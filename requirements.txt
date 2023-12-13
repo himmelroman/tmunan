@@ -1,0 +1,9 @@
+# ml
+torch
+transformers
+accelerate
+peft
+diffusers
+
+# ui
+gradio==3.48.0

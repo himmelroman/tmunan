@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Slideshow with Prompts</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="main-container">
+    <div id="prompts-container">
+      <h2>Your Prompts</h2>
+      <div class="prompt-container entry">
+        <input type="text" placeholder="Enter a prompt">
+        <button id="add-prompt">Add Prompt</button>
+      </div>
+      <div id="prompt-seq" class="prompt-container sequence"></div>
+    </div>
+    <div id="content-container">
+      <div id="controls">
+        <h1>Image Slideshow with Prompts</h1>
+        <label for="slideshow-interval">Slideshow Interval (seconds):</label>
+        <input type="number" id="slideshow-interval" min="1" value="15">
+        <br>
+        <button id="play">Play Slideshow</button>
+        <button id="stop-button">Stop Slideshow</button>
+      </div>
+      <div id="image-container">
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
