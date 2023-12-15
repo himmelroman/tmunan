@@ -1,18 +1,21 @@
-const promptsContainer = document.getElementById('prompts-container');
 const slideshowIntervalInput = document.getElementById('slideshow-interval');
 const playButton = document.getElementById('play');
 const stopButton = document.getElementById('stop-button');
 const imageContainer = document.getElementById('image-container');
-const entryPromptInput = document.querySelector('#prompts-container input');
-const addPromptButton = document.getElementById('add-prompt');
-const removeButtons = document.querySelectorAll('#prompts-container > div:not(:first-child) button');
+const promptSeqContainer = document.getElementById('prompt-seq');
+const entryPromptInput = document.getElementById('add-prompt-text');
+const addPromptButton = document.getElementById('add-prompt-button');
+const addPromptStrength = document.getElementById('add-prompt-strength');
+const addPromptNewSeq = document.getElementById('add-prompt-new-seq');
 
 let currentIndex = 0;
 let intervalId;
 let imageTimerId;
+let sequenceKeyImageId;
 
 
 function updateImage() {
+
   // Clear any previous timer
   clearInterval(imageTimerId);
 
@@ -20,10 +23,11 @@ function updateImage() {
   const displayTimeInput = slideshowIntervalInput.value;
 
   // Fetch the next prompt text
-  const currentPrompt = promptsContainer.querySelectorAll('.prompt-container input')[currentIndex].value;
+  const currentPromptElement = promptSeqContainer.querySelectorAll('textarea')[currentIndex]
+  const currentPrompt = currentPromptElement.value;
 
   // Check for empty prompts and handle edge cases
-  const totalPrompts = promptsContainer.querySelectorAll('.prompt-container input').length;
+  const totalPrompts = promptSeqContainer.querySelectorAll('textarea').length;
   console.log(`Total prompts: ${totalPrompts}`);
   if (!currentPrompt || currentIndex >= totalPrompts) {
     currentIndex = 0; // Reset to first prompt if empty or exceeding
@@ -35,40 +39,72 @@ function updateImage() {
     }
   }
 
-  // Construct the image URL using the prompt and your preferred API
-  const url = `http://localhost:8000/txt2img?prompt=${currentPrompt}`;
+  // Prepare image generation instructions
+  const new_seq= currentPromptElement.dataset.hasOwnProperty('new_sequence')
+  const task = (new_seq? 'txt2img' : 'img2img')
+  const instructions = {
+      prompt: currentPrompt,
+      image_id: sequenceKeyImageId,
+      strength: parseFloat(currentPromptElement.dataset.strength)
+  }
 
   // Fetch the image
-  fetch(url)
-    .then(response => response.blob())
-    .then(blob => {
-      // Create a URL for the blob image
-      const imageUrl = URL.createObjectURL(blob);
-
-      // Update the image container background
-      imageContainer.style.backgroundImage = `url(${imageUrl})`;
-
-      // Increment currentIndex and update image after timer
-      if (currentIndex < totalPrompts - 1) {
-        currentIndex++;
-      } else {
-        currentIndex = 0; // Reset to first prompt if all used
+  fetch(`http://localhost:8000/${task}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(instructions)
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (!data.image_url) {
+        console.log(data.error);
+        return; // Stop execution if generation fails
       }
-      console.log(`Updated currentIndex: ${currentIndex}`);
 
-      // Convert display time input to milliseconds for setTimeout
-      const displayTime = displayTimeInput * 1000;
+      // Update image_id
+      if (task === 'txt2img') {
+        sequenceKeyImageId = data.image_id
+      }
 
-      // Start the timer directly within the callback
-      imageTimerId = setTimeout(() => {
-        console.log(`Inside timer func!`);
-        // Release the used URL after display
-        URL.revokeObjectURL(imageUrl);
+      // Step 2: Fetch generated image as a blob
+      fetch(data.image_url)
+        .then(response => response.blob())
+        .then(imageBlob => {
 
-        updateImage();
-      }, displayTime);
+            // Create blob url
+            const blobUrl = URL.createObjectURL(imageBlob);
+
+            // Update the image container background
+            imageContainer.style.backgroundImage = `url(${blobUrl})`;
+
+            // visualize current prompt
+            promptSeqContainer.querySelectorAll('.prompt-item').forEach(i => i.classList.remove('current'))
+            promptSeqContainer.querySelectorAll('.prompt-item')[currentIndex].classList.add('current')
+
+            // Increment currentIndex and update image after timer
+            if (currentIndex < totalPrompts - 1) {
+              currentIndex++;
+            } else {
+              currentIndex = 0; // Reset to first prompt if all used
+            }
+
+            // Convert display time input to milliseconds for setTimeout
+            const displayTime = displayTimeInput * 1000;
+
+            // Start the timer directly within the callback
+            imageTimerId = setTimeout(() => {
+
+              // Release the used URL after display
+              URL.revokeObjectURL(blobUrl);
+
+              updateImage();
+            }, displayTime);
+        })
+        .catch(error => console.error(`Failed to fetch generated image: ${error}`));
     })
-    .catch(error => console.error(error));
+    .catch(error => console.error(`Image generation failed: ${error}`));
 }
 
 imageContainer.addEventListener('load', () => {
@@ -105,13 +141,24 @@ stopButton.addEventListener('click', () => {
 addPromptButton.addEventListener('click', () => {
   const newPromptContainer = document.createElement('div');
   newPromptContainer.className = "prompt-item"
-  const newPromptInput = document.createElement('input');
+  const newPromptTextarea = document.createElement('textarea');
+  const strengthLabel = document.createElement('label');
   const removePromptButton = document.createElement('button');
   removePromptButton.innerText = "X"
 
   // Set attributes and styles for the new elements
-  newPromptInput.value = entryPromptInput.value; // Copy text from entry prompt
-  entryPromptInput.value = ''; // Clear entry prompt after adding
+  newPromptTextarea.innerHTML = entryPromptInput.value;
+  strengthLabel.innerHTML = addPromptStrength.value;
+  if (addPromptNewSeq.checked) {
+      newPromptTextarea.className = 'new_sequence';
+      newPromptTextarea.dataset.new_sequence = 'true';
+  } else {
+      newPromptTextarea.dataset.strength = addPromptStrength.value;
+  }
+
+  // Clear entry controls
+  entryPromptInput.value = '';
+  addPromptNewSeq.checked = false;
 
   // Add functionality to remove button
   removePromptButton.addEventListener('click', () => {
@@ -120,7 +167,8 @@ addPromptButton.addEventListener('click', () => {
   });
 
   // Append new elements to the container
-  newPromptContainer.appendChild(newPromptInput);
+  newPromptContainer.appendChild(newPromptTextarea);
+  newPromptContainer.appendChild(strengthLabel);
   newPromptContainer.appendChild(removePromptButton);
   document.querySelector('#prompt-seq').appendChild(newPromptContainer);
 });

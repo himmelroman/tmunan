@@ -22,39 +22,36 @@ class LCM:
         },
     }
 
-    def __init__(self):
+    def __init__(self, txt2img_size, img2img_size):
 
-        # models
-        self.model_id = None
-        self.adapter_id = None
+        # model sizes
+        self.txt2img_size = txt2img_size
+        self.img2img_size = img2img_size
 
         # pipelines
         self.txt2img_pipe = None
         self.img2img_pipe = None
 
-    def load(self, torch_device: str, model_size: str):
-
-        self.model_id = self.model_map[model_size]['model']
-        self.adapter_id = self.model_map[model_size]['adapter']
+    def load(self, torch_device: str):
 
         # text to image
         self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
-            self.model_id,
+            self.model_map[self.txt2img_size]['model'],
             torch_dtype=torch.float16).to(torch_device)
         self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
         # load and fuse lcm lora
-        self.txt2img_pipe.load_lora_weights(self.adapter_id)
+        self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'])
         self.txt2img_pipe.fuse_lora()
 
         # image to image
         self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
-            self.model_id,
+            self.model_map[self.img2img_size]['model'],
             torch_dtype=torch.float16).to(torch_device)
         self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
 
         # load LCM-LoRA
-        self.img2img_pipe.load_lora_weights(self.adapter_id)
+        self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
         self.img2img_pipe.fuse_lora()
 
     def txt2img(self,

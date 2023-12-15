@@ -9,12 +9,20 @@
 <body>
   <div id="main-container">
     <div id="prompts-container">
-      <h2>Your Prompts</h2>
-      <div class="prompt-container entry">
-        <input type="text" placeholder="Enter a prompt">
-        <button id="add-prompt">Add Prompt</button>
+      <h2>Prompt Script</h2>
+      <div style="border-bottom: black solid; padding-bottom: 10px;">
+        <div>
+          <textarea id="add-prompt-text" placeholder="Enter a prompt"
+                    style="width: 90%; padding: 5px; margin: 5px; border-radius: 3px;"></textarea>
+        </div>
+        <div>
+          <input id="add-prompt-new-seq" type="checkbox" checked="checked">New Sequence</input><br><br>
+          <label for="add-prompt-strength">Strength:</label><input id="add-prompt-strength" type="text" value="0.25"/><br><br>
+          <button id="add-prompt-button">Add Prompt</button><br>
+        </div>
       </div>
-      <div id="prompt-seq" class="prompt-container sequence"></div>
+      <br/>
+      <div id="prompt-seq" class="sequence"></div>
     </div>
     <div id="content-container">
       <div id="controls">
