@@ -19,10 +19,10 @@ class LCM:
         'large': {
             'model': "stabilityai/stable-diffusion-xl-base-1.0",
             'adapter': "latent-consistency/lcm-lora-sdxl"
-        },
+        }
     }
 
-    def __init__(self, txt2img_size, img2img_size):
+    def __init__(self, txt2img_size=None, img2img_size=None):
 
         # model sizes
         self.txt2img_size = txt2img_size
@@ -35,24 +35,26 @@ class LCM:
     def load(self, torch_device: str):
 
         # text to image
-        self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
-            self.model_map[self.txt2img_size]['model'],
-            torch_dtype=torch.float16).to(torch_device)
-        self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
+        if self.txt2img_size:
+            self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
+                self.model_map[self.txt2img_size]['model'],
+                torch_dtype=torch.float16).to(torch_device)
+            self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
-        # load and fuse lcm lora
-        self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'])
-        self.txt2img_pipe.fuse_lora()
+            # load and fuse lcm lora
+            self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'])
+            self.txt2img_pipe.fuse_lora()
 
         # image to image
-        self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
-            self.model_map[self.img2img_size]['model'],
-            torch_dtype=torch.float16).to(torch_device)
-        self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
+        if self.img2img_size:
+            self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
+                self.model_map[self.img2img_size]['model'],
+                torch_dtype=torch.float16).to(torch_device)
+            self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
 
-        # load LCM-LoRA
-        self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
-        self.img2img_pipe.fuse_lora()
+            # load LCM-LoRA
+            self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
+            self.img2img_pipe.fuse_lora()
 
     def txt2img(self,
                 prompt: str,
@@ -64,9 +66,12 @@ class LCM:
                 randomize_seed: bool = False
                 ):
 
+        if not self.txt2img_pipe:
+            raise Exception('Text to Image pipe not initialized!')
+
         # seed
         if randomize_seed:
-            seed = random.randint(0, np.iinfo(np.int32).max)
+            seed = self.get_random_seed()
         torch.manual_seed(seed)
 
         result = self.txt2img_pipe(prompt=prompt,
@@ -88,6 +93,9 @@ class LCM:
                 strength: float = 0.6
                 ):
 
+        if not self.img2img_pipe:
+            raise Exception('Text to Image pipe not initialized!')
+
         # load image
         init_image = load_image(image_url)
 
@@ -102,6 +110,10 @@ class LCM:
                                    generator=generator
                                    ).images
         return result
+
+    @classmethod
+    def get_random_seed(cls):
+        return random.randint(0, np.iinfo(np.int32).max)
 
 
 if __name__ == '__main__':
