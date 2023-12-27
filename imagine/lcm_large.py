@@ -4,8 +4,7 @@ import torch
 import random
 import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
-from diffusers import LCMScheduler, AutoPipelineForText2Image, AutoPipelineForImage2Image, UNet2DConditionModel, \
-    DiffusionPipeline
+from diffusers import LCMScheduler, UNet2DConditionModel, DiffusionPipeline
 from diffusers.utils import make_image_grid, load_image
 
 
@@ -28,9 +27,20 @@ class LCMLarge:
         self.pipe = None
         self.compel = None
 
-        # seed = 6789
+        # comp device
+        self.device = self.get_device()
 
-    def load(self, torch_device: str):
+    @classmethod
+    def get_device(cls):
+
+        if torch.cuda.is_available():
+            return 'cuda'
+        elif torch.backends.mps.is_available():
+            return 'mps'
+        else:
+            return 'cpu'
+
+    def load(self):
 
         # load txt2img models
         self.unet = UNet2DConditionModel.from_pretrained(self.model_map[self.model_id]['unet'],
@@ -40,6 +50,9 @@ class LCMLarge:
                                                       unet=self.unet,
                                                       torch_dtype=torch.float16,
                                                       variant="fp16")
+
+        # optimize
+        # self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
 
         # init prompt generator
         self.compel = Compel(
@@ -51,15 +64,15 @@ class LCMLarge:
 
         # LCM scheduler
         self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
-        self.pipe.to(torch_device)
+        self.pipe.to(self.device)
 
     def txt2img(self,
                 prompt_list: List[str],
                 weight_list: List[float],
                 height: int = 512,
                 width: int = 512,
-                num_inference_steps: int = 4,
-                guidance_scale: float = 0.0,
+                num_inference_steps: int = 5,
+                guidance_scale: float = 1.5,
                 seed: int = 0,
                 randomize_seed: bool = False
                 ):
@@ -103,7 +116,7 @@ class LCMLarge:
 if __name__ == '__main__':
 
     lcm = LCMLarge(model_id='sdxl')
-    lcm.load(torch_device="mps")
+    lcm.load()
 
     images = lcm.txt2img(prompt_list='photo of beautiful old lady with golden hair, detailed face')
     grid = make_image_grid(images, rows=1, cols=len(images))

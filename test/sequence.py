@@ -79,7 +79,7 @@ def gen_scale_sequence(prompt1, prompt2, frames=10):
 
         # generate image
         images = lcm.txt2img(
-            prompt=f'("{prompt1}":{prompt1_weight}) AND ("{prompt2}":{prompt2_weight})',
+            prompt=f'("{prompt1}"){prompt1_weight} AND ("{prompt2}"){prompt2_weight}',
             height=768,
             width=768,
             num_inference_steps=5,
@@ -108,6 +108,6 @@ if __name__ == "__main__":
     # init_image_path = gen_image(prompt)
     #init_image_path = '/private/tmp/lcm_sequence_test/blowers big.png'
 
-    #gen_strength_sequence(init_image_path, start=15, end=100)
-    #gen_morph_sequence(init_image_path, frames=8, strength=25)
-    gen_scale_sequence(prompt, prompt2, frames=10)
+    gen_strength_sequence(init_image_path, start=15, end=100)
+    gen_morph_sequence(init_image_path, frames=8, strength=25)
+    # gen_scale_sequence(prompt, prompt2, frames=10)

@@ -1,25 +1,37 @@
 import asyncio
-import json
+from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import List
 
-import uvicorn
-from fastapi import FastAPI, BackgroundTasks, WebSocket
-from pydantic import BaseModel
+from fastapi import FastAPI, BackgroundTasks, WebSocket, Request
 from fastapi.responses import FileResponse
+
 from starlette import status
 from starlette.middleware import Middleware
-# from starlette.staticfiles import StaticFiles
+from starlette.websockets import WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
-from diffusers.utils import make_image_grid, load_image
-from starlette.websockets import WebSocketDisconnect
+from api.context import Context, WebSocketConnectionManager
+from api.pydantic_models import Txt2ImgInstructions, ImageSequence
 
 from imagine.lcm_large import LCMLarge
 
-# LCM
-lcm = LCMLarge(model_id='sdxl')
-lcm.load(torch_device='mps')
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+
+    # Init context
+    context.ws_manager = WebSocketConnectionManager()
+
+    # Load LCM
+    context.lcm = LCMLarge(model_id='sdxl')
+    context.lcm.load()
+
+    # FastAPI lifespan
+    yield
+
+    # Clean up the ML models and release the resources
+    pass
+
 
 # middleware
 middleware = [
@@ -33,57 +45,39 @@ middleware = [
 ]
 
 # FastAPI app
-app = FastAPI(middleware=middleware)
-active_ws = None
-# app.mount("/ui", StaticFiles(directory="ui"), name="ui")
-
-# env
-CACHE_DIR = '/Users/himmelroman/projects/speechualizer/tmunan/cache'
+app = FastAPI(middleware=middleware, lifespan=lifespan)
+context = Context()
 
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[WebSocket] = []
+@app.get("/images/{image_id}",)
+def get_image_by_id(image_id: str):
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
-
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
+    # return file
+    file_path = f'{context.cache_dir}/{image_id}.png'
+    return FileResponse(file_path)
 
 
-manager = ConnectionManager()
+@app.post("/txt2img",)
+def txt2img(prompt: Txt2ImgInstructions, req: Request):
 
+    # generate image
+    images = context.lcm.txt2img(
+        prompt_list=prompt.prompt_list,
+        weight_list=prompt.prompt_weights,
+        num_inference_steps=prompt.num_inference_steps,
+        guidance_scale=prompt.guidance_scale,
+        height=prompt.height, width=prompt.width,
+        seed=prompt.seed,
+        randomize_seed=prompt.seed is None
+    )
 
-class ImageSequence(BaseModel):
-    prompt_list: List[str]
-    prompt_weights: List[str]
-    num_images: int = 8
-    height: int | None = 512
-    width: int | None = 512
-    num_inference_steps: int | None = 4
-    guidance_scale: float | None = 0.0
-    seed: int | None = None
+    # save image to file
+    image_id = f'txt2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
+    file_path = f'{context.cache_dir}/{image_id}.png'
+    images[0].save(file_path)
 
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            await websocket.receive_text()
-            # await manager.send_personal_message(f"You wrote: {data}", websocket)
-            # await manager.broadcast(f"Client #{client_id} says: {data}")
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
+    # return file
+    return {'image_id': image_id, 'image_url': f'{req.base_url}images/{image_id}'}
 
 
 @app.post("/sequences",)
@@ -96,12 +90,19 @@ def sequence(seq: ImageSequence, background_tasks: BackgroundTasks, status_code=
     return {'sequence_id': 1}
 
 
-@app.get("/images/{image_id}",)
-def get_image_by_id(image_id: str):
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
 
-    # return file
-    file_path = f'{CACHE_DIR}/{image_id}.png'
-    return FileResponse(file_path)
+    # wait for connection
+    await context.ws_manager.connect(websocket)
+
+    try:
+        # dummy handler for incoming messages
+        while True:
+            await websocket.receive_json()
+
+    except WebSocketDisconnect:
+        context.ws_manager.disconnect(websocket)
 
 
 def generate_image_sequence(seq: ImageSequence):
@@ -111,24 +112,31 @@ def generate_image_sequence(seq: ImageSequence):
     asyncio.set_event_loop(loop)
 
     # iterate as many times as requested
-    for i in range(0, seq.num_images, 2):
+    weight_step = 1 / (seq.num_images - 1)
+    for i in range(0, seq.num_images):
 
-        prompt_dict = lcm.gen_prompt(seq.prompt_list, [1.0, i / 10], seq.seed)
-        image = lcm.txt2img(prompt_list=seq.prompt_list,
-                            weight_list=[1.0, i / 10],
-                            num_inference_steps=seq.num_inference_steps,
-                            guidance_scale=seq.guidance_scale,
-                            height=seq.height, width=seq.width,
-                            seed=seq.seed)[0]
+        # gen prompt weights list
+        weight_list = [1.0, round(i * weight_step, 3)]
+
+        # gen image
+        images = context.lcm.txt2img(
+            prompt_list=seq.txt2img.prompt_list,
+            weight_list=weight_list,
+            num_inference_steps=seq.txt2img.num_inference_steps,
+            guidance_scale=seq.txt2img.guidance_scale,
+            height=seq.txt2img.height, width=seq.txt2img.width,
+            seed=seq.txt2img.seed,
+            randomize_seed=seq.txt2img.seed is None
+        )
 
         # save image to disk
         image_id = f'img_seq_{i}'
-        image.save(f'{CACHE_DIR}/{image_id}.png')
+        images[0].save(f'{context.cache_dir}/{image_id}.png')
 
         # notify image ready
-        if manager.active_connections:
+        if context.ws_manager.active_connections:
             loop.run_until_complete(
-                manager.active_connections[0].send_json({
+                context.ws_manager.active_connections[0].send_json({
                     'event': 'IMAGE_READY',
                     'sequence_id': 1,
                     'image_id': image_id
@@ -136,10 +144,10 @@ def generate_image_sequence(seq: ImageSequence):
             )
 
     # notify sequence ended
-    if manager.active_connections:
+    if context.ws_manager.active_connections:
 
         loop.run_until_complete(
-            manager.active_connections[0].send_json({
+            context.ws_manager.active_connections[0].send_json({
                 'event': 'SEQUENCE_FINISHED',
                 'sequence_id': 1
             })
@@ -147,4 +155,5 @@ def generate_image_sequence(seq: ImageSequence):
 
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

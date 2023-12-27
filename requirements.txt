@@ -1,9 +1,15 @@
+# fastapi
+uvicorn==0.25.0
+fastapi==0.108.0
+pydantic-settings
+
 # ml
 torch
+diffusers
 transformers
 accelerate
 peft
-diffusers
+compel
 
 # ui
-gradio==3.48.0
+# gradio==3.48.0
