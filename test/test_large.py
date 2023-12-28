@@ -1,7 +1,4 @@
-from diffusers.utils import make_image_grid
-
-from imagine.lcm import LCM
-from imagine.lcm_large import LCMLarge
+from tmunan.imagine.lcm_large import LCMLarge
 
 WORK_DIR = f'/tmp/lcm_large/'
 

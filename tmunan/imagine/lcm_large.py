@@ -29,6 +29,7 @@ class LCMLarge:
 
         # comp device
         self.device = self.get_device()
+        print(f'PyTorch running on device: {self.device}')
 
     @classmethod
     def get_device(cls):

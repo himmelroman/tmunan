@@ -1,19 +1,22 @@
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+from diffusers.utils import load_image
 from fastapi import FastAPI, BackgroundTasks, WebSocket, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from starlette import status
 from starlette.middleware import Middleware
 from starlette.websockets import WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
-from api.context import Context, WebSocketConnectionManager
-from api.pydantic_models import Txt2ImgInstructions, ImageSequence
+from tmunan.api.context import Context, WebSocketConnectionManager
+from tmunan.api.pydantic_models import Txt2ImgInstructions, ImageSequence
 
-from imagine.lcm_large import LCMLarge
+from tmunan.imagine.lcm_large import LCMLarge
 
 
 @asynccontextmanager
@@ -47,6 +50,8 @@ middleware = [
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
 context = Context()
+
+app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 
 
 @app.get("/images/{image_id}",)
@@ -119,15 +124,19 @@ def generate_image_sequence(seq: ImageSequence):
         weight_list = [1.0, round(i * weight_step, 3)]
 
         # gen image
-        images = context.lcm.txt2img(
-            prompt_list=seq.txt2img.prompt_list,
-            weight_list=weight_list,
-            num_inference_steps=seq.txt2img.num_inference_steps,
-            guidance_scale=seq.txt2img.guidance_scale,
-            height=seq.txt2img.height, width=seq.txt2img.width,
-            seed=seq.txt2img.seed,
-            randomize_seed=seq.txt2img.seed is None
-        )
+        # images = context.lcm.txt2img(
+        #     prompt_list=seq.txt2img.prompt_list,
+        #     weight_list=weight_list,
+        #     num_inference_steps=seq.txt2img.num_inference_steps,
+        #     guidance_scale=seq.txt2img.guidance_scale,
+        #     height=seq.txt2img.height, width=seq.txt2img.width,
+        #     seed=seq.txt2img.seed,
+        #     randomize_seed=seq.txt2img.seed is None
+        # )
+        time.sleep(3)
+        images = [
+            load_image(f'{context.cache_dir}/img_seq_{i}.png')
+        ]
 
         # save image to disk
         image_id = f'img_seq_{i}'

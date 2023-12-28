@@ -3,7 +3,7 @@ import os
 from fastapi import WebSocket
 from pydantic_settings import BaseSettings
 
-from imagine.lcm_large import LCMLarge
+from tmunan.imagine.lcm_large import LCMLarge
 
 
 class WebSocketConnectionManager:

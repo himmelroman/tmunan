@@ -8,7 +8,7 @@ from starlette.middleware import Middleware
 # from starlette.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
-from imagine.lcm import LCM
+from tmunan.imagine.lcm import LCM
 from diffusers.utils import make_image_grid, load_image
 
 # LCM
@@ -31,7 +31,7 @@ app = FastAPI(middleware=middleware)
 # app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 
 # env
-CACHE_DIR = '/Users/himmelroman/projects/speechualizer/tmunan/cache'
+CACHE_DIR = '/cache'
 
 
 class Prompt_Txt2Img(BaseModel):

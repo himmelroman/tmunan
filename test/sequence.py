@@ -1,5 +1,4 @@
-from imagine.lcm import LCM
-from diffusers.utils import make_image_grid, load_image
+from tmunan.imagine.lcm import LCM
 
 # build image path
 WORK_DIR = f'/tmp/lcm_sequence_test/'

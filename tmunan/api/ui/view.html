@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Chat</title>
+        <link rel="stylesheet" href="style.css">
+        <script>
+
+            const ws = new WebSocket('ws://localhost:8000/ws');
+
+            ws.addEventListener('message', (event) => {
+                const message = JSON.parse(event.data);
+                console.log(`Incoming message: ${event.data}`)
+                transitionImage(message.image_id);
+            })
+
+            function transitionImage(imageId) {
+                const image_url = `http://localhost:8000/images/${imageId}`
+
+                const topImage = document.getElementById('topImage');
+                const bottomImage = document.getElementById('bottomImage');
+
+                // Handle new image
+                // bottomImage.style.opacity = '0';     // Initially hide the new image
+                bottomImage.src = image_url;            // Set the new image source
+
+                topImage.style.transition = 'opacity 3s ease-in-out'; // Set up transition for smooth fade
+                // bottomImage.style.display = 'block'; // Make the new image visible
+
+                setTimeout(() => {
+                  topImage.style.opacity = '0';
+                }, 50);
+
+                setTimeout(() => {
+                  topImage.src = image_url;           // Update the current image with the new one
+                  topImage.style.opacity = '1';       // Fade it back in
+                  bottomImage.style.opacity = '0';    // Hide the next image for the next cycle
+                }, 3000); // After the transition completes
+              }
+        </script>
+    </head>
+    <body>
+        <h1>Tmunan Viewer</h1>
+        <br>
+        <div id="image-container">
+            <img id="bottomImage" src="http://localhost:8000/images/img_seq_9">
+            <img id="topImage" src="http://localhost:8000/images/img_seq_1">
+        </div>
+    </body>
+</html>
