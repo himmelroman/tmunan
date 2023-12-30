@@ -70,20 +70,26 @@ function doTransition(){
     // Create new image
     const new_image_url = `http://${api_address}:8080/api/images/${dequeueImage()}`;
     const newImage = document.createElement('img')
-    newImage.src = new_image_url;
+
+    // Get old image
+    const oldImage   = imageContainer.querySelector('img')
 
     // Append new image
-    const oldImage = imageContainer.querySelector('img')
+    newImage.src = new_image_url;
     imageContainer.insertBefore(newImage, imageContainer.firstChild);
 
-    // Fade out top image
-    oldImage.style.opacity = '0%';
-    oldImage.style.transition = `opacity ${animationSpeed}s linear` // ease-in-out`;
+    // Wait until image is loaded
+    newImage.onload = function(e){
 
-    // After the transition completes
-    oldImage.addEventListener("transitionend", () => {
-        oldImage.remove();
-    })
+        // Start fading out old image
+        oldImage.style.opacity = '0%';
+        oldImage.style.transition = `opacity ${animationSpeed}s linear` // ease-in-out`;
+
+        // After the transition completes
+        oldImage.addEventListener("transitionend", () => {
+            oldImage.remove();
+        })
+    }
 }
 
 advanceSlideshow();
