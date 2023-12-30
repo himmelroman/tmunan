@@ -14,11 +14,14 @@ class Instructions(BaseModel):
 
 class SequencePrompt(BaseModel):
     text: str
-    min_weight: float = 1
-    max_weight: float = 1
+    start_weight: float = 1
+    end_weight: float = 1
 
 
 class ImageSequence(BaseModel):
     prompts: List[SequencePrompt]
-    config: Instructions
     num_images: int = 8
+
+
+class ImageSequenceScript(BaseModel):
+    sequences: List[ImageSequence]
