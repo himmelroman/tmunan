@@ -52,7 +52,7 @@ middleware = [
 
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
-app.mount("/ui", StaticFiles(directory=Path(os.getcwd()).with_name('ui'), html=True), name="ui")
+app.mount("/ui", StaticFiles(directory=Path(os.path.realpath(__file__)).parent.with_name('ui'), html=True), name="ui")
 
 
 @app.get("/api/images/{seq_id}/{image_id}",)
