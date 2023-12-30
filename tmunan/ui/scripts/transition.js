@@ -1,7 +1,35 @@
-let transitionSpeed = 1;
+let api_address = 'localhost'
+let animationSpeed = 1;
 let transitionInterval = 2;
 let inTransition = false;
 const imageQueue = [];
+
+window.onload = function () {
+
+    // init api address
+    api_address = window.location.hostname;
+
+    // Init config panel
+    const config_address = document.getElementById('config_api_address');
+    const config_animation_speed = document.getElementById('config_animation_speed');
+    const config_transition_interval = document.getElementById('config_transition_interval');
+    config_address.value = api_address;
+    config_animation_speed.value = animationSpeed;
+    config_transition_interval.value = transitionInterval;
+};
+
+function updateConfig() {
+
+    // Get config inputs
+    const config_address = document.getElementById('config_api_address');
+    const config_animation_speed = document.getElementById('config_animation_speed');
+    const config_transition_interval = document.getElementById('config_transition_interval');
+
+    // Update variables
+    api_address = config_address.value;
+    animationSpeed = config_animation_speed.value;
+    transitionInterval = config_transition_interval.value;
+}
 
 function queueImage(imageId) {
     // console.log(`Enqueuing image: ${imageId}`)
@@ -40,7 +68,7 @@ function doTransition(){
 
 
     // Create new image
-    const new_image_url = `http://localhost:8080/images/${dequeueImage()}`;
+    const new_image_url = `http://${api_address}:8080/api/images/${dequeueImage()}`;
     const newImage = document.createElement('img')
     newImage.src = new_image_url;
 
@@ -50,7 +78,7 @@ function doTransition(){
 
     // Fade out top image
     oldImage.style.opacity = '0%';
-    oldImage.style.transition = `opacity ${transitionSpeed}s linear` // ease-in-out`;
+    oldImage.style.transition = `opacity ${animationSpeed}s linear` // ease-in-out`;
 
     // After the transition completes
     oldImage.addEventListener("transitionend", () => {

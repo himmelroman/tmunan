@@ -12,9 +12,9 @@ from starlette.middleware import Middleware
 from starlette.websockets import WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
+from tmunan.api.sequence import generate_image_sequence
 from tmunan.api.context import WebSocketConnectionManager, context
 from tmunan.api.pydantic_models import Instructions, ImageSequence
-from tmunan.api.sequence import generate_image_sequence
 
 from tmunan.imagine.lcm import LCM, load_image, make_image_grid
 
@@ -49,10 +49,10 @@ middleware = [
 
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
-app.mount("/ui", StaticFiles(directory=Path(os.getcwd()).with_name('ui')), name="ui")
+app.mount("/ui", StaticFiles(directory=Path(os.getcwd()).with_name('ui'), html=True), name="ui")
 
 
-@app.get("/images/{image_id}",)
+@app.get("/api/images/{image_id}",)
 def get_image_by_id(image_id: str):
 
     # return file
@@ -60,7 +60,7 @@ def get_image_by_id(image_id: str):
     return FileResponse(file_path)
 
 
-@app.post("/txt2img",)
+@app.post("/api/txt2img",)
 def txt2img(prompt: str, config: Instructions, req: Request):
 
     # generate image
@@ -83,7 +83,7 @@ def txt2img(prompt: str, config: Instructions, req: Request):
     return {'image_id': image_id, 'image_url': f'{req.base_url}images/{image_id}'}
 
 
-@app.post("/img2img",)
+@app.post("/api/img2img",)
 def img2img(prompt: str, image_id: str, config: Instructions, request: Request, grid: bool = False):
 
     # build image path
@@ -117,7 +117,7 @@ def img2img(prompt: str, image_id: str, config: Instructions, request: Request, 
     return {'image_id': image_id, 'image_url': f'{request.base_url}images/{image_id}'}
 
 
-@app.post("/sequence",)
+@app.post("/api/sequence",)
 def sequence(seq: ImageSequence, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
 
     # start a sequence generation task
@@ -127,7 +127,7 @@ def sequence(seq: ImageSequence, background_tasks: BackgroundTasks, status_code=
     return {'sequence_id': 1}
 
 
-@app.websocket("/ws")
+@app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
 
     # wait for connection
