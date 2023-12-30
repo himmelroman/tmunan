@@ -15,7 +15,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 # import gradio as gr
 
-from tmunan.api.sequence import generate_image_sequence, generate_script
+from tmunan.api.sequence import sequencer
 from tmunan.api.context import WebSocketConnectionManager, context
 from tmunan.api.pydantic_models import Instructions, ImageSequence, ImageSequenceScript
 
@@ -135,7 +135,7 @@ def sequence(seq: ImageSequence, config: Instructions, background_tasks: Backgro
     seq_id = str(uuid.uuid4())[:8]
 
     # start a sequence generation task
-    background_tasks.add_task(generate_image_sequence, seq, config, seq_id)
+    background_tasks.add_task(sequencer.start_sequence, seq, config, seq_id)
 
     # return file
     return {'sequence_id': seq_id}
@@ -148,10 +148,15 @@ def script(script: ImageSequenceScript, config: Instructions, background_tasks: 
     script_id = str(uuid.uuid4())[:8]
 
     # start a script generation task
-    background_tasks.add_task(generate_script, script, config, script_id)
+    background_tasks.add_task(sequencer.start_script, script, config, script_id)
 
     # return file
     return {'script_id': script_id}
+
+
+@app.post("/api/stop",)
+def script():
+    sequencer.stop()
 
 
 @app.websocket("/api/ws")
