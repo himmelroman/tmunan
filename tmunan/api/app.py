@@ -29,7 +29,7 @@ async def lifespan(fastapi_app: FastAPI):
     context.ws_manager = WebSocketConnectionManager()
 
     # Load LCM
-    context.lcm = LCM(txt2img_size='small')
+    context.lcm = LCM(txt2img_size='large')
     context.lcm.load()
 
     # FastAPI lifespan
