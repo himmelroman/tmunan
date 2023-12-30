@@ -1,4 +1,4 @@
-let ws_url = 'ws://localhost:8000/ws'
+let ws_url = 'ws://localhost:8080/ws'
 
 function connectWebSocket() {
   console.log('Connecting...');
@@ -20,14 +20,14 @@ function connectWebSocket() {
   };
 
   ws.onmessage = (event) => {
-      console.log(`Incoming message: ${event.data}`)
+      // console.log(`Incoming message: ${event.data}`)
 
       // Parse from JSON string
       const message = JSON.parse(event.data);
 
       // Check event type
       if (message.event === 'IMAGE_READY') {
-          transitionImage(message.image_id);
+          queueImage(message.image_id);
 
       } else if (message.event === 'SEQUENCE_FINISHED') {
           console.log('Sequence Finished!')

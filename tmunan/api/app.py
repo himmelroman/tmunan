@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from datetime import datetime
 from contextlib import asynccontextmanager
 
@@ -24,7 +26,7 @@ async def lifespan(fastapi_app: FastAPI):
     context.ws_manager = WebSocketConnectionManager()
 
     # Load LCM
-    context.lcm = LCM(txt2img_size='large')
+    context.lcm = LCM(txt2img_size='small')
     context.lcm.load()
 
     # FastAPI lifespan
@@ -47,8 +49,7 @@ middleware = [
 
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
-
-app.mount("/ui", StaticFiles(directory="../ui"), name="ui")
+app.mount("/ui", StaticFiles(directory=Path(os.getcwd()).with_name('ui')), name="ui")
 
 
 @app.get("/images/{image_id}",)
@@ -143,4 +144,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
