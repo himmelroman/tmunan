@@ -6,11 +6,12 @@ websockets
 
 # ml
 torch
-diffusers
+diffusers==0.23.0
 transformers
 accelerate
 peft
-compel
+numpy
+# compel
 
 # ui
 # gradio==3.48.0

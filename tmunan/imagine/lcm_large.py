@@ -5,7 +5,7 @@ import random
 import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
 from diffusers import LCMScheduler, UNet2DConditionModel, DiffusionPipeline
-from diffusers.utils import make_image_grid, load_image
+# from diffusers.utils import make_image_grid, load_image
 
 
 class LCMLarge:
@@ -113,21 +113,21 @@ class LCMLarge:
     def get_random_seed(cls):
         return random.randint(0, np.iinfo(np.int32).max)
 
+#
+# if __name__ == '__main__':
+#
+#     lcm = LCMLarge(model_id='sdxl')
+#     lcm.load()
+#
+#     images = lcm.txt2img(prompt_list='photo of beautiful old lady with golden hair, detailed face')
+#     grid = make_image_grid(images, rows=1, cols=len(images))
+#     grid.show()
 
-if __name__ == '__main__':
-
-    lcm = LCMLarge(model_id='sdxl')
-    lcm.load()
-
-    images = lcm.txt2img(prompt_list='photo of beautiful old lady with golden hair, detailed face')
-    grid = make_image_grid(images, rows=1, cols=len(images))
-    grid.show()
-
-    # grid.save()
-    #new_image = lcm.img2img(image, 'Self-portrait oil painting, a beautiful cyborg with golden hair. Big scar on cheek and torn hair, 8k')
-    #make_image_grid([image, new_image], rows=1, cols=2).show()
-
-    # image.save("cache/img_base.png")
-    # new_image.save("cache/img_new.png")
-
-    # make_image_grid([image, new_image], rows=1, cols=2)
+#     grid.save()
+#     new_image = lcm.img2img(image, 'Self-portrait oil painting, a beautiful cyborg with golden hair. Big scar on cheek and torn hair, 8k')
+#     make_image_grid([image, new_image], rows=1, cols=2).show()
+#
+#     image.save("cache/img_base.png")
+#     new_image.save("cache/img_new.png")
+#
+#     make_image_grid([image, new_image], rows=1, cols=2)

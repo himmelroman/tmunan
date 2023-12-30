@@ -1,3 +1,4 @@
+from tmunan.imagine.lcm import LCM
 from tmunan.imagine.lcm_large import LCMLarge
 
 WORK_DIR = f'/tmp/lcm_large/'
@@ -6,16 +7,17 @@ WORK_DIR = f'/tmp/lcm_large/'
 if __name__ == "__main__":
 
     print('loading models...')
-    lcm = LCMLarge(model_id='sdxl')
+    lcm = LCM(txt2img_size='large')
     lcm.load()
 
     txt2img_images = lcm.txt2img(
-        prompt_list=['photo of beautiful old lady with golden hair', 'detailed face'],
-        weight_list=[1, 1],
+        prompt='old man in the rain, focus on face, (laughing)1.4',
+        # weight_list=[1],
         height=768,
         width=768,
-        num_inference_steps=5,
-        guidance_scale=1.2
+        num_inference_steps=4,
+        guidance_scale=0.5,
+        seed=11322831497147
     )
     # txt2img_images[0].save('/tmp/source_image.png')
     txt2img_images[0].show()

@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
+from typing import Any
 
 from fastapi import WebSocket
 from pydantic_settings import BaseSettings
 
-from tmunan.imagine.lcm_large import LCMLarge
+from tmunan.imagine.lcm import LCM
 
 
 class WebSocketConnectionManager:
@@ -26,8 +28,16 @@ class WebSocketConnectionManager:
 
 
 class Context(BaseSettings):
+
     app_name: str = "Tmunan"
-    cache_dir: str = os.path.join(os.path.expanduser("~"), ".cache")
-    lcm: LCMLarge | None = None
+    cache_dir: str = os.path.join(os.path.expanduser("~"), ".cache", 'tmunan')
+    lcm: LCM | None = None
     ws_manager: WebSocketConnectionManager | None = None
 
+    def __init__(self, **values: Any):
+        super().__init__(**values)
+        Path.mkdir(Path(self.cache_dir), parents=True, exist_ok=True)
+
+
+# init app context
+context = Context()

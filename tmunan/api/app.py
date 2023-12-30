@@ -1,19 +1,38 @@
 from datetime import datetime
+from contextlib import asynccontextmanager
 
-import uvicorn
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
+from fastapi import FastAPI, BackgroundTasks, WebSocket, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from starlette import status
 from starlette.middleware import Middleware
-# from starlette.staticfiles import StaticFiles
+from starlette.websockets import WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
-from tmunan.imagine.lcm import LCM
-from diffusers.utils import make_image_grid, load_image
+from tmunan.api.context import WebSocketConnectionManager, context
+from tmunan.api.pydantic_models import Instructions, ImageSequence
+from tmunan.api.sequence import generate_image_sequence
 
-# LCM
-lcm = LCM(txt2img_size='medium', img2img_size='small')
-lcm.load(torch_device='mps')
+from tmunan.imagine.lcm import LCM, load_image, make_image_grid
+
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+
+    # Init context
+    context.ws_manager = WebSocketConnectionManager()
+
+    # Load LCM
+    context.lcm = LCM(txt2img_size='large')
+    context.lcm.load()
+
+    # FastAPI lifespan
+    yield
+
+    # Clean up the ML models and release the resources
+    pass
+
 
 # middleware
 middleware = [
@@ -27,84 +46,69 @@ middleware = [
 ]
 
 # FastAPI app
-app = FastAPI(middleware=middleware)
-# app.mount("/ui", StaticFiles(directory="ui"), name="ui")
+app = FastAPI(middleware=middleware, lifespan=lifespan)
 
-# env
-CACHE_DIR = '/cache'
+app.mount("/ui", StaticFiles(directory="../ui"), name="ui")
 
 
-class Prompt_Txt2Img(BaseModel):
-    prompt: str
-    height: int | None = 512
-    width: int | None = 512
-    num_inference_steps: int | None = 4
-    guidance_scale: float | None = 0.0
-    seed: int | None = None
+@app.get("/images/{image_id}",)
+def get_image_by_id(image_id: str):
 
-
-class Prompt_Img2Img(BaseModel):
-    prompt: str
-    image_id: str
-    height: int | None = 512
-    width: int | None = 512
-    num_inference_steps: int | None = 4
-    guidance_scale: float | None = 0.0
-    strength: float | None = 0.45
-    grid: bool | None = False
+    # return file
+    file_path = f'{context.cache_dir}/{image_id}.png'
+    return FileResponse(file_path)
 
 
 @app.post("/txt2img",)
-def txt2img(prompt: Prompt_Txt2Img, request: Request):
+def txt2img(prompt: str, config: Instructions, req: Request):
 
     # generate image
-    images = lcm.txt2img(
-        prompt=prompt.prompt,
-        height=prompt.height,
-        width=prompt.width,
-        num_inference_steps=prompt.num_inference_steps,
-        guidance_scale=prompt.guidance_scale,
-        seed=prompt.seed,
-        randomize_seed=prompt.seed is None
+    print(f'Generating image with prompt: {prompt}')
+    images = context.lcm.txt2img(
+        prompt=prompt,
+        num_inference_steps=config.num_inference_steps,
+        guidance_scale=config.guidance_scale,
+        height=config.height, width=config.width,
+        seed=config.seed,
+        randomize_seed=config.seed is None
     )
 
     # save image to file
-    image_id = f't2i_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
-    file_path = f'{CACHE_DIR}/{image_id}.png'
+    image_id = f'txt2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
+    file_path = f'{context.cache_dir}/{image_id}.png'
     images[0].save(file_path)
 
     # return file
-    return {'image_id': image_id, 'image_url': f'{request.base_url}images/{image_id}'}
+    return {'image_id': image_id, 'image_url': f'{req.base_url}images/{image_id}'}
 
 
 @app.post("/img2img",)
-def img2img(prompt: Prompt_Img2Img, request: Request):
+def img2img(prompt: str, image_id: str, config: Instructions, request: Request, grid: bool = False):
 
     # build image path
-    image_url = f'{CACHE_DIR}/{prompt.image_id}.png'
+    image_url = f'{context.cache_dir}/{image_id}.png'
 
     # generate image
-    images = lcm.img2img(
+    images = context.lcm.img2img(
         image_url=image_url,
-        prompt=prompt.prompt,
-        height=prompt.height,
-        width=prompt.width,
-        num_inference_steps=prompt.num_inference_steps,
-        guidance_scale=prompt.guidance_scale,
-        strength=prompt.strength
+        prompt=prompt,
+        num_inference_steps=config.num_inference_steps,
+        guidance_scale=config.guidance_scale,
+        height=config.height, width=config.width,
+        strength=config.strength
     )
 
     # save image to file
-    image_id = f'i2i_{prompt.image_id}_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
-    file_path = f'{CACHE_DIR}/{image_id}.png'
+    image_id = f'i2i_{image_id}_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
+    file_path = f'{context.cache_dir}/{image_id}.png'
     images[0].save(file_path)
 
     # generate grid of original image + new image?
-    if prompt.grid:
+    if grid:
 
         # save grid to file
         image_id = f'i2i_grid_{image_id}'
-        file_path = f'{CACHE_DIR}/{image_id}.png'
+        file_path = f'{context.cache_dir}/{image_id}.png'
         init_image = load_image(image_url)
         make_image_grid([init_image, images[0]], rows=1, cols=2).save(file_path)
 
@@ -112,13 +116,31 @@ def img2img(prompt: Prompt_Img2Img, request: Request):
     return {'image_id': image_id, 'image_url': f'{request.base_url}images/{image_id}'}
 
 
-@app.get("/images/{image_id}",)
-def img2img(image_id: str):
+@app.post("/sequence",)
+def sequence(seq: ImageSequence, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
+
+    # start a sequence generation task
+    background_tasks.add_task(generate_image_sequence, seq)
 
     # return file
-    file_path = f'{CACHE_DIR}/{image_id}.png'
-    return FileResponse(file_path)
+    return {'sequence_id': 1}
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+
+    # wait for connection
+    await context.ws_manager.connect(websocket)
+
+    try:
+        # dummy handler for incoming messages
+        while True:
+            await websocket.receive_json()
+
+    except WebSocketDisconnect:
+        context.ws_manager.disconnect(websocket)
 
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

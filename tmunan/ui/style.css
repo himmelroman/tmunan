@@ -1,0 +1,11 @@
+body {
+	background-color: black;
+}
+
+#image-container {
+  position: relative;
+}
+
+#image-container img {
+	position: absolute;
+}
