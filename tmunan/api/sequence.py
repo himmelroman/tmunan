@@ -109,6 +109,9 @@ class Sequencer:
             # iterate as many times as requested
             for i, seq in enumerate(script.sequences):
 
+                # make a copy of the original sequence
+                effective_seq = deepcopy(seq)
+
                 # check if we should stop
                 if self.stop_requested:
                     break
@@ -118,7 +121,7 @@ class Sequencer:
 
                 # if we have continuity prompts from previous loop
                 if i == 0 and continuity_prompts:
-                    seq.prompts.extend(deepcopy(continuity_prompts))
+                    effective_seq.prompts.extend(continuity_prompts)
                     continuity_prompts = None
 
                 # if this is NOT the first sequence
@@ -126,10 +129,10 @@ class Sequencer:
 
                     # iterate prompts from previous sequence
                     reversed_prompts = self.reverse_prompt_weights(script.sequences[i - 1].prompts)
-                    seq.prompts.extend(reversed_prompts)
+                    effective_seq.prompts.extend(reversed_prompts)
 
                 # play sequence
-                self.run_image_sequence(seq, config, seq_id=seq_id, parent_dir=script_dir)
+                self.run_image_sequence(effective_seq, config, seq_id=seq_id, parent_dir=script_dir)
 
             # stop, unless loop requested
             if script.loop:
