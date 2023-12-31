@@ -77,7 +77,7 @@ class Sequencer:
             # notify image ready
             if context.ws_manager.active_connections:
                 loop.run_until_complete(
-                    context.ws_manager.active_connections[0].send_json({
+                    context.ws_manager.broadcast({
                         'event': 'IMAGE_READY',
                         'sequence_id': seq_id,
                         'image_id': image_relative_path,
@@ -90,7 +90,7 @@ class Sequencer:
         if context.ws_manager.active_connections:
 
             loop.run_until_complete(
-                context.ws_manager.active_connections[0].send_json({
+                context.ws_manager.broadcast({
                     'event': 'SEQUENCE_FINISHED',
                     'sequence_id': seq_id
                 })
