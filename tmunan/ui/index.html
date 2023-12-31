@@ -5,6 +5,17 @@
         <link rel="stylesheet" href="css/style.css">
         <script src="scripts/transition.js"></script>
         <script src="scripts/websocket.js"></script>
+        <script type="application/javascript">
+            function fs(){
+                document.getElementById("ffs").style.visibility = "hidden"
+                try {
+                    document.documentElement.requestFullscreen()
+                } catch(e){
+                    console.log(e)
+                }
+
+            }
+        </script>
     </head>
     <body>
         <div id="imageContainer">
@@ -21,5 +32,6 @@
               <input type="button" onclick="updateConfig();" value="Save">
           </div>
         </div>
+        <div id="ffs" class="fs" onclick="fs()">XX</div>
     </body>
 </html>

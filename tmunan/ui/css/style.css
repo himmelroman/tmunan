@@ -45,3 +45,13 @@ body {
   margin: 10px;
   width: 200px;
 }
+
+
+.fs {
+  position: absolute;
+  top: 20px;
+  left:20px;
+  font-size: 30px;
+  color: white;
+  padding: 40px;
+}
