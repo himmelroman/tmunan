@@ -29,7 +29,7 @@ async def lifespan(fastapi_app: FastAPI):
     context.ws_manager = WebSocketConnectionManager()
 
     # Load LCM
-    context.lcm = LCM(txt2img_size='large')
+    context.lcm = LCM(txt2img_size='small')
     context.lcm.load()
 
     # FastAPI lifespan
@@ -155,7 +155,7 @@ def script(script: ImageSequenceScript, config: Instructions, background_tasks: 
 
 
 @app.post("/api/stop",)
-def script():
+def stop():
     sequencer.stop()
 
 

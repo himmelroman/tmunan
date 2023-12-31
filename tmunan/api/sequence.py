@@ -2,9 +2,10 @@ import uuid
 import asyncio
 from copy import deepcopy
 from pathlib import Path
+from typing import List
 
 from tmunan.api.context import context
-from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, Instructions
+from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, Instructions, SequencePrompt
 
 
 class Sequencer:
@@ -23,27 +24,17 @@ class Sequencer:
         self.stop_requested = False
 
         # start generating sequence
-        self.generate_image_sequence(seq, config, seq_id, parent_dir)
+        self.run_image_sequence(seq, config, seq_id, parent_dir)
 
     def start_script(self, script: ImageSequenceScript, config: Instructions, script_id):
 
         # inits flags
         self.stop_requested = False
 
-        # run until stopped
-        while not self.stop_requested:
+        # run script
+        self.run_script(script, config, script_id)
 
-            # get id
-            script_id = str(uuid.uuid4())[:8]
-
-            # run script
-            self.generate_script(script, config, script_id)
-
-            # stop, unless loop requested
-            if not script.loop:
-                break
-
-    def generate_image_sequence(self, seq: ImageSequence, config: Instructions, seq_id, parent_dir=None):
+    def run_image_sequence(self, seq: ImageSequence, config: Instructions, seq_id, parent_dir=None):
 
         # prepare dir
         seq_dir = f'{parent_dir if parent_dir else context.cache_dir}/seq_{seq_id}/'
@@ -105,38 +96,70 @@ class Sequencer:
                 })
             )
 
-    def generate_script(self, script: ImageSequenceScript, config: Instructions, script_id):
+    def run_script(self, script: ImageSequenceScript, config: Instructions, script_id):
 
         # prepare dir
         script_dir = f'{context.cache_dir}/script_{script_id}/'
         Path.mkdir(Path(script_dir), exist_ok=True, parents=True)
 
-        # iterate as many times as requested
-        for i, seq in enumerate(script.sequences):
+        # run until stopped
+        continuity_prompts = None
+        while not self.stop_requested:
 
-            # check if we should stop
-            if self.stop_requested:
+            # iterate as many times as requested
+            for i, seq in enumerate(script.sequences):
+
+                # check if we should stop
+                if self.stop_requested:
+                    break
+
+                # gen seq id
+                seq_id = str(uuid.uuid4())[:8]
+
+                # if we have continuity prompts from previous loop
+                if i == 0 and continuity_prompts:
+                    seq.prompts.extend(deepcopy(continuity_prompts))
+                    continuity_prompts = None
+
+                # if this is NOT the first sequence
+                if i > 0:
+
+                    # iterate prompts from previous sequence
+                    reversed_prompts = self.reverse_prompt_weights(script.sequences[i - 1].prompts)
+                    seq.prompts.extend(reversed_prompts)
+
+                # play sequence
+                self.run_image_sequence(seq, config, seq_id=seq_id, parent_dir=script_dir)
+
+            # stop, unless loop requested
+            if script.loop:
+
+                # generate new seed
+                config.seed = context.lcm.get_random_seed()
+
+                # take last sequence prompts to loop back into first sequence smoothly
+                continuity_prompts = self.reverse_prompt_weights(script.sequences[-1].prompts)
+
+            else:
                 break
 
-            # gen seq id
-            seq_id = str(uuid.uuid4())[:8]
+    @classmethod
+    def reverse_prompt_weights(cls, prompts: List[SequencePrompt]):
 
-            # if this is NOT the first sequence
-            if i > 0:
+        # new list
+        reversed_prompt_list = []
 
-                # iterate prompts from previous sequence
-                for p in script.sequences[i - 1].prompts:
+        for p in prompts:
 
-                    # reverse weight trajectories
-                    reversed_prompt = deepcopy(p)
-                    reversed_prompt.start_weight = reversed_prompt.end_weight
-                    reversed_prompt.end_weight = 0.0
+            # reverse weight trajectories
+            reversed_prompt = deepcopy(p)
+            reversed_prompt.start_weight = reversed_prompt.end_weight
+            reversed_prompt.end_weight = 0.0
 
-                    # add reversed prompt to new sequence
-                    seq.prompts.append(reversed_prompt)
+            # add reversed prompt to new sequence
+            reversed_prompt_list.append(reversed_prompt)
 
-            # play sequence
-            self.generate_image_sequence(seq, config, seq_id=seq_id, parent_dir=script_dir)
+        return reversed_prompt_list
 
     @classmethod
     def gen_seq_prompt(cls, prompts, prog: float):
@@ -150,6 +173,7 @@ class Sequencer:
 
         # build master prompt string
         return ', '.join(format_prompt(p.text, calc_weight(p)) for p in prompts)
+
 
 # create sequencer instance
 sequencer = Sequencer()
