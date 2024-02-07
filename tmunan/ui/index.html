@@ -3,6 +3,7 @@
     <head>
         <title>Tmunan - View</title>
         <link rel="stylesheet" href="css/style.css">
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
         <script src="scripts/transition.js"></script>
         <script src="scripts/websocket.js"></script>
         <script type="application/javascript">
@@ -16,9 +17,42 @@
 
             }
         </script>
+        <script type="application/javascript">
+            function playVideo(video_url) {
+
+                var video = document.getElementById('video');
+                if (Hls.isSupported()) {
+
+                    var hls = new Hls({
+                        debug: true,
+                    });
+
+                    hls.loadSource(video_url);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                        video.muted = true;
+                        video.play();
+                    });
+                }
+
+                // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
+                // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element through the `src` property.
+                // This is using the built-in support of the plain video element, without using hls.js.
+                else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = video_url;
+                    video.addEventListener('canplay', function () {
+                        video.play();
+                    });
+                }
+            }
+            window.onload = function () {
+                playVideo('http://localhost:8080/cache/hls/manifest.m3u8')
+            };
+        </script>
     </head>
     <body>
         <div id="imageContainer">
+            <video id="video" controls></video>
             <img id="curImage">
         </div>
         <div id="mySidenav" class="sidenav">
@@ -32,6 +66,6 @@
               <input type="button" onclick="updateConfig();" value="Save">
           </div>
         </div>
-        <div id="ffs" class="fs" onclick="fs()">XX</div>
+<!--        <div id="ffs" class="fs" onclick="fs()">XX</div>-->
     </body>
 </html>

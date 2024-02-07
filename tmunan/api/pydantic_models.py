@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel
 
 
-class Instructions(BaseModel):
+class ImageInstructions(BaseModel):
     height: int | None = 768
     width: int | None = 768
     num_inference_steps: int | None = 4

@@ -1,24 +1,32 @@
 import uuid
-import asyncio
-from copy import deepcopy
 from pathlib import Path
-from typing import List
+from copy import deepcopy
+from typing import List, Callable
 
-from tmunan.api.context import context
-from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, Instructions, SequencePrompt
+from tmunan.imagine.lcm import LCM
+from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
 
 
-class Sequencer:
+class ImageScript:
 
-    def __init__(self):
+    def __init__(self, lcm: LCM, cache_dir):
 
+        # context
+        self.cache_dir = cache_dir
+        self.lcm = lcm
+
+        # internal
         self.stop_requested = False
 
-    def stop(self):
+        # events
+        self.on_image_ready: Callable = None
+        self.on_sequence_finished: Callable = None
+        self.on_script_finished: Callable = None
 
+    def stop(self):
         self.stop_requested = True
 
-    def start_sequence(self, seq: ImageSequence, config: Instructions, seq_id, parent_dir=None):
+    def start_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
 
         # init stop flag
         self.stop_requested = False
@@ -26,7 +34,7 @@ class Sequencer:
         # start generating sequence
         self.run_image_sequence(seq, config, seq_id, parent_dir)
 
-    def start_script(self, script: ImageSequenceScript, config: Instructions, script_id):
+    def start_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
 
         # inits flags
         self.stop_requested = False
@@ -34,19 +42,15 @@ class Sequencer:
         # run script
         self.run_script(script, config, script_id)
 
-    def run_image_sequence(self, seq: ImageSequence, config: Instructions, seq_id, parent_dir=None):
+    def run_image_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
 
         # prepare dir
-        seq_dir = f'{parent_dir if parent_dir else context.cache_dir}/seq_{seq_id}/'
+        seq_dir = f'{parent_dir if parent_dir else self.cache_dir}/seq_{seq_id}/'
         Path.mkdir(Path(seq_dir), exist_ok=True, parents=True)
-
-        # set up event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         # verify seed
         if not config.seed:
-            config.seed = context.lcm.get_random_seed()
+            config.seed = self.lcm.get_random_seed()
 
         # iterate as many times as requested
         for i in range(0, seq.num_images):
@@ -60,7 +64,7 @@ class Sequencer:
             print(f'Generating image {i} with prompt: {prompt}')
 
             # gen image
-            images = context.lcm.txt2img(
+            images = self.lcm.txt2img(
                 prompt=prompt,
                 num_inference_steps=config.num_inference_steps,
                 guidance_scale=config.guidance_scale,
@@ -70,36 +74,33 @@ class Sequencer:
             )
 
             # save image to disk
-            image_path = f'{seq_dir}/{i}'
-            image_relative_path = str(Path(image_path).relative_to(Path(context.cache_dir)))
-            images[0].save(f'{image_path}.png')
+            image_id = f'{seq_dir}{i}'  # seq_dir already includes trailing slash
+            image_path = f'{image_id}.png'
+            image_relative_path = str(Path(image_id).relative_to(Path(self.cache_dir)))
+            images[0].save(f'{image_id}.png')
 
             # notify image ready
-            if context.ws_manager.active_connections:
-                loop.run_until_complete(
-                    context.ws_manager.broadcast({
+            if self.on_image_ready:
+                self.on_image_ready({
                         'event': 'IMAGE_READY',
                         'sequence_id': seq_id,
+                        'image_path': image_path,
                         'image_id': image_relative_path,
                         'prompt': prompt,
                         'seed': config.seed
                     })
-                )
 
         # notify sequence ended
-        if context.ws_manager.active_connections:
-
-            loop.run_until_complete(
-                context.ws_manager.broadcast({
+        if self.on_sequence_finished:
+            self.on_sequence_finished({
                     'event': 'SEQUENCE_FINISHED',
                     'sequence_id': seq_id
                 })
-            )
 
-    def run_script(self, script: ImageSequenceScript, config: Instructions, script_id):
+    def run_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
 
         # prepare dir
-        script_dir = f'{context.cache_dir}/script_{script_id}/'
+        script_dir = f'{self.cache_dir}/script_{script_id}/'
         Path.mkdir(Path(script_dir), exist_ok=True, parents=True)
 
         # run until stopped
@@ -131,14 +132,14 @@ class Sequencer:
                     reversed_prompts = self.reverse_prompt_weights(script.sequences[i - 1].prompts)
                     effective_seq.prompts.extend(reversed_prompts)
 
-                # play sequence
+                # pack sequence
                 self.run_image_sequence(effective_seq, config, seq_id=seq_id, parent_dir=script_dir)
 
             # stop, unless loop requested
             if script.loop:
 
                 # generate new seed
-                config.seed = context.lcm.get_random_seed()
+                config.seed = self.lcm.get_random_seed()
 
                 # take last sequence prompts to loop back into first sequence smoothly
                 continuity_prompts = self.reverse_prompt_weights(script.sequences[-1].prompts)
@@ -176,7 +177,3 @@ class Sequencer:
 
         # build master prompt string
         return ', '.join(format_prompt(p.text, calc_weight(p)) for p in prompts)
-
-
-# create sequencer instance
-sequencer = Sequencer()
