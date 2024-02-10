@@ -57,11 +57,13 @@ class LCM:
         if self.txt2img_size:
             self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
                 self.model_map[self.txt2img_size]['model'],
+                local_files_only=True,
                 torch_dtype=torch.float16).to(self.device)
             self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
             # load and fuse lcm lora
-            self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'])
+            self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
+                                                weight_name='pytorch_lora_weights.safetensors')
             self.txt2img_pipe.fuse_lora()
 
             # init prompt generator

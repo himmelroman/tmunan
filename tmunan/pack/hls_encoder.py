@@ -1,12 +1,14 @@
 import enum
 import time
-from queue import Empty
+from queue import Queue
 
 import numpy as np
 from typing import Any
 from pathlib import Path
 
 import ffmpeg
+
+from tmunan.pack.utils import duplicate_frames
 
 
 class HLSPresets(enum.Enum):
@@ -69,7 +71,7 @@ class HLSEncoder:
             "pix_fmt": "yuv420p",
             "hls_time": 1,
             "hls_list_size": 2 * 60 / 2,  # 10 minutes keep
-            "hls_flags": "independent_segments+split_by_time",  # "delete_segments",  # remove outdated segments from disk
+            "hls_flags": "independent_segments",    # "split_by_time",  # "delete_segments",  # remove outdated segments from disk
             "flush_packets": 1,
             **preset.value,
             **hls_kwargs,
@@ -79,6 +81,7 @@ class HLSEncoder:
     def __enter__(self) -> "HLSEncoder":
         self.proc = (
             ffmpeg.input("pipe:", **self.inp_settings)
+            .filter("fade", d=1, t="in", alpha=1)
             .output(str(self.out_path), **self.enc_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)
@@ -87,6 +90,7 @@ class HLSEncoder:
 
     def __exit__(self, type, value, traceback):
         self.proc.stdin.close()
+        self.proc.wait()
         self.proc = None
 
     def __call__(self, rgb24: np.ndarray[np.uint8, Any]):
@@ -98,35 +102,59 @@ class HLSEncoder:
             print('HLS Encoder: Putting None')
             self.frame_queue.put(None)
 
-    def run(self, frame_queue):
+    def run(self, frame_queue: Queue):
 
         print(f'Running: {self.fps=}')
 
-        # save
+        # save input queue
         self.frame_queue = frame_queue
 
         # context
         with self:
 
             # loop
-            while True:
+            end_reached = False
+            last_frame = None
+            while not end_reached:
 
-                try:
-                    # get next image
-                    img = frame_queue.get(timeout=1)
-                    print(f'HLS Encoder: Got image from queue')
+                # let images aggregate
+                time.sleep(1)
 
-                    # push to ffmpeg
-                    if img is None:
-                        print('Breaking')
-                        break
+                # get all frames from queue
+                input_frames = self.get_all(frame_queue)
+                # print(f'HLS: Got {len(input_frames)} frames from queue')
 
-                    print('HLS Encoder: Pushing image into ffmpeg')
-                    for _ in range(self.fps):
-                        self(img)
+                # reuse last frame if no new frames arrived
+                if len(input_frames) == 0 and last_frame is not None:
+                    input_frames = [last_frame]
 
-                except Empty:
-                    print('HLS Encoder: Queue is empty...')
-                    continue
+                # check if we have any input to push
+                if len(input_frames) > 0:
 
-        print('HLS Existing')
+                    # check if death-pill received
+                    if input_frames[-1] is None:
+
+                        # mark
+                        end_reached = True
+
+                        # take all real frames for last round
+                        if len(input_frames) > 1:
+                            input_frames = input_frames[:-1]
+
+                    filled_frames = duplicate_frames(input_frames, target_fps=self.fps)
+                    # print(f'HLS: Got {len(filled_frames)} after interpolation')
+
+                    # push frames to ffmpeg
+                    for frame in filled_frames:
+                        self(frame)
+                        last_frame = frame
+
+        print('HLS Exiting')
+
+    @staticmethod
+    def get_all(queue):
+        all_items = []
+        while not queue.empty():
+            all_items.append(queue.get_nowait())
+
+        return all_items

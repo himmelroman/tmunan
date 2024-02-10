@@ -4,17 +4,16 @@
         <title>Tmunan - View</title>
         <link rel="stylesheet" href="css/style.css">
         <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-        <script src="scripts/transition.js"></script>
+<!--        <script src="scripts/transition.js"></script>-->
         <script src="scripts/websocket.js"></script>
         <script type="application/javascript">
             function fs(){
-                document.getElementById("ffs").style.visibility = "hidden"
+                // document.getElementById("ffs").style.visibility = "hidden"
                 try {
                     document.documentElement.requestFullscreen()
                 } catch(e){
                     console.log(e)
                 }
-
             }
         </script>
         <script type="application/javascript">
@@ -53,17 +52,13 @@
     <body>
         <div id="imageContainer">
             <video id="video" controls></video>
-            <img id="curImage">
         </div>
         <div id="mySidenav" class="sidenav">
           <div id="config">
-              <label for="config_api_address">Address:</label><br>
+              <label for="config_api_address">API Address:</label><br>
               <input id="config_api_address" /><br>
-              <label for="config_animation_speed">Animation Speed:</label><br>
-              <input id="config_animation_speed" /><br>
-              <label for="config_transition_interval">Transition Interval:</label><br>
-              <input id="config_transition_interval" /><br>
-              <input type="button" onclick="updateConfig();" value="Save">
+              <input type="button" onclick="updateConfig();" value="Save"><br>
+              <input type="button" onclick="fs();" value="Fullscreen">
           </div>
         </div>
 <!--        <div id="ffs" class="fs" onclick="fs()">XX</div>-->

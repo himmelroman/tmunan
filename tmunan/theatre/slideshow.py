@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from queue import Queue
 
@@ -59,9 +60,9 @@ class Slideshow(Performance):
         # self.image_script_task.on_sequence_finished = self.broadcast_message
 
         # start HLS encoder
-        if (Path(self.cache_dir) / 'hls').exists():
-            (Path(self.cache_dir) / 'hls').rmdir()
-        self.hls_encoder = HLSEncoderProcess(Path(self.cache_dir) / 'hls' / 'manifest.m3u8', img_config.height, img_config.width, 12)
+        if (Path(seq_dir) / 'hls').exists():
+            shutil.rmtree(str(Path(seq_dir) / 'hls'))
+        self.hls_encoder = HLSEncoderProcess(Path(seq_dir) / 'hls' / 'manifest.m3u8', img_config.height, img_config.width, 12)
         self.hls_encoder.start()
 
         # run

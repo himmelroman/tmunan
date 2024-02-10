@@ -144,18 +144,19 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 
 
 @app.post("/api/sequence",)
-def sequence(seq: ImageSequence, config: ImageInstructions, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
+def sequence(seq: ImageSequence, config: ImageInstructions,
+             request: Request, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
 
     # gen id
     seq_id = str(uuid.uuid4())[:8]
-    seq_dir = Path(app.context.cache_dir) / seq_id
+    # seq_dir = Path(app.context.cache_dir) / f'seq_{seq_id}'
 
     # start slideshow generation task
     slideshow = create_performance(PerformanceType.Slideshow, app)
     background_tasks.add_task(slideshow.run, seq, config, seq_id)
 
     # return file
-    return {'sequence_id': seq_id}
+    return {'sequence_id': seq_id, 'hls_uri': request.base_url.replace(path=f'cache/seq_{seq_id}/hls/manifest.m3u8')}
 
 
 # @app.post("/api/script",)
