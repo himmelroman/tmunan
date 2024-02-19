@@ -2,6 +2,7 @@ import os
 import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
+from typing import List
 
 from fastapi import FastAPI, BackgroundTasks, WebSocket, Request
 from fastapi.responses import FileResponse
@@ -40,10 +41,10 @@ async def lifespan(fastapi_app: FastAPI):
     # load things once
     pass
 
-    # FastAPI lifespan
+    # FastAPI app lifespan
     yield
 
-    # Clean up the ML models and release the resources
+    # Clean up and release resources
     pass
 
 
@@ -156,7 +157,10 @@ def sequence(seq: ImageSequence, config: ImageInstructions,
     background_tasks.add_task(slideshow.run, seq, config, seq_id)
 
     # return file
-    return {'sequence_id': seq_id, 'hls_uri': request.base_url.replace(path=f'cache/seq_{seq_id}/hls/manifest.m3u8')}
+    return {
+        'sequence_id': seq_id,
+        'hls_uri': request.base_url.replace(path=f'ui/index.html?sequence_id={seq_id}')
+    }
 
 
 # @app.post("/api/script",)
@@ -176,20 +180,52 @@ def sequence(seq: ImageSequence, config: ImageInstructions,
 # def stop():
 #     sequencer.stop()
 #
+audio_chunks: List[bytes] = []
+
 
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    global audio_chunks
 
     # wait for connection
     await app.ws_manager.connect(websocket)
 
     try:
-        # dummy handler for incoming messages
         while True:
-            await websocket.receive_json()
+            data = await websocket.receive()
+            audio_chunks.append(data)
+
+            # Check if 5 seconds of audio are accumulated
+            if len(audio_chunks) * 1 >= 5:  # Assuming each chunk is 0.1 seconds
+                # Process accumulated audio here (e.g., call a custom function)
+                # process_accumulated_audio(audio_chunks)
+                print(audio_chunks)
+                audio_chunks = []  # Clear buffer for next 5 seconds
+
+            # send event to frontend (optional)
+            await websocket.send_json({'msg': "5 seconds audio received!"})
 
     except WebSocketDisconnect:
         app.ws_manager.disconnect(websocket)
+
+#
+# async def process_audio(websocket: WebSocket):
+#     global audio_chunks
+#
+#     # Receive audio chunks continuously
+#     await websocket.accept()
+#     while True:
+#         data = await websocket.recv()
+#         audio_chunks.append(data)
+#
+#         # Check if 5 seconds of audio are accumulated
+#         if len(audio_chunks) * 0.1 >= 5:  # Assuming each chunk is 0.1 seconds
+#             # Process accumulated audio here (e.g., call a custom function)
+#             process_accumulated_audio(audio_chunks)
+#             audio_chunks = []  # Clear buffer for next 5 seconds
+#
+#         # Send event to frontend (optional)
+#         await websocket.send_text("5 seconds audio received!")
 
 
 if __name__ == "__main__":

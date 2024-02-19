@@ -81,7 +81,7 @@ class HLSEncoder:
     def __enter__(self) -> "HLSEncoder":
         self.proc = (
             ffmpeg.input("pipe:", **self.inp_settings)
-            .filter("fade", d=1, t="in", alpha=1)
+            # .filter("fade", d=1, t="in", alpha=1)
             .output(str(self.out_path), **self.enc_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)

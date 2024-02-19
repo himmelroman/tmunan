@@ -4,8 +4,9 @@
         <title>Tmunan - View</title>
         <link rel="stylesheet" href="css/style.css">
         <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-<!--        <script src="scripts/transition.js"></script>-->
-        <script src="scripts/websocket.js"></script>
+        <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>
+        <script src="scripts/video.js"></script>
+        <script src="scripts/audio.js"></script>
         <script type="application/javascript">
             function fs(){
                 // document.getElementById("ffs").style.visibility = "hidden"
@@ -17,35 +18,37 @@
             }
         </script>
         <script type="application/javascript">
-            function playVideo(video_url) {
+            function initVideo() {
 
-                var video = document.getElementById('video');
-                if (Hls.isSupported()) {
+                // Verify sequence-id param
+                const baseUrl = new URL(window.location.href);
+                if (baseUrl.searchParams.has("sequence_id")) {
 
-                    var hls = new Hls({
-                        debug: true,
-                    });
+                    // build HLS url
+                    const seqId = baseUrl.searchParams.get("sequence_id");
+                    const hlsUrl = new URL(`/cache/seq_${seqId}/hls/manifest.m3u8`, baseUrl);
+                    console.log(`HLS Url: ${hlsUrl}`)
 
-                    hls.loadSource(video_url);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-                        video.muted = true;
-                        video.play();
-                    });
-                }
+                    // get video element
+                    const video_element = document.getElementById('video')
 
-                // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
-                // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element through the `src` property.
-                // This is using the built-in support of the plain video element, without using hls.js.
-                else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = video_url;
-                    video.addEventListener('canplay', function () {
-                        video.play();
-                    });
+                    // init HLS player
+                    playVideo(video_element, hlsUrl.toString())
                 }
             }
+            function initAudio() {
+
+                // build websocket url
+                const baseUrl = new URL(window.location.href);
+                const wsUrl = new URL(`/api/ws`, baseUrl);
+                wsUrl.protocol = "ws"
+
+                // init audio sending via websocket
+                sendAudio(wsUrl.toString())
+            }
             window.onload = function () {
-                playVideo('http://localhost:8080/cache/hls/manifest.m3u8')
+                initVideo();
+                initAudio();
             };
         </script>
     </head>
