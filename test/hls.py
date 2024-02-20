@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from diffusers.utils import load_image
 
-from tmunan.pack.hls_worker_process import HLSEncoderProcess
+from tmunan.display.hls_worker_process import HLSEncoderProcess
 
 #
 # def wait_and_stop():

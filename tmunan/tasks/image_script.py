@@ -15,6 +15,9 @@ class ImageScript:
         self.cache_dir = cache_dir
         self.lcm = lcm
 
+        # dynamic text
+        self.dynamic_text = None
+
         # internal
         self.stop_requested = False
 
@@ -59,8 +62,17 @@ class ImageScript:
             if self.stop_requested:
                 break
 
+            # generate dynamic text prompt
+            effective_prompts = seq.prompts
+            if self.dynamic_text:
+                txt = self.dynamic_text
+                self.dynamic_text = None
+
+                # gen prompt
+                effective_prompts.append(SequencePrompt(text=txt, start_weight=0.6, end_weight=0.6))
+
             # gen prompt for current sequence progress
-            prompt = self.gen_seq_prompt(seq.prompts, (i / seq.num_images * 100))
+            prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
             print(f'Generating image {i} with prompt: {prompt}')
 
             # gen image
@@ -132,7 +144,7 @@ class ImageScript:
                     reversed_prompts = self.reverse_prompt_weights(script.sequences[i - 1].prompts)
                     effective_seq.prompts.extend(reversed_prompts)
 
-                # pack sequence
+                # display sequence
                 self.run_image_sequence(effective_seq, config, seq_id=seq_id, parent_dir=script_dir)
 
             # stop, unless loop requested

@@ -1,5 +1,7 @@
 import os
 import uuid
+from enum import Enum
+from multiprocessing import freeze_support
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List
@@ -16,10 +18,9 @@ from starlette.middleware.cors import CORSMiddleware
 
 # import gradio as gr
 
+from tmunan.theatre.workers import AppWorkers
 from tmunan.api.websocket import WebSocketConnectionManager
 from tmunan.api.pydantic_models import ImageInstructions, ImageSequence
-
-from tmunan.imagine.lcm import load_image, make_image_grid
 from tmunan.theatre.performance_factory import create_performance, PerformanceType
 
 
@@ -38,7 +39,9 @@ class AppSettings(BaseSettings):
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
 
-    # load things once
+    # pre-start global workers
+    fastapi_app.workers.init_imagine()
+    fastapi_app.workers.init_listen()
     pass
 
     # FastAPI app lifespan
@@ -65,6 +68,7 @@ app = FastAPI(middleware=middleware, lifespan=lifespan)
 # App components
 app.ws_manager = WebSocketConnectionManager()
 app.context = AppSettings()
+app.workers = AppWorkers()
 
 # Static mounts
 app.mount("/ui", StaticFiles(directory=Path(os.path.realpath(__file__)).parent.with_name('ui'), html=True), name="ui")
@@ -145,16 +149,19 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 
 
 @app.post("/api/sequence",)
-def sequence(seq: ImageSequence, config: ImageInstructions,
+def sequence(seq: ImageSequence, img_config: ImageInstructions,
              request: Request, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
 
     # gen id
     seq_id = str(uuid.uuid4())[:8]
-    # seq_dir = Path(app.context.cache_dir) / f'seq_{seq_id}'
+    seq_dir = Path(app.context.cache_dir) / f'seq_{seq_id}'
+
+    # init
+    app.workers.init_display(seq_dir, img_config.height, img_config.width, fps=12)
 
     # start slideshow generation task
     slideshow = create_performance(PerformanceType.Slideshow, app)
-    background_tasks.add_task(slideshow.run, seq, config, seq_id)
+    background_tasks.add_task(slideshow.run, seq, img_config, seq_id)
 
     # return file
     return {
@@ -197,35 +204,21 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # Check if 5 seconds of audio are accumulated
             if len(audio_chunks) * 1 >= 5:  # Assuming each chunk is 0.1 seconds
-                # Process accumulated audio here (e.g., call a custom function)
-                # process_accumulated_audio(audio_chunks)
-                print(audio_chunks)
+                audio_sample = b''
+                for msg in audio_chunks:
+                    if 'bytes' in msg:
+                        audio_sample += msg['bytes']
+                    else:
+                        print(f'Strange msg: {msg}')
+
+                app.workers.listen.push_input(audio_sample)
                 audio_chunks = []  # Clear buffer for next 5 seconds
 
             # send event to frontend (optional)
-            await websocket.send_json({'msg': "5 seconds audio received!"})
+            # await websocket.send_json({'msg': "5 seconds audio received!"})
 
     except WebSocketDisconnect:
         app.ws_manager.disconnect(websocket)
-
-#
-# async def process_audio(websocket: WebSocket):
-#     global audio_chunks
-#
-#     # Receive audio chunks continuously
-#     await websocket.accept()
-#     while True:
-#         data = await websocket.recv()
-#         audio_chunks.append(data)
-#
-#         # Check if 5 seconds of audio are accumulated
-#         if len(audio_chunks) * 0.1 >= 5:  # Assuming each chunk is 0.1 seconds
-#             # Process accumulated audio here (e.g., call a custom function)
-#             process_accumulated_audio(audio_chunks)
-#             audio_chunks = []  # Clear buffer for next 5 seconds
-#
-#         # Send event to frontend (optional)
-#         await websocket.send_text("5 seconds audio received!")
 
 
 if __name__ == "__main__":

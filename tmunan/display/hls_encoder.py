@@ -8,7 +8,7 @@ from pathlib import Path
 
 import ffmpeg
 
-from tmunan.pack.utils import duplicate_frames
+from tmunan.display.utils import duplicate_frames
 
 
 class HLSPresets(enum.Enum):

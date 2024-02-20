@@ -1,6 +1,6 @@
 import multiprocessing
 
-from tmunan.pack.hls_encoder import HLSEncoder
+from tmunan.display.hls_encoder import HLSEncoder
 
 
 class HLSEncoderProcess:
