@@ -1,5 +1,6 @@
 import re
 
+import nltk
 from nltk import pos_tag
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -10,6 +11,9 @@ class TextBuffer:
     def __init__(self):
         self.text = ""
         self.phrases = []
+
+        nltk.download('stopwords')
+        nltk.download('averaged_perceptron_tagger')
 
     def push_text(self, text):
         """
