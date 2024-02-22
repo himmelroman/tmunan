@@ -1,6 +1,6 @@
 from tmunan.common.exec import BackgroundExecutor
 from tmunan.listen.text_buffer import TextBuffer
-from tmunan.listen.distil_whisper.whisper_worker_process import WhisperBackgroundTask
+from tmunan.listen.distil_whisper.whisper_bg_task import WhisperBackgroundTask
 
 
 class ASR:
@@ -8,7 +8,7 @@ class ASR:
     def __init__(self):
         self.audio_buffer = []
         self.text_buffer = TextBuffer()
-        self.asr_executor = BackgroundExecutor(WhisperBackgroundTask, model_id='distil-medium')
+        self.asr_executor = BackgroundExecutor(WhisperBackgroundTask, model_id='distil-large')
 
     def start(self):
 

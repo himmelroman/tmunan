@@ -60,7 +60,7 @@ class TextBuffer:
 
         # You can use regular expressions to remove special characters
         cleaned_text = re.sub(r"[^\w\s]", "", lower_text)
-        stop_words = set(stopwords.words("english") + ['okay', 'uh'])
+        stop_words = set(stopwords.words("english") + ['okay', 'uh', 'hmm', 'oh'])
         return " ".join([word for word in cleaned_text.split() if word not in stop_words])
 
     def extract_sequences(self, tagged_words):

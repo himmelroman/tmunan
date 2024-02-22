@@ -6,6 +6,9 @@ class DistilWhisper:
 
     model_map = {
         'distil-medium': {
+            'model': "distil-whisper/distil-medium",
+        },
+        'distil-large': {
             'model': "distil-whisper/distil-large-v2",
         }
     }

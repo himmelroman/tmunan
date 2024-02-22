@@ -1,11 +1,9 @@
 from enum import Enum
 
-from tmunan.common.exec import BackgroundExecutor
-
-from tmunan.imagine.lcm import LCM
+from tmunan.imagine.sd_lcm.lcm import LCM
 from tmunan.display.hls_worker_process import HLSEncoderProcess
+from tmunan.imagine.txt2img import Txt2Img
 from tmunan.listen.asr import ASR
-from tmunan.listen.distil_whisper.whisper_worker_process import WhisperBackgroundTask
 
 
 class AppWorkers:
@@ -23,8 +21,8 @@ class AppWorkers:
 
     def init_imagine(self, model_size='large'):
         if not self.imagine:
-            self.imagine = LCM(txt2img_size=model_size)
-            self.imagine.load()
+            self.imagine = Txt2Img(model_id=model_size)
+            self.imagine.start()
 
     def init_listen(self):
         if not self.listen:

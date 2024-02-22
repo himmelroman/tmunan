@@ -1,4 +1,4 @@
-from tmunan.imagine.lcm import LCM
+from tmunan.imagine.sd_lcm.lcm import LCM
 
 # build image path
 WORK_DIR = f'/tmp/lcm_sequence_test/'

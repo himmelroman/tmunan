@@ -1,10 +1,9 @@
 import numpy as np
-from queue import Queue
 
 from tmunan.theatre.performance import Performance
 from tmunan.tasks.image_script import ImageScript
 
-from tmunan.imagine.lcm import load_image
+from tmunan.imagine.sd_lcm.lcm import load_image
 from tmunan.api.pydantic_models import ImageSequence, ImageInstructions
 
 
@@ -25,17 +24,10 @@ class Slideshow(Performance):
         self.img_seq = None
         self.img_config = None
 
-        # Image management
-        self.image_map = dict()
-        self.image_queue = Queue()
-
         # Task
         self.image_script_task = ImageScript(self.imagine, self.listen, self.cache_dir)
 
     def display_image(self, image_info):
-
-        # register image into map
-        self.image_map[image_info['image_id']] = image_info
 
         # put on queue
         image = load_image(image_info['image_path'])

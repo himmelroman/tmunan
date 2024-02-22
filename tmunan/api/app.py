@@ -3,7 +3,6 @@ import uuid
 
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import List
 
 from fastapi import FastAPI, BackgroundTasks, WebSocket, Request
 from fastapi.responses import FileResponse
@@ -95,7 +94,7 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #
 #     # generate image
 #     print(f'Generating image with prompt: {prompt}')
-#     images = context.lcm.txt2img(
+#     images = context.sd_lcm.txt2img(
 #         prompt=prompt,
 #         num_inference_steps=config.num_inference_steps,
 #         guidance_scale=config.guidance_scale,
@@ -120,7 +119,7 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #     image_url = f'{context.cache_dir}/{image_id}.png'
 #
 #     # generate image
-#     images = context.lcm.img2img(
+#     images = context.sd_lcm.img2img(
 #         image_url=image_url,
 #         prompt=prompt,
 #         num_inference_steps=config.num_inference_steps,

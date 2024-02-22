@@ -1,24 +1,31 @@
 import uuid
+import datetime
+import threading
 from pathlib import Path
 from copy import deepcopy
 from typing import List, Callable
 
 from tmunan.listen.asr import ASR
-from tmunan.imagine.lcm import LCM
+from tmunan.imagine.txt2img import Txt2Img
 from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
 
 
 class ImageScript:
 
-    def __init__(self, lcm: LCM, asr: ASR, cache_dir):
+    def __init__(self, txt2img: Txt2Img, asr: ASR, cache_dir):
 
-        # context
-        self.lcm = lcm
-        self.asr = asr
+        # env
         self.cache_dir = cache_dir
+        self.seq_dir = None
+
+        # generators
+        self.asr = asr
+        self.txt2img = txt2img
+        self.txt2img.on_image_ready += self.process_ready_image
 
         # internal
         self.stop_requested = False
+        self.sync_event = threading.Event()
 
         # events
         self.on_image_ready: Callable = None
@@ -27,32 +34,32 @@ class ImageScript:
 
     def stop(self):
         self.stop_requested = True
-
-    def start_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
-
-        # init stop flag
-        self.stop_requested = False
-
-        # start generating sequence
-        self.run_image_sequence(seq, config, seq_id, parent_dir)
-
-    def start_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
-
-        # inits flags
-        self.stop_requested = False
-
-        # run script
-        self.run_script(script, config, script_id)
+    #
+    # def start_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
+    #
+    #     # init stop flag
+    #     self.stop_requested = False
+    #
+    #     # start generating sequence
+    #     self.run_image_sequence(seq, config, seq_id, parent_dir)
+    #
+    # def start_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
+    #
+    #     # inits flags
+    #     self.stop_requested = False
+    #
+    #     # run script
+    #     self.run_script(script, config, script_id)
 
     def run_image_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
 
         # prepare dir
-        seq_dir = f'{parent_dir if parent_dir else self.cache_dir}/seq_{seq_id}/'
-        Path.mkdir(Path(seq_dir), exist_ok=True, parents=True)
+        self.seq_dir = Path(f'{parent_dir if parent_dir else self.cache_dir}/seq_{seq_id}/')
+        Path.mkdir(Path(self.seq_dir), exist_ok=True, parents=True)
 
         # verify seed
         if not config.seed:
-            config.seed = self.lcm.get_random_seed()
+            config.seed = self.txt2img.get_random_seed()
 
         # iterate as many times as requested
         for i in range(0, seq.num_images):
@@ -73,7 +80,8 @@ class ImageScript:
             print(f'Generating image {i} with prompt: {prompt}')
 
             # gen image
-            images = self.lcm.txt2img(
+            self.sync_event.clear()
+            self.txt2img.txt2img(
                 prompt=prompt,
                 num_inference_steps=config.num_inference_steps,
                 guidance_scale=config.guidance_scale,
@@ -82,29 +90,26 @@ class ImageScript:
                 randomize_seed=False
             )
 
-            # save image to disk
-            image_id = f'{seq_dir}{i}'  # seq_dir already includes trailing slash
-            image_path = f'{image_id}.png'
-            image_relative_path = str(Path(image_id).relative_to(Path(self.cache_dir)))
-            images[0].save(f'{image_id}.png')
+            # wait until image is ready
+            self.sync_event.wait()
 
-            # notify image ready
-            if self.on_image_ready:
-                self.on_image_ready({
-                        'event': 'IMAGE_READY',
-                        'sequence_id': seq_id,
-                        'image_path': image_path,
-                        'image_id': image_relative_path,
-                        'prompt': prompt,
-                        'seed': config.seed
-                    })
+    def process_ready_image(self, image):
 
-        # notify sequence ended
-        if self.on_sequence_finished:
-            self.on_sequence_finished({
-                    'event': 'SEQUENCE_FINISHED',
-                    'sequence_id': seq_id
-                })
+        # release sync event
+        self.sync_event.set()
+
+        # generate timestamp
+        now_ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+
+        # save image to disk
+        image_path = self.seq_dir / f'{now_ts}.png'
+        image.save(str(image_path))
+
+        # notify image ready
+        if self.on_image_ready:
+            self.on_image_ready({
+                'image_path': str(image_path)
+            })
 
     def run_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
 
@@ -148,7 +153,7 @@ class ImageScript:
             if script.loop:
 
                 # generate new seed
-                config.seed = self.lcm.get_random_seed()
+                config.seed = self.txt2img.get_random_seed()
 
                 # take last sequence prompts to loop back into first sequence smoothly
                 continuity_prompts = self.reverse_prompt_weights(script.sequences[-1].prompts)

@@ -20,7 +20,6 @@ class LCM:
         },
         'large': {
             'model': "stabilityai/stable-diffusion-xl-base-1.0",
-            # 'model': "stabilityai/sdxl-turbo",
             'adapter': "latent-consistency/lcm-lora-sdxl"
         }
     }
@@ -61,7 +60,7 @@ class LCM:
                 torch_dtype=torch.float16).to(self.device)
             self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
-            # load and fuse lcm lora
+            # load and fuse sd_lcm lora
             self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
                                                 weight_name='pytorch_lora_weights.safetensors')
             self.txt2img_pipe.fuse_lora()

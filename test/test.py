@@ -33,7 +33,7 @@ if __name__ == '__main__':
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
 
     # load LCM-LoRA
-    pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
+    pipe.load_lora_weights("latent-consistency/sd_lcm-lora-sdv1-5")
     pipe.fuse_lora()
 
     # prepare image
