@@ -40,7 +40,7 @@ class Slideshow(Performance):
         self.img_config = img_config
 
         # subscribe to events
-        self.image_script_task.on_image_ready = self.display_image
+        self.image_script_task.on_image_ready += self.display_image
 
         # run
         self.image_script_task.run_image_sequence(self.img_seq, self.img_config, seq_id)
@@ -49,4 +49,4 @@ class Slideshow(Performance):
         self.app.workers.stop_display()
 
         # unsubscribe events
-        self.image_script_task.on_image_ready = None
+        self.image_script_task.on_image_ready -= self.display_image

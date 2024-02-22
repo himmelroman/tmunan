@@ -1,10 +1,11 @@
 import uuid
 import datetime
 import threading
+from typing import List
 from pathlib import Path
 from copy import deepcopy
-from typing import List, Callable
 
+from tmunan.common.event import Event
 from tmunan.listen.asr import ASR
 from tmunan.imagine.txt2img import Txt2Img
 from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
@@ -28,9 +29,7 @@ class ImageScript:
         self.sync_event = threading.Event()
 
         # events
-        self.on_image_ready: Callable = None
-        self.on_sequence_finished: Callable = None
-        self.on_script_finished: Callable = None
+        self.on_image_ready = Event()
 
     def stop(self):
         self.stop_requested = True
@@ -106,10 +105,9 @@ class ImageScript:
         image.save(str(image_path))
 
         # notify image ready
-        if self.on_image_ready:
-            self.on_image_ready({
-                'image_path': str(image_path)
-            })
+        self.on_image_ready.notify({
+            'image_path': str(image_path)
+        })
 
     def run_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
 
