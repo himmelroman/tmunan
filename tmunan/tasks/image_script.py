@@ -33,7 +33,7 @@ class ImageScript:
 
     def stop(self):
         self.stop_requested = True
-    #
+
     # def start_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
     #
     #     # init stop flag

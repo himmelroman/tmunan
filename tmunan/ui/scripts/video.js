@@ -30,12 +30,11 @@ function playVideo(video_element, video_url) {
         });
         hls.on(Hls.Events.MANIFEST_PARSED, function () {
             console.log('manifest parsed');
-            // console.log(currentStream.hls);
-            // playerRef.current?.play();
+            hls.current?.play();
         });
         hls.on(Hls.Events.ERROR, function (event, data) {
             console.log(event);
-            console.log(data);
+            // hls.loadSource(video_url);
         });
     }
 
