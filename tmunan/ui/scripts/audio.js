@@ -5,16 +5,15 @@ function sendAudio(ws_url) {
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
             console.log('Audio: Creating RecordRTC...');
-            const recorder = RecordRTC(stream, {
+            const recorder = new RecordRTC(stream, {
                 type: 'audio',
                 mimeType: 'audio/wav',
-                timeSlice: 1000, // Record in 1 second chunks
+                timeSlice: 5000,    // Record in X second chunks
                 recorderType: StereoAudioRecorder,
-                numberOfAudioChannels: 1,
-                sampleRate: 16000,
+                numberOfAudioChannels: 2,
                 desiredSampRate: 16000,
                 ondataavailable: event => {
-                    console.log(`Audio: Sending data!`);
+                    // console.log(`Audio: Sending data!`);
                     ws.send(event);
                 },
                 onStop: () => {

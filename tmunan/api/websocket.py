@@ -17,7 +17,10 @@ class WebSocketConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        try:
+            self.active_connections.remove(websocket)
+        except ValueError:
+            pass
 
     def sync_broadcast(self, message):
         asyncio.set_event_loop(self.loop)

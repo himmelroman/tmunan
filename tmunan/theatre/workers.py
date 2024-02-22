@@ -4,7 +4,8 @@ from tmunan.common.exec import BackgroundExecutor
 
 from tmunan.imagine.lcm import LCM
 from tmunan.display.hls_worker_process import HLSEncoderProcess
-from tmunan.listen.whisper_worker_process import WhisperBackgroundTask
+from tmunan.listen.asr import ASR
+from tmunan.listen.distil_whisper.whisper_worker_process import WhisperBackgroundTask
 
 
 class AppWorkers:
@@ -27,7 +28,7 @@ class AppWorkers:
 
     def init_listen(self):
         if not self.listen:
-            self.listen = BackgroundExecutor(WhisperBackgroundTask, model_id='distil-medium')
+            self.listen = ASR()
             self.listen.start()
 
     def init_display(self, output_dir, image_height, image_width, fps=12):

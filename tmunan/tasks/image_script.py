@@ -3,20 +3,19 @@ from pathlib import Path
 from copy import deepcopy
 from typing import List, Callable
 
+from tmunan.listen.asr import ASR
 from tmunan.imagine.lcm import LCM
 from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
 
 
 class ImageScript:
 
-    def __init__(self, lcm: LCM, cache_dir):
+    def __init__(self, lcm: LCM, asr: ASR, cache_dir):
 
         # context
-        self.cache_dir = cache_dir
         self.lcm = lcm
-
-        # dynamic text
-        self.dynamic_text = None
+        self.asr = asr
+        self.cache_dir = cache_dir
 
         # internal
         self.stop_requested = False
@@ -64,12 +63,10 @@ class ImageScript:
 
             # generate dynamic text prompt
             effective_prompts = seq.prompts
-            if self.dynamic_text:
-                txt = self.dynamic_text
-                self.dynamic_text = None
-
-                # gen prompt
-                effective_prompts.append(SequencePrompt(text=txt, start_weight=0.6, end_weight=0.6))
+            recognized_phrase_list = self.asr.consume_text()
+            if recognized_phrase_list:
+                for phrase in recognized_phrase_list:
+                    effective_prompts.append(SequencePrompt(text=phrase, start_weight=1.2, end_weight=1.2))
 
             # gen prompt for current sequence progress
             prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))

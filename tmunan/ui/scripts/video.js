@@ -1,10 +1,25 @@
 function playVideo(video_element, video_url) {
 
-    // var video = document.getElementById('video');
     if (Hls.isSupported()) {
 
         let hls = new Hls({
             debug: true,
+            manifestLoadPolicy: {
+              default: {
+                maxTimeToFirstByteMs: Infinity,
+                maxLoadTimeMs: 10000,
+                timeoutRetry: {
+                  maxNumRetry: 60,
+                  retryDelayMs: 1000,
+                  maxRetryDelayMs: 1000,
+                },
+                errorRetry: {
+                  maxNumRetry: 60,
+                  retryDelayMs: 1000,
+                  maxRetryDelayMs: 1000,
+                },
+              },
+            },
         });
 
         hls.loadSource(video_url);
@@ -12,6 +27,15 @@ function playVideo(video_element, video_url) {
         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
             video_element.muted = true;
             video_element.play();
+        });
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            console.log('manifest parsed');
+            // console.log(currentStream.hls);
+            // playerRef.current?.play();
+        });
+        hls.on(Hls.Events.ERROR, function (event, data) {
+            console.log(event);
+            console.log(data);
         });
     }
 

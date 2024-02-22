@@ -1,4 +1,4 @@
-from tmunan.listen.TranscriptServer import TmunanTranscriptionServer
+from tmunan.listen.whisper_live.TranscriptServer import TmunanTranscriptionServer
 
 if __name__ == '__main__':
     server = TmunanTranscriptionServer()

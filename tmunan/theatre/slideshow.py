@@ -30,7 +30,7 @@ class Slideshow(Performance):
         self.image_queue = Queue()
 
         # Task
-        self.image_script_task = ImageScript(self.imagine, self.cache_dir)
+        self.image_script_task = ImageScript(self.imagine, self.listen, self.cache_dir)
 
     def display_image(self, image_info):
 
@@ -39,12 +39,7 @@ class Slideshow(Performance):
 
         # put on queue
         image = load_image(image_info['image_path'])
-        print('Pushing image to encoder')
         self.display.push_input(np.array(image, dtype=np.uint8))
-
-    def process_speech(self, text):
-        print(f'Speech: {text}')
-        self.image_script_task.dynamic_text = text
 
     def run(self, img_seq: ImageSequence, img_config: ImageInstructions, seq_id: str):
 
@@ -54,7 +49,6 @@ class Slideshow(Performance):
 
         # subscribe to events
         self.image_script_task.on_image_ready = self.display_image
-        self.listen.on_output_ready += self.process_speech
 
         # run
         self.image_script_task.run_image_sequence(self.img_seq, self.img_config, seq_id)
@@ -64,4 +58,3 @@ class Slideshow(Performance):
 
         # unsubscribe events
         self.image_script_task.on_image_ready = None
-        self.listen.on_output_ready -= self.process_speech

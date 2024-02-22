@@ -1,6 +1,6 @@
 import time
 
-from tmunan.listen.TranscriptClient import TranscriptClient
+from tmunan.listen.whisper_live.TranscriptClient import TranscriptClient
 
 
 sentences = []

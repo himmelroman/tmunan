@@ -6,7 +6,7 @@ class DistilWhisper:
 
     model_map = {
         'distil-medium': {
-            'model': "distil-whisper/distil-medium.en",
+            'model': "distil-whisper/distil-large-v2",
         }
     }
 
@@ -33,15 +33,14 @@ class DistilWhisper:
 
     def load(self):
 
-        print(f'Creating Whisper model: {self.model_id} - {self.model_map[self.model_id]["model"]}')
-
         # load model
         model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            self.model_map[self.model_id]['model'], torch_dtype=torch.float16, low_cpu_mem_usage=True, use_safetensors=True
+            self.model_map[self.model_id]['model'],
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True,
+            use_safetensors=True
         )
         model.to(self.device)
-
-        print(f'Creating Whisper pipeline: {model}')
 
         # load pipeline
         processor = AutoProcessor.from_pretrained(self.model_map[self.model_id]['model'])

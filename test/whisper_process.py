@@ -5,7 +5,7 @@ import numpy as np
 from scipy.io import wavfile
 
 from tmunan.common.exec import BackgroundExecutor
-from tmunan.listen.whisper_worker_process import WhisperBackgroundTask
+from tmunan.listen.distil_whisper.whisper_worker_process import WhisperBackgroundTask
 
 if __name__ == '__main__':
 

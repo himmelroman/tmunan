@@ -13,6 +13,7 @@ accelerate
 peft
 numpy~=1.26.2
 compel~=2.0.2
+nltk
 
 # media
 ffmpeg-python==0.2.0

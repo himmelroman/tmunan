@@ -1,7 +1,6 @@
 import os
 import uuid
-from enum import Enum
-from multiprocessing import freeze_support
+
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List
@@ -187,40 +186,32 @@ def sequence(seq: ImageSequence, img_config: ImageInstructions,
 # def stop():
 #     sequencer.stop()
 #
-audio_chunks: List[bytes] = []
 
 
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global audio_chunks
 
     # wait for connection
     await app.ws_manager.connect(websocket)
 
     try:
         while True:
+
+            # get WS message
             data = await websocket.receive()
-            audio_chunks.append(data)
+            if 'bytes' in data:
 
-            # Check if 5 seconds of audio are accumulated
-            if len(audio_chunks) * 1 >= 5:  # Assuming each chunk is 0.1 seconds
-                audio_sample = b''
-                for msg in audio_chunks:
-                    if 'bytes' in msg:
-                        audio_sample += msg['bytes']
-                    else:
-                        print(f'Strange msg: {msg}')
+                # push to ASR
+                print(f'Pushing audio into Listen: {len(data["bytes"])}')
+                app.workers.listen.push_audio(data['bytes'])
 
-                app.workers.listen.push_input(audio_sample)
-                audio_chunks = []  # Clear buffer for next 5 seconds
-
-            # send event to frontend (optional)
-            # await websocket.send_json({'msg': "5 seconds audio received!"})
-
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError) as ex:
+        print(f'WS disconnected... {ex}')
         app.ws_manager.disconnect(websocket)
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+    # HF_HUB_OFFLINE=1

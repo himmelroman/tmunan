@@ -1,5 +1,5 @@
 from tmunan.common.exec import BackgroundTask
-from tmunan.listen.whisper import DistilWhisper
+from tmunan.listen.distil_whisper.whisper import DistilWhisper
 
 
 class WhisperBackgroundTask(BackgroundTask):
@@ -19,9 +19,9 @@ class WhisperBackgroundTask(BackgroundTask):
             # load model
             self.whisper = DistilWhisper(model_id=self.model_id)
             self.whisper.load()
+
         except Exception as e:
             print(e)
 
     def exec(self, item):
-        # return {'res': 'fake'}
         return self.whisper.transcribe(item)
