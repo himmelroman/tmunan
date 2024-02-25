@@ -94,7 +94,7 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #
 #     # generate image
 #     print(f'Generating image with prompt: {prompt}')
-#     images = context.sd_lcm.txt2img(
+#     blend = context.sd_lcm.txt2img(
 #         prompt=prompt,
 #         num_inference_steps=config.num_inference_steps,
 #         guidance_scale=config.guidance_scale,
@@ -106,10 +106,10 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #     # save image to file
 #     image_id = f'txt2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
 #     file_path = f'{context.cache_dir}/{image_id}.png'
-#     images[0].save(file_path)
+#     blend[0].save(file_path)
 #
 #     # return file
-#     return {'image_id': image_id, 'image_url': f'{req.base_url}images/{image_id}'}
+#     return {'image_id': image_id, 'image_url': f'{req.base_url}blend/{image_id}'}
 #
 #
 # @app.post("/api/img2img",)
@@ -119,7 +119,7 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #     image_url = f'{context.cache_dir}/{image_id}.png'
 #
 #     # generate image
-#     images = context.sd_lcm.img2img(
+#     blend = context.sd_lcm.img2img(
 #         image_url=image_url,
 #         prompt=prompt,
 #         num_inference_steps=config.num_inference_steps,
@@ -131,7 +131,7 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #     # save image to file
 #     image_id = f'i2i_{image_id}_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
 #     file_path = f'{context.cache_dir}/{image_id}.png'
-#     images[0].save(file_path)
+#     blend[0].save(file_path)
 #
 #     # generate grid of original image + new image?
 #     if grid:
@@ -140,10 +140,10 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #         image_id = f'i2i_grid_{image_id}'
 #         file_path = f'{context.cache_dir}/{image_id}.png'
 #         init_image = load_image(image_url)
-#         make_image_grid([init_image, images[0]], rows=1, cols=2).save(file_path)
+#         make_image_grid([init_image, blend[0]], rows=1, cols=2).save(file_path)
 #
 #     # return file
-#     return {'image_id': image_id, 'image_url': f'{request.base_url}images/{image_id}'}
+#     return {'image_id': image_id, 'image_url': f'{request.base_url}blend/{image_id}'}
 
 
 @app.post("/api/sequence",)

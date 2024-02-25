@@ -2,17 +2,17 @@ def duplicate_frames(frames, target_fps):
     """Duplicates frames to achieve the target FPS.
 
     Args:
-    images: A list of images.
+    blend: A list of blend.
     target_fps: The target frames per second.
 
     Returns:
-    A list of images with the target FPS achieved by duplicating frames.
+    A list of blend with the target FPS achieved by duplicating frames.
     """
 
     # No need to calculate total_frames_needed, it's the target FPS itself
     total_frames_needed = target_fps
 
-    # If there are enough images, return them directly.
+    # If there are enough blend, return them directly.
     if len(frames) >= total_frames_needed:
         return frames
 
@@ -27,7 +27,7 @@ def duplicate_frames(frames, target_fps):
         for _ in range(duplicates_per_image):
             output_images.append(img)
 
-    # Add the remaining images
+    # Add the remaining blend
     for _ in range(remainder):
         output_images.append(frames[-1])
 

@@ -56,32 +56,38 @@ class HLSEncoder:
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
         print(f'Output path for HLS: {self.out_path}')
 
-        # Input queue
+        # Input
         self.frame_queue = None
+        self.fps = input_fps
 
-        # FFMPEG Config
+        # Input
         self.inp_settings = {
             "format": "rawvideo",
             "pix_fmt": "rgb24",
             "s": f"{shape[1]}x{shape[0]}",
-            "r": input_fps
+            # "r": input_fps
+            "framerate": "1/2",
+
         }
+        # Output
         self.enc_settings = {
+            "g": self.fps,
+            "sc_threshold": 0,
             "format": "hls",
-            "pix_fmt": "yuv420p",
+            # "pix_fmt": "yuv420p",
             "hls_time": 1,
             "hls_list_size": 2 * 60 / 2,  # 10 minutes keep
-            "hls_flags": "independent_segments",    # "split_by_time",  # "delete_segments",  # remove outdated segments from disk
+            "hls_flags": "independent_segments+split_by_time",  # "delete_segments",  # remove outdated segments from disk
             "flush_packets": 1,
             **preset.value,
             **hls_kwargs,
         }
-        self.fps = input_fps
 
     def __enter__(self) -> "HLSEncoder":
         self.proc = (
             ffmpeg.input("pipe:", **self.inp_settings)
-            # .filter("fade", d=1, t="in", alpha=1)
+            .filter("minterpolate", fps=self.fps, mi_mode="mci", mc_mode="aobmc", me_mode="bidir", vsbmc=0.9)
+            .filter("cas", strength=0.8)
             .output(str(self.out_path), **self.enc_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)
@@ -117,37 +123,33 @@ class HLSEncoder:
             last_frame = None
             while not end_reached:
 
-                # let images aggregate
-                time.sleep(1)
-
-                # get all frames from queue
+                # get all ready frames from queue
                 input_frames = self.get_all(frame_queue)
-                # print(f'HLS: Got {len(input_frames)} frames from queue')
+                print(f'HLS: Got {len(input_frames)} frames from queue')
 
                 # reuse last frame if no new frames arrived
                 if len(input_frames) == 0 and last_frame is not None:
                     input_frames = [last_frame]
 
-                # check if we have any input to push
-                if len(input_frames) > 0:
+                # if no input
+                if len(input_frames) == 0:
 
-                    # check if death-pill received
-                    if input_frames[-1] is None:
+                    time.sleep(1)
+                    continue
 
-                        # mark
-                        end_reached = True
+                # check if death-pill received
+                if input_frames[-1] is None:
 
-                        # take all real frames for last round
-                        if len(input_frames) > 1:
-                            input_frames = input_frames[:-1]
+                    # mark
+                    end_reached = True
 
-                    filled_frames = duplicate_frames(input_frames, target_fps=self.fps)
-                    # print(f'HLS: Got {len(filled_frames)} after interpolation')
+                    # take all real frames for last round
+                    input_frames = input_frames[:-1]
 
-                    # push frames to ffmpeg
-                    for frame in filled_frames:
-                        self(frame)
-                        last_frame = frame
+                # push frames to video
+                for frame in input_frames:
+                    self(frame)
+                    last_frame = frame
 
         print('HLS Exiting')
 
