@@ -175,6 +175,7 @@ class BackgroundExecutor:
         while not stop_event.is_set():
             try:
                 item = in_q.get(timeout=0.01)
+                print(f'Got item out of queue, pushing to exec: {item=}')
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
