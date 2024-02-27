@@ -135,6 +135,7 @@ class BackgroundExecutor:
         return self._proc
 
     def push_input(self, item):
+        print(f'Pushing in push_input to self._input_queue.put(item): {item=}')
         self._input_queue.put(item)
 
     def stop(self):

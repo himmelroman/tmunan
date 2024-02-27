@@ -34,6 +34,7 @@ class LCMBackgroundTask(BackgroundTask):
     def exec(self, txt2img_args):
 
         try:
+            print(f'Running self.lcm.txt2img with: {txt2img_args=}')
             images = self.lcm.txt2img(**txt2img_args)
             return images[0]
 

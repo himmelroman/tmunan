@@ -15,6 +15,7 @@ class Txt2Img:
         self.lcm_executor.on_output_ready += lambda res: self.on_image_ready.notify(res)
 
     def txt2img(self, **kwargs):
+        print(f'Pushing to self.lcm_executor: {kwargs=}')
         self.lcm_executor.push_input(kwargs)
 
     def get_random_seed(self):

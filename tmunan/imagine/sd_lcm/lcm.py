@@ -113,6 +113,8 @@ class LCM:
                 randomize_seed: bool = False
                 ):
 
+        self.logger.info(f'Starting txt2img!')
+
         if not self.txt2img_pipe:
             raise Exception('Text to Image pipe not initialized!')
 

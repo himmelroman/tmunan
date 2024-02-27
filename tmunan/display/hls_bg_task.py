@@ -16,9 +16,9 @@ class HLSPresets(enum.Enum):
     DEFAULT_CPU = {
         "vcodec": "libx264",
         "preset": "veryfast",
-        # "video_bitrate": "6M",
-        # "maxrate": "6M",
-        # "bufsize": "6M",
+        "video_bitrate": "6M",
+        "maxrate": "6M",
+        "bufsize": "6M",
     }
     DEFAULT_CUDA = {
         "vcodec": "h264_nvenc",
@@ -43,7 +43,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
                  input_fps: int,
                  output_fps: int,
                  hls_path: Path,
-                 preset: HLSPresets = HLSPresets.DEFAULT_MPS,
+                 preset: HLSPresets = HLSPresets.DEFAULT_CPU,
                  **hls_kwargs):
         super().__init__()
 
