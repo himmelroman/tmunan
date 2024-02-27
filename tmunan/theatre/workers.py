@@ -1,7 +1,6 @@
 from enum import Enum
 
-from tmunan.imagine.sd_lcm.lcm import LCM
-from tmunan.display.hls_worker_process import HLSEncoderProcess
+from tmunan.display.hls import HLS
 from tmunan.imagine.txt2img import Txt2Img
 from tmunan.listen.asr import ASR
 
@@ -31,7 +30,10 @@ class AppWorkers:
 
     def init_display(self, output_dir, image_height, image_width, fps=12):
         self.stop_display()
-        self.display = HLSEncoderProcess(output_dir / 'hls' / 'manifest.m3u8', image_height, image_width, fps)
+        self.display = HLS(input_shape=(image_height, image_width),
+                           input_fps=3,
+                           output_fps=fps,
+                           hls_path=output_dir / 'hls' / 'manifest.m3u8')
         self.display.start()
 
     def stop_display(self):

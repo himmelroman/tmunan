@@ -31,7 +31,7 @@ class Slideshow(Performance):
 
         # put on queue
         image = load_image(image_info['image_path'])
-        self.display.push_input(np.array(image, dtype=np.uint8))
+        self.display.push_image(np.array(image, dtype=np.uint8))
 
     def run(self, img_seq: ImageSequence, img_config: ImageInstructions, seq_id: str):
 

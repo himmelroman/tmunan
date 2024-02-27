@@ -14,8 +14,6 @@ from starlette.middleware import Middleware
 from starlette.websockets import WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
-# import gradio as gr
-
 from tmunan.theatre.workers import AppWorkers
 from tmunan.api.websocket import WebSocketConnectionManager
 from tmunan.api.pydantic_models import ImageInstructions, ImageSequence

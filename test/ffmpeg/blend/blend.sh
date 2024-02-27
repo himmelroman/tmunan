@@ -2,3 +2,5 @@
 #ffmpeg -framerate 1/2 -pattern_type glob -i "*.png" -vf "minterpolate=fps=25:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=0.9" out.mp4
 #ffmpeg -framerate 1/2 -pattern_type glob -i "*.png" -vf "minterpolate=fps=25:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=0.9, unsharp=luma_msize_x=7:luma_msize_y=7:luma_amount=2.5" out.mp4
 ffmpeg -framerate 1/3 -pattern_type glob -i "*.png" -vf "minterpolate=fps=12:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=0.9, cas=0.9" out.mp4
+
+# ffmpeg -framerate 1/3 -pattern_type glob -i "*.png" -init_hw_device vulkan -vf "libplacebo=fps=60:frame_mixer=mitchell_clamp" -c:v libx264 -crf 18 "output.mp4"

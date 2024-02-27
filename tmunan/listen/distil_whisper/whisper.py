@@ -57,7 +57,7 @@ class DistilWhisper:
             device=self.device,
         )
 
-        print(f'Done')
+        print(f'Whisper loading - Done')
 
     def transcribe(self, audio_sample):
 

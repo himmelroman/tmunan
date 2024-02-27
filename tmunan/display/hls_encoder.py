@@ -1,14 +1,11 @@
 import enum
 import time
-from queue import Queue
-
 import numpy as np
+from queue import Queue
 from typing import Any
 from pathlib import Path
 
 import ffmpeg
-
-from tmunan.display.utils import duplicate_frames
 
 
 class HLSPresets(enum.Enum):

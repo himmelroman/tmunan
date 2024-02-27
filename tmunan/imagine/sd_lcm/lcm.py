@@ -1,10 +1,13 @@
 import random
-import numpy as np
+import time
 
 import torch
-from diffusers import LCMScheduler, AutoPipelineForText2Image, AutoPipelineForImage2Image
-from diffusers.utils import load_image, make_image_grid
+import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
+from diffusers.utils import load_image, make_image_grid
+from diffusers import LCMScheduler, AutoPipelineForText2Image, AutoPipelineForImage2Image
+
+from tmunan.common.log import get_logger
 
 
 class LCM:
@@ -40,6 +43,9 @@ class LCM:
         # comp device
         self.device = self.get_device()
 
+        # env
+        self.logger = get_logger(self.__class__.__name__)
+
     @classmethod
     def get_device(cls):
 
@@ -52,8 +58,13 @@ class LCM:
 
     def load(self):
 
+        self.logger.info("Loading models...")
+
         # text to image
         if self.txt2img_size:
+
+            # load txt2img model
+            self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
             self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
                 self.model_map[self.txt2img_size]['model'],
                 local_files_only=True,
@@ -61,6 +72,7 @@ class LCM:
             self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
             # load and fuse sd_lcm lora
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
             self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
                                                 weight_name='pytorch_lora_weights.safetensors')
             self.txt2img_pipe.fuse_lora()
@@ -76,14 +88,20 @@ class LCM:
 
         # image to image
         if self.img2img_size:
+
+            # load img2img model
+            self.logger.info(f"Loading img2img model: {self.model_map[self.txt2img_size]['model']}")
             self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
                 self.model_map[self.img2img_size]['model'],
                 torch_dtype=torch.float16).to(self.device)
             self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
 
             # load LCM-LoRA
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
             self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
             self.img2img_pipe.fuse_lora()
+
+        self.logger.info("Loading models finished.")
 
     def txt2img(self,
                 prompt: str,
@@ -107,11 +125,16 @@ class LCM:
         prompt_dict = self.gen_prompt(prompt, seed)
 
         # run image generation
+        self.logger.info(f"Generating txt2img: {prompt=}, {seed=}")
+        start_time = time.time()
         result = self.txt2img_pipe(**prompt_dict,
                                    num_inference_steps=num_inference_steps,
                                    guidance_scale=guidance_scale,
                                    height=height, width=width
                                    ).images
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"Done generating txt2img: {elapsed_time=}")
+
         return result
 
     def img2img(self,
@@ -130,8 +153,12 @@ class LCM:
         # load image
         prompt_image = load_image(image_url)
 
-        # pass prompt and image to pipeline
+        # set seed
         generator = torch.manual_seed(0)
+
+        # pass prompt and image to pipeline
+        self.logger.info(f"Generating img2img: {prompt=}, seed=0")
+        start_time = time.time()
         result = self.img2img_pipe(prompt=prompt,
                                    image=prompt_image,
                                    num_inference_steps=num_inference_steps,
@@ -140,6 +167,9 @@ class LCM:
                                    strength=strength,
                                    generator=generator
                                    ).images
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"Done generating img2img: {elapsed_time=}")
+
         return result
 
     def gen_prompt(self, prompt, seed):
