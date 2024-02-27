@@ -87,7 +87,7 @@ class HLSEncoder:
         self.proc = (
             ffmpeg.input("pipe:", **self.inp_settings)
             .filter("minterpolate", fps=self.fps, mi_mode="mci", mc_mode="aobmc", me_mode="bidir", vsbmc=0.9)
-            .filter("cas", strength=0.8)
+            # .filter("cas", strength=0.8)
             .output(str(self.out_path), **self.enc_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)
