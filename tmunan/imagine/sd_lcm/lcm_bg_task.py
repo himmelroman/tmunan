@@ -29,7 +29,7 @@ class LCMBackgroundTask(BackgroundTask):
             self.lcm.load()
 
         except Exception as ex:
-            self.logger.exception()
+            self.logger.exception(f'Error in {self.__class__.__name__} setup phase!')
 
     def exec(self, txt2img_args):
 
@@ -38,4 +38,4 @@ class LCMBackgroundTask(BackgroundTask):
             return images[0]
 
         except Exception as ex:
-            self.logger.exception()
+            self.logger.exception(f'Error in {self.__class__.__name__} exec!')
