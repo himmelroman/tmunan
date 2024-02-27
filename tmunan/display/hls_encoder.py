@@ -77,7 +77,7 @@ class HLSEncoder:
             # "pix_fmt": "yuv420p",
             "hls_time": 1,
             "hls_list_size": 2 * 60 / 2,  # 10 minutes keep
-            "hls_flags": "independent_segments+split_by_time",  # "delete_segments",  # remove outdated segments from disk
+            "hls_flags": "split_by_time",  # "delete_segments",  # remove outdated segments from disk
             "flush_packets": 1,
             **preset.value,
             **hls_kwargs,
