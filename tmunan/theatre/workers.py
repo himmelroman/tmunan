@@ -31,7 +31,7 @@ class AppWorkers:
     def init_display(self, output_dir, image_height, image_width, fps=12):
         self.stop_display()
         self.display = HLS(input_shape=(image_height, image_width),
-                           input_fps=3,
+                           input_fps=1,
                            output_fps=fps,
                            hls_path=output_dir / 'hls' / 'manifest.m3u8')
         self.display.start()
