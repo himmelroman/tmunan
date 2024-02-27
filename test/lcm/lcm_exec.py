@@ -38,7 +38,7 @@ if __name__ == '__main__':
     t2i.on_shutdown += mark_shutdown
 
     time.sleep(1)
-    print('Staring Txt2Img')
+    print('Starting Txt2Img')
     t2i.start()
 
     while running:
