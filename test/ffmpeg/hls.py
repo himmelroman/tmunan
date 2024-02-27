@@ -20,7 +20,7 @@ if __name__ == "__main__":
     hls_path.mkdir(parents=True, exist_ok=True)
 
     fps = 25
-    images = Path('/Users/himmelroman/projects/speechualizer/tmunan/test/ffmpeg/blend/').glob('*.png')
+    images = Path('/Users/himmelroman/projects/speechualizer/tmunan/test/ffmpeg/blend/sheep_sequence').glob('*.png')
     hlser = HLSEncoderProcess('/Users/himmelroman/projects/speechualizer/tmunan/test/ffmpeg/blend/hls/playlist.m3u8', 768, 768, fps)
     hlser.start()
     time.sleep(2)
