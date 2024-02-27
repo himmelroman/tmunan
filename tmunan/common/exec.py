@@ -136,7 +136,6 @@ class BackgroundExecutor:
         return self._proc
 
     def push_input(self, item):
-        print(f'Pushing in push_input to self._input_queue.put(item): {item=}')
         self._input_queue.put(item)
 
     def stop(self):
@@ -175,17 +174,18 @@ class BackgroundExecutor:
         logger = get_logger(f'{task_class.__name__}Executor')
 
         # initialize task
+        logger.info(f'Initializing Task of type: {task_class.__name__}')
         task = task_class(*task_args, **task_kwargs)
         task.setup()
 
         # signal ready
+        logger.info(f'Task is ready.')
         out_q.put((None, None))
 
         # run task loop
         while not stop_event.is_set():
             try:
                 item = in_q.get(timeout=0.01)
-                logger.info(f'Got item out of queue, pushing to exec: {item=}')
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
@@ -195,4 +195,5 @@ class BackgroundExecutor:
                 out_q.put((False, e))
 
         # release resources
+        logger.info(f'Cleaning up resources...')
         task.cleanup()

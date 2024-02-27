@@ -23,7 +23,6 @@ class Txt2Img:
         self.lcm_executor.stop()
 
     def request_txt2img(self, **kwargs):
-        print(f'Pushing to self.lcm_executor: {kwargs=}')
         self.lcm_executor.push_input(kwargs)
 
     @staticmethod
