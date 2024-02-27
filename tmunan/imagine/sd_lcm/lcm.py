@@ -67,7 +67,7 @@ class LCM:
             self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
             self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
                 self.model_map[self.txt2img_size]['model'],
-                local_files_only=True,
+                # local_files_only=True,
                 torch_dtype=torch.float16).to(self.device)
             self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
