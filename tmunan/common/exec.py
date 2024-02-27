@@ -119,7 +119,7 @@ class BackgroundExecutor:
         self._input_queue = multiprocessing.Queue()
         self._output_queue = multiprocessing.Queue()
         self._stop_event = multiprocessing.Event()
-        self._proc = SpawnMonitoredProcess(
+        self._proc = ForkMonitoredProcess(
             target=self.run,
             args=(self._input_queue, self._output_queue, self._stop_event,
                   self._task_class, self._task_args, self._task_kwargs))
