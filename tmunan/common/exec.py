@@ -128,6 +128,7 @@ class BackgroundExecutor:
         # events
         self.on_exit = Event()
         self.on_error = Event()
+        self.on_worker_ready = Event()
         self.on_output_ready = Event()
 
     @property
@@ -146,7 +147,10 @@ class BackgroundExecutor:
         while not (self._output_queue.empty() and self._stop_event.is_set()):
             try:
                 success, data = self._output_queue.get(timeout=0.1)
-                if success:
+                if success is None and data is None:
+                    # fire ready event
+                    self.on_worker_ready.fire()
+                elif success:
                     # fire output event
                     self.on_output_ready.fire(data)
                 else:
@@ -170,6 +174,9 @@ class BackgroundExecutor:
         # initialize task
         task = task_class(*task_args, **task_kwargs)
         task.setup()
+
+        # signal ready
+        out_q.put((None, None))
 
         # run task loop
         while not stop_event.is_set():

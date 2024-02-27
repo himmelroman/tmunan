@@ -80,7 +80,7 @@ class ImageScript:
 
             # gen image
             self.sync_event.clear()
-            self.txt2img.txt2img(
+            self.txt2img.request_txt2img(
                 prompt=prompt,
                 num_inference_steps=config.num_inference_steps,
                 guidance_scale=config.guidance_scale,
