@@ -17,6 +17,7 @@ class Txt2Img:
         self.lcm_executor.on_output_ready += lambda res: self.on_image_ready.notify(res)
         self.lcm_executor.on_worker_ready += self.on_startup.notify
         self.lcm_executor.on_exit += self.on_shutdown.notify
+        self.lcm_executor.on_error += lambda ex: print(ex)
 
     def stop(self):
         self.lcm_executor.stop()

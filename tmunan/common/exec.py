@@ -6,6 +6,7 @@ from queue import Empty
 from typing import Callable, Type
 
 from tmunan.common.event import Event
+from tmunan.common.log import get_logger
 
 
 class _BaseMonitoredProcess(multiprocessing.process.BaseProcess):
@@ -49,7 +50,6 @@ class _BaseMonitoredProcess(multiprocessing.process.BaseProcess):
 
     def run(self):
         super().run()
-
 
 
 class ForkMonitoredProcess(_BaseMonitoredProcess, multiprocessing.context.ForkProcess):
@@ -171,6 +171,9 @@ class BackgroundExecutor:
     @staticmethod
     def run(in_q, out_q, stop_event, task_class, task_args, task_kwargs):
 
+        # init logger
+        logger = get_logger(f'{task_class.__name__}Executor')
+
         # initialize task
         task = task_class(*task_args, **task_kwargs)
         task.setup()
@@ -182,12 +185,13 @@ class BackgroundExecutor:
         while not stop_event.is_set():
             try:
                 item = in_q.get(timeout=0.01)
-                print(f'Got item out of queue, pushing to exec: {item=}')
+                logger.info(f'Got item out of queue, pushing to exec: {item=}')
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
                 continue
             except Exception as e:
+                logger.exception()
                 out_q.put((False, e))
 
         # release resources
