@@ -6,7 +6,6 @@ from tmunan.imagine.txt2img import Txt2Img
 def handle_image_ready(image):
     print('Image Ready!')
     image.save('test_image.png')
-
     t2i.stop()
 
 
@@ -38,6 +37,7 @@ if __name__ == '__main__':
     t2i.on_shutdown += mark_shutdown
 
     time.sleep(1)
+    print('Staring Txt2Img')
     t2i.start()
 
     while running:
