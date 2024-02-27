@@ -68,7 +68,6 @@ class Image2HLSBackgroundTask(BackgroundTask):
             "pix_fmt": "rgb24",
             "s": f"{self.input_shape[1]}x{self.input_shape[0]}",
             "framerate": f"1/{self.input_fps}",
-
         }
         self.output_settings = {
             "g": self.output_fps,
