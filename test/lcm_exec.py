@@ -24,6 +24,7 @@ def request_image():
 
 def mark_shutdown():
     global running
+    print('Marking shutdown')
     running = False
 
 
