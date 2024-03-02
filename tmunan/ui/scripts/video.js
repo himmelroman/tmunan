@@ -6,7 +6,7 @@ function playVideo(video_element, video_url) {
     if (Hls.isSupported()) {
 
         let hls = new Hls({
-            debug: true,
+            debug: false,
             manifestLoadPolicy: {
               default: {
                 maxTimeToFirstByteMs: Infinity,
