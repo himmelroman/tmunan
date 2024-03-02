@@ -153,7 +153,7 @@ def sequence(seq: ImageSequence, img_config: ImageInstructions,
     seq_dir = Path(app.context.cache_dir) / f'seq_{seq_id}'
 
     # init
-    app.workers.init_display(seq_dir, img_config.height, img_config.width, fps=12)
+    app.workers.init_display(seq_dir, img_config.height, img_config.width, seq.images_per_second, fps=12)
 
     # start slideshow generation task
     slideshow = create_performance(PerformanceType.Slideshow, app)

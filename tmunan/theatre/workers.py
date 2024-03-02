@@ -28,10 +28,10 @@ class AppWorkers:
             self.listen = ASR()
             self.listen.start()
 
-    def init_display(self, output_dir, image_height, image_width, fps=12):
+    def init_display(self, output_dir, image_height, image_width, ips=1, fps=12):
         self.stop_display()
         self.display = HLS(input_shape=(image_height, image_width),
-                           input_fps=3,
+                           input_fps=ips,
                            output_fps=fps,
                            hls_path=output_dir / 'hls' / 'manifest.m3u8')
         self.display.start()

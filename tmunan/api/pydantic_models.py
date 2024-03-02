@@ -21,6 +21,7 @@ class SequencePrompt(BaseModel):
 class ImageSequence(BaseModel):
     prompts: List[SequencePrompt]
     num_images: int = 8
+    images_per_second: int = 1
 
 
 class ImageSequenceScript(BaseModel):
