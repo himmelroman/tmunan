@@ -1,3 +1,4 @@
+import atexit
 import threading
 import multiprocessing
 
@@ -138,8 +139,17 @@ class BackgroundExecutor:
     def push_input(self, item):
         self._input_queue.put(item)
 
-    def stop(self):
-        self._stop_event.set()
+    def stop(self, force=False):
+
+        # if force - stop immediately
+        if force:
+            self._stop_event.set()
+
+        # otherwise - put death pill on queue
+        else:
+            self._input_queue.put(None)
+
+        # wait for process to finish
         self._proc.join()
 
     def _output_thread_func(self):
@@ -160,12 +170,17 @@ class BackgroundExecutor:
 
     def start(self):
 
+        def terminate_child():
+            if self._proc.is_alive():
+                self._proc.terminate()
+
         # start output thread
         self._output_thread = threading.Thread(target=self._output_thread_func, daemon=True)
         self._output_thread.start()
 
         # start background process
         self._proc.start(on_exit=self.on_exit)
+        atexit.register(terminate_child)
 
     @staticmethod
     def run(in_q, out_q, stop_event, task_class, task_args, task_kwargs):
@@ -186,6 +201,8 @@ class BackgroundExecutor:
         while not stop_event.is_set():
             try:
                 item = in_q.get(timeout=0.01)
+                if item is None:
+                    break
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
