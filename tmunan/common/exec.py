@@ -191,7 +191,7 @@ class BackgroundExecutor:
             except Empty:
                 continue
             except Exception as e:
-                logger.exception()
+                logger.exception('Error processing item!')
                 out_q.put((False, e))
 
         # release resources

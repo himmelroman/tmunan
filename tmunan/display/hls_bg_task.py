@@ -95,7 +95,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
             ffmpeg.input("pipe:", **self.input_settings)
             #.filter("minterpolate", fps=self.output_fps, mi_mode="mci", mc_mode="aobmc", me_mode="bidir", vsbmc=0.9)
             .filter("minterpolate", fps=self.output_fps, mi_mode="blend")
-            .filter("cas", strength=0.8)
+            # .filter("cas", strength=0.8)
             .output(str(self.out_path), **self.output_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)
