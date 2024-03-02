@@ -22,11 +22,11 @@
 
                 // Verify sequence-id param
                 const baseUrl = new URL(window.location.href);
-                if (baseUrl.searchParams.has("sequence_id")) {
+                if (baseUrl.searchParams.has("display_id")) {
 
                     // build HLS url
-                    const seqId = baseUrl.searchParams.get("sequence_id");
-                    const hlsUrl = new URL(`/cache/seq_${seqId}/hls/manifest.m3u8`, baseUrl);
+                    const dispId = baseUrl.searchParams.get("display_id");
+                    const hlsUrl = new URL(`/cache/${dispId}/hls/manifest.m3u8`, baseUrl);
                     console.log(`HLS Url: ${hlsUrl}`)
 
                     // get video element

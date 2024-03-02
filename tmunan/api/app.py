@@ -16,7 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from tmunan.theatre.workers import AppWorkers
 from tmunan.api.websocket import WebSocketConnectionManager
-from tmunan.api.pydantic_models import ImageInstructions, ImageSequence
+from tmunan.api.pydantic_models import ImageInstructions, ImageSequenceScript
 from tmunan.theatre.performance_factory import create_performance, PerformanceType
 
 
@@ -37,7 +37,7 @@ async def lifespan(fastapi_app: FastAPI):
 
     # pre-start global workers
     fastapi_app.workers.init_imagine()
-    fastapi_app.workers.init_listen()
+    # fastapi_app.workers.init_listen()
     pass
 
     # FastAPI app lifespan
@@ -144,45 +144,31 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #     return {'image_id': image_id, 'image_url': f'{request.base_url}blend/{image_id}'}
 
 
-@app.post("/api/sequence",)
-def sequence(seq: ImageSequence, img_config: ImageInstructions,
-             request: Request, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
+@app.post("/api/script",)
+def script(script: ImageSequenceScript, img_config: ImageInstructions,
+           request: Request, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
 
     # gen id
-    seq_id = str(uuid.uuid4())[:8]
-    seq_dir = Path(app.context.cache_dir) / f'seq_{seq_id}'
+    script_id = str(uuid.uuid4())[:8]
+    script_dir = Path(app.context.cache_dir) / f'script_{script_id}'
 
     # init
-    app.workers.init_display(seq_dir, img_config.height, img_config.width, seq.images_per_second, fps=12)
+    app.workers.init_display(script_dir, img_config.height, img_config.width, img_config.images_per_second, fps=12)
 
     # start slideshow generation task
     slideshow = create_performance(PerformanceType.Slideshow, app)
-    background_tasks.add_task(slideshow.run, seq, img_config, seq_id)
+    background_tasks.add_task(slideshow.run, script, img_config, script_id)
 
     # return file
     return {
-        'sequence_id': seq_id,
-        'hls_uri': request.base_url.replace(path=f'ui/index.html?sequence_id={seq_id}')
+        'script_id': script_id,
+        'hls_uri': request.base_url.replace(path=f'ui/index.html?display_id=script_{script_id}')
     }
-
-
-# @app.post("/api/script",)
-# def script(script: ImageSequenceScript, config: ImageInstructions, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
-#
-#     # get id
-#     script_id = str(uuid.uuid4())[:8]
-#
-#     # start a script generation task
-#     background_tasks.add_task(sequencer.start_script, script, config, script_id)
-#
-#     # return file
-#     return {'script_id': script_id}
 
 
 # @app.post("/api/stop",)
 # def stop():
 #     sequencer.stop()
-#
 
 
 @app.websocket("/api/ws")

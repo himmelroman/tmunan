@@ -10,6 +10,7 @@ class ImageInstructions(BaseModel):
     guidance_scale: float | None = 0.5
     strength: float | None = 0.3
     seed: int | None = None
+    images_per_second: int = 2
 
 
 class SequencePrompt(BaseModel):
@@ -20,8 +21,7 @@ class SequencePrompt(BaseModel):
 
 class ImageSequence(BaseModel):
     prompts: List[SequencePrompt]
-    num_images: int = 8
-    images_per_second: int = 1
+    num_images: int = 10
 
 
 class ImageSequenceScript(BaseModel):

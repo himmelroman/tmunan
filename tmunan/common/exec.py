@@ -1,4 +1,5 @@
 import atexit
+import platform
 import threading
 import multiprocessing
 
@@ -109,6 +110,10 @@ class BackgroundTask(ABC):
 
 
 class BackgroundExecutor:
+
+    # Choose process context based on platform
+    WORKER_PROCESS_CLASS = ForkMonitoredProcess if platform.system() == "Linux" else SpawnMonitoredProcess
+
     def __init__(self, task_class: Type[BackgroundTask], *args, **kwargs):
 
         # task
@@ -120,7 +125,7 @@ class BackgroundExecutor:
         self._input_queue = multiprocessing.Queue()
         self._output_queue = multiprocessing.Queue()
         self._stop_event = multiprocessing.Event()
-        self._proc = ForkMonitoredProcess(
+        self._proc = self.WORKER_PROCESS_CLASS(
             target=self.run,
             args=(self._input_queue, self._output_queue, self._stop_event,
                   self._task_class, self._task_args, self._task_kwargs))

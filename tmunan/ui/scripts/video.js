@@ -34,18 +34,22 @@ function playVideo(video_element, video_url) {
             hls.current?.play();
         });
         hls.on(Hls.Events.ERROR, function (event, data) {
-            console.log(event);
-            if (data.details === Hls.ErrorDetails.NETWORK_ERROR && data.fatal === false) {
-            const currentAttempt = data.retry + 1; // Extract current attempt from data
-            if (currentAttempt <= MAX_RETRY_ATTEMPTS) {
-              console.warn(`Manifest fetch failed (attempt ${currentAttempt}/${MAX_RETRY_ATTEMPTS}), retrying...`);
-              setTimeout(() => {
-                hls.loadSource(hls.source); // Retry loading the manifest
-              }, RETRY_DELAY);
-            } else {
-              console.error(`Manifest fetch failed after ${MAX_RETRY_ATTEMPTS} attempts. Giving up.`);
+            console.log(`HLS Error: ${event}: ${data}`);
+
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                if (data.retry === undefined) {
+                    data.retry = 1;
+                }
+                if (data.retry <= MAX_RETRY_ATTEMPTS) {
+                    console.warn(`Manifest fetch failed (attempt ${data.retry}/${MAX_RETRY_ATTEMPTS}), retrying...`);
+                    setTimeout(() => {
+                        data.retry += 1;
+                        hls.loadSource(video_url); // Retry loading the manifest
+                    }, RETRY_DELAY);
+                } else {
+                    console.error(`Manifest fetch failed after ${MAX_RETRY_ATTEMPTS} attempts. Giving up.`);
+                }
             }
-          }
         });
         hls.attachMedia(video_element);
         hls.loadSource(video_url);

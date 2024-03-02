@@ -6,19 +6,21 @@ from pathlib import Path
 from copy import deepcopy
 
 from tmunan.common.event import Event
+from tmunan.listen.asr import ASR
 from tmunan.imagine.txt2img import Txt2Img
 from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
 
 
 class ImageScript:
 
-    def __init__(self, txt2img: Txt2Img, cache_dir):
+    def __init__(self, txt2img: Txt2Img, asr: ASR, cache_dir):
 
         # env
         self.cache_dir = cache_dir
         self.seq_dir = None
 
         # generators
+        self.asr = asr
         self.txt2img = txt2img
         self.txt2img.on_image_ready += self.process_ready_image
 
@@ -65,8 +67,15 @@ class ImageScript:
             if self.stop_requested:
                 break
 
+            # generate dynamic text prompt
+            effective_prompts = seq.prompts
+            recognized_phrase_list = self.asr.consume_text()
+            if recognized_phrase_list:
+                for phrase in recognized_phrase_list:
+                    effective_prompts.append(SequencePrompt(text=phrase, start_weight=1.2, end_weight=1.2))
+
             # gen prompt for current sequence progress
-            prompt = self.gen_seq_prompt(seq.prompts, (i / seq.num_images * 100))
+            prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
             print(f'Generating image {i} with prompt: {prompt}')
 
             # gen image
@@ -113,15 +122,15 @@ class ImageScript:
             # iterate as many times as requested
             for i, seq in enumerate(script.sequences):
 
+                # make a copy of the original sequence
+                effective_seq = deepcopy(seq)
+
                 # check if we should stop
                 if self.stop_requested:
                     break
 
                 # gen seq id
                 seq_id = str(uuid.uuid4())[:8]
-
-                # make a copy of the original sequence
-                effective_seq = deepcopy(seq)
 
                 # if we have continuity prompts from previous loop
                 if i == 0 and continuity_prompts:
