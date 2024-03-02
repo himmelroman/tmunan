@@ -17,6 +17,3 @@ nltk
 
 # media
 ffmpeg-python==0.2.0
-
-
-# torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 0 has a total capacty of 22.19 GiB of which 2.69 MiB is free. Process 30543 has 1.77 GiB memory in use. Process 30540 has 11.42 GiB memory in use. Including non-PyTorch memory, this process has 7.21 GiB memory in use. Process 30635 has 1.77 GiB memory in use. Of the allocated memory 6.82 GiB is allocated by PyTorch, and 152.02 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
