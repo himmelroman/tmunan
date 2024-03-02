@@ -12,7 +12,11 @@ pipe = pipe.to("cuda")
 prompt = "a photo of an astronaut riding a horse on mars"
 
 start_time = time.time()
-image = pipe(prompt).images[0]
+image = pipe(prompt=prompt,
+             num_inference_steps=20,
+             guidance_scale=0.4,
+             height=768, width=768
+             ).images[0]
 elapsed_time = time.time() - start_time
 print(f'Elapsed time: {elapsed_time}')
 
