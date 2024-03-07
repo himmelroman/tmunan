@@ -2,6 +2,8 @@ from typing import List
 
 from pydantic import BaseModel
 
+from tmunan.imagine.sd_lcm.lcm_bg_task import TaskType
+
 
 class ImageInstructions(BaseModel):
     height: int | None = 768
@@ -22,8 +24,10 @@ class SequencePrompt(BaseModel):
 class ImageSequence(BaseModel):
     prompts: List[SequencePrompt]
     num_images: int = 10
+    transition: TaskType
 
 
 class ImageSequenceScript(BaseModel):
     sequences: List[ImageSequence]
     loop: bool = False
+    transition: TaskType

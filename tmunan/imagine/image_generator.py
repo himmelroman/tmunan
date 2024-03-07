@@ -4,10 +4,10 @@ from tmunan.imagine.sd_lcm.lcm import LCM
 from tmunan.imagine.sd_lcm.lcm_bg_task import LCMBackgroundTask
 
 
-class Txt2Img:
+class ImageGenerator:
 
-    def __init__(self, model_id):
-        self.lcm_executor = BackgroundExecutor(LCMBackgroundTask, model_id=model_id)
+    def __init__(self, model_size):
+        self.lcm_executor = BackgroundExecutor(LCMBackgroundTask, model_size=model_size)
         self.on_image_ready = Event()
         self.on_startup = Event()
         self.on_shutdown = Event()
@@ -22,7 +22,7 @@ class Txt2Img:
     def stop(self):
         self.lcm_executor.stop()
 
-    def request_txt2img(self, **kwargs):
+    def request_image(self, **kwargs):
         self.lcm_executor.push_input(kwargs)
 
     @staticmethod

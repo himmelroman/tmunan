@@ -7,13 +7,13 @@ from copy import deepcopy
 
 from tmunan.common.event import Event
 from tmunan.listen.asr import ASR
-from tmunan.imagine.txt2img import Txt2Img
+from tmunan.imagine.image_generator import ImageGenerator
 from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
 
 
 class ImageScript:
 
-    def __init__(self, txt2img: Txt2Img, asr: ASR, cache_dir):
+    def __init__(self, txt2img: ImageGenerator, asr: ASR, cache_dir):
 
         # env
         self.cache_dir = cache_dir
@@ -80,7 +80,7 @@ class ImageScript:
 
             # gen image
             self.sync_event.clear()
-            self.txt2img.request_txt2img(
+            self.txt2img.request_image(
                 prompt=prompt,
                 num_inference_steps=config.num_inference_steps,
                 guidance_scale=config.guidance_scale,

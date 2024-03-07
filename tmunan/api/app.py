@@ -184,8 +184,10 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive()
             if 'bytes' in data:
 
+                pass
+
                 # push to ASR
-                print(f'Pushing audio into Listen: {len(data["bytes"])}')
+                # print(f'Pushing audio into Listen: {len(data["bytes"])}')
                 # app.workers.listen.push_audio(data['bytes'])
 
     except (WebSocketDisconnect, RuntimeError) as ex:

@@ -6,21 +6,25 @@ from pathlib import Path
 from copy import deepcopy
 
 from tmunan.common.event import Event
-from tmunan.imagine.txt2img import Txt2Img
+from tmunan.common.log import get_logger
+from tmunan.imagine.sd_lcm.lcm_bg_task import TaskType
+from tmunan.imagine.image_generator import ImageGenerator
 from tmunan.api.pydantic_models import ImageSequence, ImageSequenceScript, ImageInstructions, SequencePrompt
 
 
 class ImageScript:
 
-    def __init__(self, txt2img: Txt2Img, cache_dir):
+    def __init__(self, image_gen: ImageGenerator, cache_dir):
 
         # env
         self.cache_dir = cache_dir
         self.seq_dir = None
+        self.logger = get_logger(self.__class__.__name__)
 
-        # generators
-        self.txt2img = txt2img
-        self.txt2img.on_image_ready += self.process_ready_image
+        # imaging
+        self.image_gen = image_gen
+        self.image_gen.on_image_ready += self.process_ready_image
+        self.last_image_path = None
 
         # internal
         self.stop_requested = False
@@ -48,15 +52,19 @@ class ImageScript:
     #     # run script
     #     self.run_script(script, config, script_id)
 
-    def run_image_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
+    def run_image_sequence(self, seq: ImageSequence, img_config: ImageInstructions, seq_id, parent_dir=None):
+
+        self.logger.info(f'Starting image sequence {seq=}')
+        self.logger.info(f'Image configuration {img_config=}')
 
         # prepare dir
         self.seq_dir = Path(f'{parent_dir if parent_dir else self.cache_dir}/seq_{seq_id}/')
         Path.mkdir(Path(self.seq_dir), exist_ok=True, parents=True)
+        self.logger.info(f'Saving images in {self.seq_dir}')
 
         # verify seed
-        if not config.seed:
-            config.seed = self.txt2img.get_random_seed()
+        if not img_config.seed:
+            img_config.seed = self.image_gen.get_random_seed()
 
         # iterate as many times as requested
         for i in range(0, seq.num_images):
@@ -71,14 +79,29 @@ class ImageScript:
 
             # gen image
             self.sync_event.clear()
-            self.txt2img.request_txt2img(
-                prompt=prompt,
-                num_inference_steps=config.num_inference_steps,
-                guidance_scale=config.guidance_scale,
-                height=config.height, width=config.width,
-                seed=config.seed,
-                randomize_seed=False
-            )
+
+            # check transition type
+            if seq.transition == TaskType.Image2Image and self.last_image_path is not None:
+                self.image_gen.request_image(
+                    task=TaskType.Image2Image.value,
+                    image_url=self.last_image_path,
+                    prompt=prompt,
+                    num_inference_steps=img_config.num_inference_steps,
+                    guidance_scale=img_config.guidance_scale,
+                    strength=img_config.strength,
+                    height=img_config.height, width=img_config.width
+                )
+
+            else:
+                self.image_gen.request_image(
+                    task=TaskType.Text2Image.value,
+                    prompt=prompt,
+                    num_inference_steps=img_config.num_inference_steps,
+                    guidance_scale=img_config.guidance_scale,
+                    height=img_config.height, width=img_config.width,
+                    seed=img_config.seed,
+                    randomize_seed=False
+                )
 
             # wait until image is ready
             self.sync_event.wait()
@@ -94,6 +117,9 @@ class ImageScript:
         # save image to disk
         image_path = self.seq_dir / f'{now_ts}.png'
         image.save(str(image_path))
+
+        # save last image path
+        self.last_image_path = str(image_path)
 
         # notify image ready
         self.on_image_ready.notify({
@@ -142,7 +168,7 @@ class ImageScript:
             if script.loop:
 
                 # generate new seed
-                config.seed = self.txt2img.get_random_seed()
+                config.seed = self.image_gen.get_random_seed()
 
                 # take last sequence prompts to loop back into first sequence smoothly
                 continuity_prompts = self.reverse_prompt_weights(script.sequences[-1].prompts)

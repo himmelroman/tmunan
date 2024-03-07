@@ -58,7 +58,7 @@ class LCM:
 
     def load(self):
 
-        self.logger.info("Loading models...")
+        self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image
         if self.txt2img_size:
@@ -90,7 +90,7 @@ class LCM:
         if self.img2img_size:
 
             # load img2img model
-            self.logger.info(f"Loading img2img model: {self.model_map[self.txt2img_size]['model']}")
+            self.logger.info(f"Loading img2img model: {self.model_map[self.img2img_size]['model']}")
             self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
                 self.model_map[self.img2img_size]['model'],
                 torch_dtype=torch.float16).to(self.device)

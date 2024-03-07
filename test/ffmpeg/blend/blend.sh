@@ -6,4 +6,4 @@
 
 # ffmpeg -hwaccel cuda -hwaccel_output_format cuda -pattern_type glob -i "*.png" -c:v h264_nvenc out.mp4
 
-ffmpeg -framerate 1/3 -pattern_type glob -i "*.png" -vf "tblend=all_mode=average,setpts=N/RATE" -r 12 out.mp4
+#ffmpeg -framerate 1/3 -pattern_type glob -i "*.png" -vf "tblend=all_mode=average,setpts=N/RATE" -r 12 out.mp4
