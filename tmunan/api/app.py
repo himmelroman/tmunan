@@ -153,7 +153,10 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions,
     script_dir = Path(app.context.cache_dir) / f'script_{script_id}'
 
     # init
-    app.workers.init_display(script_dir, img_config.height, img_config.width, img_config.images_per_second, fps=12)
+    app.workers.init_display(script_dir,
+                             img_config.height, img_config.width,
+                             img_config.key_frame_per_second, img_config.key_frame_per_second,
+                             fps=img_config.output_fps)
 
     # start slideshow generation task
     slideshow = create_performance(PerformanceType.Slideshow, app)

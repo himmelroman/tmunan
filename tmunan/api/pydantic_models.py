@@ -12,7 +12,9 @@ class ImageInstructions(BaseModel):
     guidance_scale: float | None = 0.5
     strength: float | None = 0.3
     seed: int | None = None
-    images_per_second: int = 2
+    key_frame_duration: int = 3
+    key_frame_stable_periods: int = 2
+    output_fps: int = 12
 
 
 class SequencePrompt(BaseModel):

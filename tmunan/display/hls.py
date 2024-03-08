@@ -8,14 +8,16 @@ class HLS:
 
     def __init__(self,
                  input_shape: tuple[int, int],
-                 input_fps: int,
+                 kf_duration: int,
+                 kf_repeat: int,
                  output_fps: int,
                  hls_path: Path):
 
         # create HLS executor
         self.hls_executor = BackgroundExecutor(Image2HLSBackgroundTask,
                                                input_shape=input_shape,
-                                               input_fps=input_fps,
+                                               kf_duration=kf_duration,
+                                               kf_repeat=kf_repeat,
                                                output_fps=output_fps,
                                                hls_path=hls_path)
 

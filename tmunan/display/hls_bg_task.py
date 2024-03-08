@@ -34,7 +34,8 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
     def __init__(self,
                  input_shape: tuple[int, int],
-                 input_fps: int,
+                 kf_duration: int,
+                 kf_repeat: int,
                  output_fps: int,
                  hls_path: Path,
                  preset: HLSPresets = HLSPresets.DEFAULT_CPU,
@@ -43,7 +44,8 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
         # save arguments
         self.input_shape = input_shape
-        self.input_fps = input_fps
+        self.kf_duration = kf_duration
+        self.kf_repeat = kf_repeat
         self.output_fps = output_fps
         self.preset = preset
         self.hls_kwargs = hls_kwargs
@@ -61,7 +63,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
             "format": "rawvideo",
             "pix_fmt": "rgb24",
             "s": f"{self.input_shape[1]}x{self.input_shape[0]}",
-            "framerate": f"1/{self.input_fps}",
+            "framerate": f"1/{self.kf_duration}",
         }
         self.output_settings = {
             "g": self.output_fps,
@@ -107,4 +109,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
         # push image to ffmpeg's stdin
         self.logger.info('Pushing image')
-        self.ffmpeg_process.stdin.write(image.tobytes())
+
+        # repeat image according to kf_repeat
+        for _ in range(self.kf_repeat + 1):
+            self.ffmpeg_process.stdin.write(image.tobytes())
