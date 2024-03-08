@@ -28,12 +28,6 @@ class HLSPresets(enum.Enum):
         "maxrate": "6M",
         "bufsize": "6M",
     }
-    DEFAULT_MPS = {
-        "vcodec": "h264_videotoolbox",
-        "video_bitrate": "4M",
-        # "maxrate": "6M",
-        # "bufsize": "6M",
-    }
 
 
 class Image2HLSBackgroundTask(BackgroundTask):
@@ -74,8 +68,8 @@ class Image2HLSBackgroundTask(BackgroundTask):
             "sc_threshold": 0,
             "format": "hls",
             "hls_time": 1,
-            "hls_list_size": 2 * 60 / 2,             # 10 minutes keep
-            "hls_flags": "independent_segments",     # "split_by_time", "delete_segments"
+            "hls_list_size": 2 * 60 / 2,                        # 10 minutes keep
+            "hls_flags": "independent_segments",  # +append_list",    # "split_by_time", "delete_segments"
             "flush_packets": 1,
             **preset.value,
             **hls_kwargs,
@@ -93,8 +87,9 @@ class Image2HLSBackgroundTask(BackgroundTask):
         self.logger.info(f"Starting ffmpeg: {self.input_settings=}, {self.output_settings=}")
         self.ffmpeg_process = (
             ffmpeg.input("pipe:", **self.input_settings)
-            #.filter("minterpolate", fps=self.output_fps, mi_mode="mci", mc_mode="aobmc", me_mode="bidir", vsbmc=0.9)
-            .filter("minterpolate", fps=self.output_fps, mi_mode="blend")
+            .filter("minterpolate", fps=self.output_fps, mi_mode="mci")
+            .filter("unsharp", lx=13, ly=13, la=1.2)
+            # .filter("minterpolate", fps=self.output_fps, mi_mode="blend")
             # .filter("cas", strength=0.8)
             .output(str(self.out_path), **self.output_settings)
             .overwrite_output()
