@@ -153,7 +153,7 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions,
     script_dir = Path(app.context.cache_dir) / f'script_{script_id}'
 
     # init
-    app.workers.init_display(script_dir,
+    app.workers.init_display(output_dir=script_dir,
                              image_height=img_config.height, image_width=img_config.width,
                              kf_duration=img_config.key_frame_duration, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
