@@ -154,8 +154,8 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions,
 
     # init
     app.workers.init_display(script_dir,
-                             img_config.height, img_config.width,
-                             img_config.key_frame_per_second, img_config.key_frame_per_second,
+                             image_height=img_config.height, image_width=img_config.width,
+                             kf_duration=img_config.key_frame_duration, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
 
     # start slideshow generation task
