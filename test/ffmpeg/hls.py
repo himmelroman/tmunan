@@ -19,7 +19,7 @@ if __name__ == "__main__":
     in_fps = 2
     out_fps = 12
     images = Path(args.input_dir).glob('*.png')
-    hlser = HLS(input_shape=(768, 768), input_fps=in_fps, output_fps=out_fps,
+    hlser = HLS(input_shape=(768, 768), kf_duration=in_fps, kf_repeat=3, output_fps=out_fps,
                 hls_path=Path(args.hls_output_path))
     hlser.start()
     time.sleep(5)
