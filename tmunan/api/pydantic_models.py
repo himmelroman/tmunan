@@ -13,7 +13,7 @@ class ImageInstructions(BaseModel):
     strength: float | None = 0.3
     seed: int | None = None
     key_frame_duration: int = 3
-    key_frame_stable_periods: int = 2
+    key_frame_repeat: int = 2
     output_fps: int = 12
 
 
