@@ -111,5 +111,5 @@ class Image2HLSBackgroundTask(BackgroundTask):
         self.logger.info('Pushing image')
 
         # repeat image according to kf_repeat
-        for _ in range(self.kf_repeat + 1):
+        for _ in range(self.kf_repeat):
             self.ffmpeg_process.stdin.write(image.tobytes())
