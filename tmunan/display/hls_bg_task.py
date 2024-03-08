@@ -70,7 +70,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
             "sc_threshold": 0,
             "format": "hls",
             "hls_time": 1,
-            "hls_list_size": 2 * 60 / 2,                        # 10 minutes keep
+            "hls_list_size": 2 * 60,              # 10 minutes keep
             "hls_flags": "independent_segments",  # +append_list",    # "split_by_time", "delete_segments"
             "flush_packets": 1,
             **preset.value,
