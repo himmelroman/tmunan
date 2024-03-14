@@ -27,6 +27,7 @@ class LCM:
         }
     }
 
+    # constructor
     def __init__(self, txt2img_size=None, img2img_size=None):
 
         # model sizes
@@ -58,6 +59,7 @@ class LCM:
 
     def load(self):
 
+        print(f"Loading models onto device: {self.device}")
         self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image

@@ -12,18 +12,6 @@ logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:
 
 # constants
 LOG_DIR = Path(os.environ['WORK_DIR'] if 'WORK_DIR' in os.environ else '/tmp/') / 'log'
-LOG_HEADER_START_TAG = '========================= LOG HEADER START ================================='
-LOG_HEADER_END_TAG = '========================== LOG HEADER END =================================='
-
-
-def get_log_header():
-
-    header = f'\n{LOG_HEADER_START_TAG}\n' \
-             f'commit={os.environ.get("GIT_COMMIT", "n/a")}, ' \
-             f'branch={os.environ.get("GIT_BRANCH", "n/a")}, ' \
-             f'tags={os.environ.get("GIT_TAGS", "n/a")} ' \
-             f'\n{LOG_HEADER_END_TAG}\n'
-    return header
 
 
 def get_logger(log_name, log_path=None, console=True):
@@ -34,14 +22,6 @@ def get_logger(log_name, log_path=None, console=True):
 
     # get logger
     logger = logging.getLogger(log_name)
-
-    # clear handlers (in case a logger with the same name existed)
-    logger.handlers = []
-
-    # clear root and parent handlers,
-    # in case some other package (e.g. rollbar) caused a StreamHandler to be added by calling logging.basicConfig()
-    logger.root.handlers = []
-    logger.parent.handlers = []
 
     # set logger level
     logger.setLevel(DEBUG)
@@ -73,8 +53,5 @@ def get_logger(log_name, log_path=None, console=True):
 
     # save log path
     logger.log_path = log_path
-
-    # add log header
-    logger.debug(get_log_header())
 
     return logger
