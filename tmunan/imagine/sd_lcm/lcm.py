@@ -6,6 +6,7 @@ import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
 from diffusers.utils import load_image, make_image_grid
 from diffusers import LCMScheduler, AutoPipelineForText2Image, AutoPipelineForImage2Image
+from latentblending import BlendingEngine
 
 from tmunan.common.log import get_logger
 
@@ -24,6 +25,10 @@ class LCM:
         'large': {
             'model': "stabilityai/stable-diffusion-xl-base-1.0",
             'adapter': "latent-consistency/lcm-lora-sdxl"
+        },
+        'large-turbo': {
+            'model': "stabilityai/sdxl-turbo",
+            'adapter': "latent-consistency/lcm-lora-sdxl"
         }
     }
 
@@ -37,6 +42,7 @@ class LCM:
         # pipelines
         self.txt2img_pipe = None
         self.img2img_pipe = None
+        self.blend_engine = None
 
         # prompt
         self.compel = None
@@ -62,45 +68,51 @@ class LCM:
         self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image
-        if self.txt2img_size:
-
-            # load txt2img model
-            self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
-            self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
-                self.model_map[self.txt2img_size]['model'],
-                # local_files_only=True,
-                torch_dtype=torch.float16).to(self.device)
-            self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
-
-            # load and fuse sd_lcm lora
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
-            self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
-                                                weight_name='pytorch_lora_weights.safetensors')
-            self.txt2img_pipe.fuse_lora()
-
-            # init prompt generator
-            if self.txt2img_size == 'large':
-                self.compel = Compel(
-                    tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
-                    text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
-                    returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
-                    requires_pooled=[False, True]
-                )
+        # if self.txt2img_size:
+        #
+        #     # load txt2img model
+        #     self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
+        #     self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
+        #         self.model_map[self.txt2img_size]['model'],
+        #         # local_files_only=True,
+        #         torch_dtype=torch.float16).to(self.device)
+        #     self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
+        #
+        #     # load and fuse sd_lcm lora
+        #     self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
+        #     self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
+        #                                         weight_name='pytorch_lora_weights.safetensors')
+        #     self.txt2img_pipe.fuse_lora()
+        #
+        #     # init prompt generator
+        #     if self.txt2img_size == 'large':
+        #         self.compel = Compel(
+        #             tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
+        #             text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
+        #             returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
+        #             requires_pooled=[False, True]
+        #         )
 
         # image to image
-        if self.img2img_size:
+        # if self.img2img_size:
+        #
+        #     # load img2img model
+        #     self.logger.info(f"Loading img2img model: {self.model_map[self.img2img_size]['model']}")
+        #     self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
+        #         self.model_map[self.img2img_size]['model'],
+        #         torch_dtype=torch.float16).to(self.device)
+        #     self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
+        #
+        #     # load LCM-LoRA
+        #     self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
+        #     self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
+        #     self.img2img_pipe.fuse_lora()
 
-            # load img2img model
-            self.logger.info(f"Loading img2img model: {self.model_map[self.img2img_size]['model']}")
-            self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
-                self.model_map[self.img2img_size]['model'],
-                torch_dtype=torch.float16).to(self.device)
-            self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
-
-            # load LCM-LoRA
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
-            self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
-            self.img2img_pipe.fuse_lora()
+        self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo",
+                                                                      torch_dtype=torch.float16,
+                                                                      variant="fp16")
+        self.txt2img_pipe.to(self.device)
+        self.blend_engine = BlendingEngine(self.txt2img_pipe)
 
         self.logger.info("Loading models finished.")
 
@@ -164,7 +176,7 @@ class LCM:
                                    image=prompt_image,
                                    num_inference_steps=num_inference_steps,
                                    height=width, width=height,
-                                   guidance_scale=guidance_scale,
+                                   guidance_scale=0.0,
                                    strength=strength,
                                    generator=generator
                                    ).images
