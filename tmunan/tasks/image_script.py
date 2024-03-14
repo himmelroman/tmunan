@@ -123,6 +123,7 @@ class ImageScript:
             elapsed_time = time.time() - start_time
             sleep_time = img_config.key_frame_duration * img_config.key_frame_repeat - elapsed_time
             if sleep_time > 0:
+                print(f'Sleeping for: {sleep_time}')
                 time.sleep(sleep_time)
 
     def process_ready_image(self, image):
