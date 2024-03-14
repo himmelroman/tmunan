@@ -68,51 +68,51 @@ class LCM:
         self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image
-        # if self.txt2img_size:
-        #
-        #     # load txt2img model
-        #     self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
-        #     self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
-        #         self.model_map[self.txt2img_size]['model'],
-        #         # local_files_only=True,
-        #         torch_dtype=torch.float16).to(self.device)
-        #     self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
-        #
-        #     # load and fuse sd_lcm lora
-        #     self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
-        #     self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
-        #                                         weight_name='pytorch_lora_weights.safetensors')
-        #     self.txt2img_pipe.fuse_lora()
-        #
-        #     # init prompt generator
-        #     if self.txt2img_size == 'large':
-        #         self.compel = Compel(
-        #             tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
-        #             text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
-        #             returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
-        #             requires_pooled=[False, True]
-        #         )
+        if self.txt2img_size:
+
+            # load txt2img model
+            self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
+            self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
+                self.model_map[self.txt2img_size]['model'],
+                # local_files_only=True,
+                torch_dtype=torch.float16).to(self.device)
+            self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
+
+            # load and fuse sd_lcm lora
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
+            self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
+                                                weight_name='pytorch_lora_weights.safetensors')
+            self.txt2img_pipe.fuse_lora()
+
+            # init prompt generator
+            if self.txt2img_size == 'large':
+                self.compel = Compel(
+                    tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
+                    text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
+                    returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
+                    requires_pooled=[False, True]
+                )
 
         # image to image
-        # if self.img2img_size:
-        #
-        #     # load img2img model
-        #     self.logger.info(f"Loading img2img model: {self.model_map[self.img2img_size]['model']}")
-        #     self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
-        #         self.model_map[self.img2img_size]['model'],
-        #         torch_dtype=torch.float16).to(self.device)
-        #     self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
-        #
-        #     # load LCM-LoRA
-        #     self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
-        #     self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
-        #     self.img2img_pipe.fuse_lora()
+        if self.img2img_size:
 
-        self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo",
-                                                                      torch_dtype=torch.float16,
-                                                                      variant="fp16")
-        self.txt2img_pipe.to(self.device)
-        self.blend_engine = BlendingEngine(self.txt2img_pipe)
+            # load img2img model
+            self.logger.info(f"Loading img2img model: {self.model_map[self.img2img_size]['model']}")
+            self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
+                self.model_map[self.img2img_size]['model'],
+                torch_dtype=torch.float16).to(self.device)
+            self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
+
+            # load LCM-LoRA
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
+            self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
+            self.img2img_pipe.fuse_lora()
+
+        # self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo",
+        #                                                               torch_dtype=torch.float16,
+        #                                                               variant="fp16")
+        # self.txt2img_pipe.to(self.device)
+        # self.blend_engine = BlendingEngine(self.txt2img_pipe)
 
         self.logger.info("Loading models finished.")
 
