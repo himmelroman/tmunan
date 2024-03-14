@@ -26,7 +26,7 @@ class AppWorkers:
             self.read = TextGenerator()
             self.read.start()
 
-    def init_imagine(self, model_size='small'):
+    def init_imagine(self, model_size='large'):
         if not self.imagine:
             self.imagine = ImageGenerator(model_size=model_size)
             self.imagine.start()
