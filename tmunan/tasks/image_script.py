@@ -121,7 +121,7 @@ class ImageScript:
 
             # check elapsed time
             elapsed_time = time.time() - start_time
-            sleep_time = img_config.key_frame_duration * img_config.key_frame_repeat - elapsed_time
+            sleep_time = (img_config.key_frame_duration * img_config.key_frame_repeat) - elapsed_time + 1
             if sleep_time > 0:
                 print(f'Sleeping for: {sleep_time}')
                 time.sleep(sleep_time)
