@@ -21,7 +21,7 @@ def dir2hls(in_fps, out_fps, key_frame_repeat, input_dir, output_dir):
         image = load_image(str(img))
         image_np = np.array(image, dtype=np.uint8)
         hlser.push_image(image_np)
-        # time.sleep(1)
+        time.sleep(0.5)
 
     time.sleep(15)
     print('Stopping test')
@@ -39,6 +39,6 @@ if __name__ == "__main__":
 
     # dir2hls(in_fps=2, out_fps=12, input_dir=args.input_dir, output_dir=args.hls_output_path)
 
-    dir2hls(in_fps=2, out_fps=24, key_frame_repeat=5,
+    dir2hls(in_fps=1, out_fps=24, key_frame_repeat=3,
             input_dir='/Users/himmelroman/.cache/theatre/script_d92e9879/seq_1c6678a8',
             output_dir='/tmp/multi_hls/hls.m3u8')

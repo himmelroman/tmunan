@@ -89,8 +89,8 @@ class Image2HLSBackgroundTask(BackgroundTask):
         self.logger.info(f"Starting ffmpeg: {self.input_settings=}, {self.output_settings=}")
         self.ffmpeg_process = (
             ffmpeg.input("pipe:", **self.input_settings)
-            # .filter("minterpolate", fps=self.output_fps, mi_mode="mci", scd="none")
-            .filter("minterpolate", fps=self.output_fps, mi_mode="blend")
+            #.filter("minterpolate", fps=self.output_fps, mi_mode="mci", scd="none")
+            .filter("minterpolate", fps=self.output_fps, mi_mode="blend", scd="none")
             # .filter("unsharp", lx=13, ly=13, la=1.2)
             # .filter("cas", strength=0.8)
             .output(str(self.out_path), **self.output_settings)

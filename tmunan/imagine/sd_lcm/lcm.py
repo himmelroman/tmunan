@@ -6,7 +6,7 @@ import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
 from diffusers.utils import load_image, make_image_grid
 from diffusers import LCMScheduler, AutoPipelineForText2Image, AutoPipelineForImage2Image
-from latentblending import BlendingEngine
+# from latentblending import BlendingEngine
 
 from tmunan.common.log import get_logger
 
