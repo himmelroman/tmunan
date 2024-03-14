@@ -59,7 +59,6 @@ class LCM:
 
     def load(self):
 
-        print(f"Loading models onto device: {self.device}")
         self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image
