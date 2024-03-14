@@ -15,7 +15,8 @@ class Slideshow(Performance):
         # Host app
         self.app = app
 
-        # Imagine & display
+        # Workers
+        self.read = app.workers.read
         self.imagine = app.workers.imagine
         self.display = app.workers.display
 
@@ -23,8 +24,15 @@ class Slideshow(Performance):
         self.img_script = None
         self.img_config = None
 
-        # Task
+        # Imagine Task
         self.image_script_task = ImageScript(self.imagine, self.cache_dir)
+
+        # Bind events
+        self.read.on_prompt_ready += self.push_text
+
+    def push_text(self, text_prompt):
+        print(f'on_prompt_ready fired with: {text_prompt}')
+        self.image_script_task.set_text_prompt(text_prompt)
 
     def display_image(self, image_info):
 

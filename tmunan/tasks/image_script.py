@@ -26,6 +26,9 @@ class ImageScript:
         self.image_gen.on_image_ready += self.process_ready_image
         self.last_image_path = None
 
+        # text
+        self.external_text_prompt = None
+
         # internal
         self.stop_requested = False
         self.sync_event = threading.Event()
@@ -35,6 +38,10 @@ class ImageScript:
 
     def stop(self):
         self.stop_requested = True
+
+    def set_text_prompt(self, text_prompt):
+        print(f'Setting external_text_prompt to: {text_prompt}')
+        self.external_text_prompt = text_prompt
 
     # def start_sequence(self, seq: ImageSequence, config: ImageInstructions, seq_id, parent_dir=None):
     #
@@ -73,8 +80,12 @@ class ImageScript:
             if self.stop_requested:
                 break
 
+            effective_prompts = deepcopy(seq.prompts)
+            if self.external_text_prompt:
+                effective_prompts.insert(0, self.external_text_prompt)
+
             # gen prompt for current sequence progress
-            prompt = self.gen_seq_prompt(seq.prompts, (i / seq.num_images * 100))
+            prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
             print(f'Generating image {i} with prompt: {prompt}')
 
             # gen image

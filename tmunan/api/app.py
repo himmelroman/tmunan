@@ -4,19 +4,18 @@ import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, BackgroundTasks, WebSocket, Request
+from fastapi import FastAPI, BackgroundTasks, WebSocket, Request, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic_settings import BaseSettings
 
-from starlette import status
 from starlette.middleware import Middleware
 from starlette.websockets import WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
 from tmunan.theatre.workers import AppWorkers
 from tmunan.api.websocket import WebSocketConnectionManager
-from tmunan.api.pydantic_models import ImageInstructions, ImageSequenceScript
+from tmunan.api.pydantic_models import ImageInstructions, ImageSequenceScript, TextInstructions, ReadTextPrompt
 from tmunan.theatre.performance_factory import create_performance, PerformanceType
 
 
@@ -37,6 +36,7 @@ async def lifespan(fastapi_app: FastAPI):
 
     # pre-start global workers
     fastapi_app.workers.init_imagine()
+    fastapi_app.workers.init_read()
     # fastapi_app.workers.init_listen()
     pass
 
@@ -143,9 +143,16 @@ def get_image_by_id(script_id: str, seq_id: str, image_id: str):
 #     # return file
 #     return {'image_id': image_id, 'image_url': f'{request.base_url}blend/{image_id}'}
 
+@app.post("/api/read/prompt",)
+def post_text(input_text: ReadTextPrompt, status_code=status.HTTP_200_OK):
+
+    # consume posted text
+    app.workers.read.push_text(input_text.text)
+    return {'success': True}
+
 
 @app.post("/api/script",)
-def script(script: ImageSequenceScript, img_config: ImageInstructions,
+def script(script: ImageSequenceScript, img_config: ImageInstructions, text_config: TextInstructions,
            request: Request, background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
 
     # gen id
@@ -157,6 +164,9 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions,
                              image_height=img_config.height, image_width=img_config.width,
                              kf_duration=img_config.key_frame_duration, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
+
+    # set text instructions
+    app.workers.read.set_instructions(text_config)
 
     # start slideshow generation task
     slideshow = create_performance(PerformanceType.Slideshow, app)

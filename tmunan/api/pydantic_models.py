@@ -17,6 +17,15 @@ class ImageInstructions(BaseModel):
     output_fps: int = 12
 
 
+class ReadTextPrompt(BaseModel):
+    text: str
+
+
+class TextInstructions(BaseModel):
+    start_weight: float = 1
+    end_weight: float = 1
+
+
 class SequencePrompt(BaseModel):
     text: str
     start_weight: float = 1

@@ -36,6 +36,36 @@
                     playVideo(video_element, hlsUrl.toString())
                 }
             }
+            function post_text_prompt() {
+
+                // Prepare address
+                const baseUrl = new URL(window.location.href);
+                const postUrl = new URL(`/api/read/prompt`, baseUrl);
+
+                // Get value from textbox
+                const textInput = document.getElementById('text_input');
+                const postData = { text: textInput.value };
+
+                // Set options for the fetch request (optional)
+                const options = {
+                  method: "POST", // Set request method to POST
+                  headers: {
+                    "Content-Type": "application/json", // Specify data format
+                  },
+                  body: JSON.stringify(postData), // Convert data to JSON string
+                };
+
+                // Send the POST request using fetch
+                console.log("Posting Text:", options);
+                fetch(postUrl, options)
+                  .then((response) => response.json()) // Parse the response as JSON
+                  .then((responseData) => {
+                    console.log("Success:", responseData);
+                  })
+                  .catch((error) => {
+                    console.error("Error:", error);
+                  });
+            }
             function initAudio() {
 
                 // build websocket url
@@ -46,6 +76,7 @@
                 // init audio sending via websocket
                 sendAudio(wsUrl.toString())
             }
+
             window.onload = function () {
                 initVideo();
                 initAudio();
@@ -55,6 +86,11 @@
     <body>
         <div id="imageContainer">
             <video id="video" controls></video>
+        </div>
+        <div>
+            <label for="text_input">Text Prompt: </label>
+            <input id="text_input" name="text_input">
+            <button onclick="post_text_prompt();">Send</button>
         </div>
         <div id="mySidenav" class="sidenav">
           <div id="config">
