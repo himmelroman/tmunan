@@ -1,4 +1,5 @@
 import uuid
+import time
 import datetime
 import threading
 from typing import List
@@ -89,6 +90,7 @@ class ImageScript:
             print(f'Generating image {i} with prompt: {prompt}')
 
             # gen image
+            start_time = time.time()
             self.sync_event.clear()
 
             # check transition type
@@ -116,6 +118,11 @@ class ImageScript:
 
             # wait until image is ready
             self.sync_event.wait()
+
+            # check elapsed time
+            elapsed_time = time.time() - start_time
+            sleep_time = img_config.key_frame_duration * img_config.key_frame_repeat - elapsed_time
+            time.sleep(sleep_time)
 
     def process_ready_image(self, image):
 
