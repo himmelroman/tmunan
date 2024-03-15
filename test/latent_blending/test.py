@@ -1,6 +1,8 @@
 import torch
 import warnings
 
+from PIL import Image
+
 from compel import Compel, ReturnedEmbeddingsType
 
 from diffusers import AutoPipelineForText2Image
@@ -65,8 +67,19 @@ def write_images(images, output_dir, duration_transition, fps=30):
 
     # Save
     for i, img in enumerate(imgs_transition_ext):
-        img = be.dh.latent2image(img)
-        img.save(f'{output_dir}/{i}.png')
+        #img = be.dh.latent2image(img)
+        try:
+            print('Saving img as is')
+            img.save(f'{output_dir}/{i}.png')
+        except Exception as ex:
+            print(ex)
+
+        try:
+            print('Loading array as image')
+            img2 = Image.fromarray(img)
+            img2.save(f'{output_dir}/{i}.png')
+        except Exception as ex:
+            print(ex)
 
 
 # Save movie
