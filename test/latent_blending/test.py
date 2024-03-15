@@ -48,8 +48,8 @@ torch.set_grad_enabled(False)
 torch.backends.cudnn.benchmark = False
 
 # %% First let us spawn a stable diffusion holder. Uncomment your version of choice.
-pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float16, variant="fp16")
-pipe.to("mps")
+pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", torch_dtype=torch.float16, variant="fp16")
+pipe.to("cuda")
 
 be = BlendingEngineCompel(pipe)
 be.set_prompt1("lightly cloudy sky background, (pink clouds)0.1")
