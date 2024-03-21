@@ -112,7 +112,7 @@ class BackgroundTask(ABC):
 class BackgroundExecutor:
 
     # Choose process context based on platform
-    WORKER_PROCESS_CLASS = ForkMonitoredProcess if platform.system() == "Linux" else SpawnMonitoredProcess
+    WORKER_PROCESS_CLASS = SpawnMonitoredProcess    # ForkMonitoredProcess if platform.system() == "Linux" else SpawnMonitoredProcess
 
     def __init__(self, task_class: Type[BackgroundTask], *args, **kwargs):
 
