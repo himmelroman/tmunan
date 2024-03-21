@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+import torch
 from fastapi import FastAPI, BackgroundTasks, WebSocket, Request, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -34,8 +35,11 @@ class AppSettings(BaseSettings):
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
 
+    # determine model size
+    model_size = 'large' if torch.cuda.is_available() else 'medium'
+
     # pre-start global workers
-    fastapi_app.workers.init_imagine()
+    fastapi_app.workers.init_imagine(model_size=model_size)
     fastapi_app.workers.init_read()
     # fastapi_app.workers.init_listen()
     pass

@@ -27,8 +27,7 @@ class LCM:
             'adapter': "latent-consistency/lcm-lora-sdxl"
         },
         'large-turbo': {
-            'model': "stabilityai/sdxl-turbo",
-            'adapter': "latent-consistency/lcm-lora-sdxl"
+            'model': "stabilityai/sdxl-turbo"
         }
     }
 
@@ -76,13 +75,18 @@ class LCM:
                 self.model_map[self.txt2img_size]['model'],
                 # local_files_only=True,
                 torch_dtype=torch.float16).to(self.device)
-            self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
-            # load and fuse sd_lcm lora
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
-            self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
-                                                weight_name='pytorch_lora_weights.safetensors')
-            self.txt2img_pipe.fuse_lora()
+            # check for LCM adapter
+            if self.model_map[self.txt2img_size].get('adapter'):
+
+                # update scheduler
+                self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
+
+                # load and fuse sd_lcm lora
+                self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
+                self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
+                                                    weight_name='pytorch_lora_weights.safetensors')
+                self.txt2img_pipe.fuse_lora()
 
             # init prompt generator
             if self.txt2img_size == 'large':
@@ -101,18 +105,17 @@ class LCM:
             self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
                 self.model_map[self.img2img_size]['model'],
                 torch_dtype=torch.float16).to(self.device)
-            self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
 
-            # load LCM-LoRA
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
-            self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
-            self.img2img_pipe.fuse_lora()
+            # check for LCM adapter
+            if self.model_map[self.img2img_size].get('adapter'):
 
-        # self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo",
-        #                                                               torch_dtype=torch.float16,
-        #                                                               variant="fp16")
-        # self.txt2img_pipe.to(self.device)
-        # self.blend_engine = BlendingEngine(self.txt2img_pipe)
+                # update scheduler
+                self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
+
+                # load LCM-LoRA
+                self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
+                self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
+                self.img2img_pipe.fuse_lora()
 
         self.logger.info("Loading models finished.")
 
@@ -144,6 +147,44 @@ class LCM:
                                    num_inference_steps=num_inference_steps,
                                    guidance_scale=guidance_scale,
                                    height=height, width=width
+                                   ).images
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"Done generating txt2img: {elapsed_time=}")
+
+        return result
+
+    def txt2img_latents(self,
+                        prompt_embeds,
+                        negative_prompt_embeds,
+                        pooled_prompt_embeds,
+                        negative_pooled_prompt_embeds,
+                        latents,
+                        height: int = 512,
+                        width: int = 512,
+                        num_inference_steps: int = 4,
+                        guidance_scale: float = 0.0,
+                        seed: int = 0,
+                        randomize_seed: bool = False,
+                        ):
+
+        if not self.txt2img_pipe:
+            raise Exception('Text to Image pipe not initialized!')
+
+        # seed
+        if randomize_seed:
+            seed = self.get_random_seed()
+        torch.manual_seed(seed)
+
+        # run image generation
+        start_time = time.time()
+        result = self.txt2img_pipe(prompt_embeds=prompt_embeds,
+                                   negative_prompt_embeds=negative_prompt_embeds,
+                                   pooled_prompt_embeds=pooled_prompt_embeds,
+                                   negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+                                   latents=latents,
+                                   num_inference_steps=num_inference_steps,
+                                   guidance_scale=guidance_scale,
+                                   height=height, width=width,
                                    ).images
         elapsed_time = time.time() - start_time
         self.logger.info(f"Done generating txt2img: {elapsed_time=}")
@@ -206,6 +247,30 @@ class LCM:
                 'prompt': prompt,
                 'seed': seed
             }
+
+    def get_prompt_embeds(self, prompt_text):
+
+        (
+            prompt_embeds,
+            negative_prompt_embeds,
+            pooled_prompt_embeds,
+            negative_pooled_prompt_embeds,
+        ) = self.txt2img_pipe.encode_prompt(
+            prompt=prompt_text,
+            prompt_2=prompt_text,
+            device=self.device,
+            num_images_per_prompt=1,
+            do_classifier_free_guidance=True,
+            negative_prompt="",
+            negative_prompt_2="",
+            prompt_embeds=None,
+            negative_prompt_embeds=None,
+            pooled_prompt_embeds=None,
+            negative_pooled_prompt_embeds=None,
+            lora_scale=0,
+            clip_skip=False,
+        )
+        return prompt_embeds, negative_prompt_embeds, pooled_prompt_embeds, negative_pooled_prompt_embeds
 
     @classmethod
     def get_random_seed(cls):
