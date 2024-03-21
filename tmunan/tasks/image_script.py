@@ -74,6 +74,9 @@ class ImageScript:
         if not img_config.seed:
             img_config.seed = self.image_gen.get_random_seed()
 
+        # prepare transition type index
+        trans_index = [seg.type for seg in seq.transitions.segments for _ in range(seg.count)]
+
         # iterate as many times as requested
         for i in range(0, seq.num_images):
 
@@ -89,12 +92,28 @@ class ImageScript:
             prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
             print(f'Generating image {i} with prompt: {prompt}')
 
-            # gen image
+            # take the time before start of image generation
             start_time = time.time()
             self.sync_event.clear()
 
+            # determine transition type
+            transition_type = trans_index[i % len(trans_index)]
+
             # check transition type
-            if seq.transition == TaskType.Image2Image and self.last_image_url is not None:
+            if transition_type == TaskType.Text2Image or self.last_image_url is None:
+
+                # text 2 image
+                self.image_gen.txt2img(
+                    prompt=prompt,
+                    num_inference_steps=img_config.num_inference_steps,
+                    guidance_scale=img_config.guidance_scale,
+                    height=img_config.height, width=img_config.width,
+                    seed=img_config.seed,
+                    randomize_seed=False
+                )
+            else:
+
+                # image 2 image
                 self.image_gen.img2img(
                     prompt=prompt,
                     image_url=self.last_image_url,
@@ -104,22 +123,12 @@ class ImageScript:
                     height=img_config.height, width=img_config.width
                 )
 
-            else:
-                self.image_gen.txt2img(
-                    prompt=prompt,
-                    num_inference_steps=img_config.num_inference_steps,
-                    guidance_scale=img_config.guidance_scale,
-                    height=img_config.height, width=img_config.width,
-                    seed=img_config.seed,
-                    randomize_seed=False
-                )
-
             # wait until image is ready
             self.sync_event.wait()
 
-            # check elapsed time
+            # check elapsed time since image generation request
             elapsed_time = time.time() - start_time
-            sleep_time = (img_config.key_frame_period * img_config.key_frame_repeat) - elapsed_time + 1
+            sleep_time = img_config.key_frame_period - elapsed_time
             if sleep_time > 0:
                 print(f'Sleeping for: {sleep_time}')
                 time.sleep(sleep_time)
