@@ -27,7 +27,7 @@ class Slideshow(Performance):
         # Task
         self.image_script_task = ImageScript(self.imagine, self.listen, self.cache_dir)
 
-    def display_image(self, image_info):
+    def display_image(self, image_url, image_info):
 
         # put on queue
         image = load_image(image_info['image_path'])

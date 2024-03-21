@@ -25,7 +25,7 @@ class ImageScript:
         # imaging
         self.image_gen = image_gen
         self.image_gen.on_image_ready += self.process_ready_image
-        self.last_image_path = None
+        self.last_image_url = None
 
         # text
         self.external_text_prompt = None
@@ -94,10 +94,10 @@ class ImageScript:
             self.sync_event.clear()
 
             # check transition type
-            if seq.transition == TaskType.Image2Image and self.last_image_path is not None:
+            if seq.transition == TaskType.Image2Image and self.last_image_url is not None:
                 self.image_gen.img2img(
-                    image_url=self.last_image_path,
                     prompt=prompt,
+                    image_url=self.last_image_url,
                     num_inference_steps=img_config.num_inference_steps,
                     guidance_scale=img_config.guidance_scale,
                     strength=img_config.strength,
@@ -119,12 +119,12 @@ class ImageScript:
 
             # check elapsed time
             elapsed_time = time.time() - start_time
-            sleep_time = (img_config.key_frame_duration * img_config.key_frame_repeat) - elapsed_time + 1
+            sleep_time = (img_config.key_frame_period * img_config.key_frame_repeat) - elapsed_time + 1
             if sleep_time > 0:
                 print(f'Sleeping for: {sleep_time}')
                 time.sleep(sleep_time)
 
-    def process_ready_image(self, image):
+    def process_ready_image(self, image_url, image):
 
         # release sync event
         self.sync_event.set()
@@ -136,8 +136,8 @@ class ImageScript:
         image_path = self.seq_dir / f'{now_ts}.png'
         image.save(str(image_path))
 
-        # save last image path
-        self.last_image_path = str(image_path)
+        # save last image id
+        self.last_image_url = image_url
 
         # notify image ready
         self.on_image_ready.notify({

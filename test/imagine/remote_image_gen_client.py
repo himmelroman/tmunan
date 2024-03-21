@@ -2,15 +2,15 @@ import time
 
 from diffusers.utils import make_image_grid
 
-from tmunan.imagine.image_generator import RemoteImageGenerator
+from tmunan.imagine.image_generator import ImageGeneratorRemote
 
 
 if __name__ == '__main__':
 
     images = list()
 
-    rig = RemoteImageGenerator('http://localhost', 8080)
-    rig.on_image_ready += lambda img: images.append(img)
+    rig = ImageGeneratorRemote('http://localhost', 8080)
+    rig.on_image_ready += lambda img_id, img: images.append(img)
 
     print('Requesting images')
     rig.txt2img(

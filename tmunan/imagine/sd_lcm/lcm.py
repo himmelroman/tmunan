@@ -192,8 +192,8 @@ class LCM:
         return result
 
     def img2img(self,
-                image_url: str,
                 prompt: str,
+                image_url: str,
                 height: int = 512,
                 width: int = 512,
                 num_inference_steps: int = 4,
@@ -217,7 +217,7 @@ class LCM:
                                    image=prompt_image,
                                    num_inference_steps=num_inference_steps,
                                    height=width, width=height,
-                                   guidance_scale=0.0,
+                                   guidance_scale=guidance_scale,
                                    strength=strength,
                                    generator=generator
                                    ).images

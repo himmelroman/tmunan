@@ -3,7 +3,7 @@ import time
 from tmunan.imagine.image_generator import ImageGenerator
 
 
-def handle_image_ready(image):
+def handle_image_ready(image_url, image):
     print('Image Ready!')
     image.save('test_image.png')
     t2i.stop()

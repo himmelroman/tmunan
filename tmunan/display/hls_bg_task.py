@@ -34,7 +34,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
     def __init__(self,
                  input_shape: tuple[int, int],
-                 kf_duration: int,
+                 kf_period: int,
                  kf_repeat: int,
                  output_fps: int,
                  hls_path: Path,
@@ -44,7 +44,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
         # save arguments
         self.input_shape = input_shape
-        self.kf_duration = kf_duration
+        self.kf_duration = kf_period
         self.kf_repeat = kf_repeat
         self.output_fps = output_fps
         self.preset = preset

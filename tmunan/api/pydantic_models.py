@@ -9,6 +9,10 @@ class Prompt(BaseModel):
     text: str
 
 
+class BaseImage(BaseModel):
+    image_url: str
+
+
 class ImageInstructions(BaseModel):
     height: int | None = 768
     width: int | None = 768
@@ -16,7 +20,7 @@ class ImageInstructions(BaseModel):
     guidance_scale: float | None = 0.5
     strength: float | None = 0.3
     seed: int | None = None
-    key_frame_duration: int = 3
+    key_frame_period: int = 3
     key_frame_repeat: int = 2
     output_fps: int = 12
 

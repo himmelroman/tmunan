@@ -13,7 +13,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 
 from tmunan.imagine.sd_lcm.lcm import LCM
-from tmunan.api.pydantic_models import ImageInstructions, Prompt
+from tmunan.api.pydantic_models import ImageInstructions, Prompt, BaseImage
 
 
 class AppSettings(BaseSettings):
@@ -32,7 +32,7 @@ class AppSettings(BaseSettings):
 async def lifespan(fastapi_app: FastAPI):
 
     # determine model size
-    model_size = 'large' if torch.cuda.is_available() else 'medium'
+    model_size = 'large' if torch.cuda.is_available() else 'small'
 
     # LCM
     app.lcm = LCM(txt2img_size=model_size, img2img_size=model_size)
@@ -98,14 +98,11 @@ def txt2img(prompt: Prompt, img_config: ImageInstructions, req: Request):
 
 
 @app.post("/api/imagine/img2img",)
-def img2img(prompt: Prompt, image_id: str, img_config: ImageInstructions, request: Request):
-
-    # build image path
-    image_url = f'{app.context.cache_dir}/{image_id}.png'
+def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions, request: Request):
 
     # generate image
     images = app.lcm.img2img(
-        image_url=image_url,
+        image_url=base_image.image_url,
         prompt=prompt.text,
         num_inference_steps=img_config.num_inference_steps,
         guidance_scale=img_config.guidance_scale,

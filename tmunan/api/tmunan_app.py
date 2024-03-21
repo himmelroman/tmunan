@@ -4,9 +4,7 @@ import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-import torch
 from fastapi import FastAPI, BackgroundTasks, WebSocket, Request, status
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic_settings import BaseSettings
 
@@ -36,10 +34,14 @@ class AppSettings(BaseSettings):
 async def lifespan(fastapi_app: FastAPI):
 
     # determine model size
-    model_size = 'large' if torch.cuda.is_available() else 'medium'
+    # model_size = 'large' if torch.cuda.is_available() else 'medium'
+
+    # determine imagine api address
+    api_address = os.environ['API_ADDRESS']
+    api_port = os.environ['API_PORT']
 
     # pre-start global workers
-    fastapi_app.workers.init_imagine(model_size=model_size)
+    fastapi_app.workers.init_imagine(api_base_address=api_address, api_port=api_port)
     fastapi_app.workers.init_read()
     # fastapi_app.workers.init_listen()
     pass
@@ -94,7 +96,7 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
     # init
     app.workers.init_display(output_dir=script_dir,
                              image_height=img_config.height, image_width=img_config.width,
-                             kf_duration=img_config.key_frame_duration, kf_repeat=img_config.key_frame_repeat,
+                             kf_duration=img_config.key_frame_period, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
 
     # set text instructions
@@ -115,33 +117,38 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
 # def stop():
 #     sequencer.stop()
 
-
-@app.websocket("/api/ws")
-async def websocket_endpoint(websocket: WebSocket):
-
-    # wait for connection
-    await app.ws_manager.connect(websocket)
-
-    try:
-        while True:
-
-            # get WS message
-            data = await websocket.receive()
-            if 'bytes' in data:
-
-                pass
-
-                # push to ASR
-                # print(f'Pushing audio into Listen: {len(data["bytes"])}')
-                # app.workers.listen.push_audio(data['bytes'])
-
-    except (WebSocketDisconnect, RuntimeError) as ex:
-        print(f'WS disconnected... {ex}')
-        app.ws_manager.disconnect(websocket)
+#
+# @app.websocket("/api/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#
+#     # wait for connection
+#     await app.ws_manager.connect(websocket)
+#
+#     try:
+#         while True:
+#
+#             # get WS message
+#             data = await websocket.receive()
+#             if 'bytes' in data:
+#
+#                 pass
+#
+#                 # push to ASR
+#                 # print(f'Pushing audio into Listen: {len(data["bytes"])}')
+#                 # app.workers.listen.push_audio(data['bytes'])
+#
+#     except (WebSocketDisconnect, RuntimeError) as ex:
+#         print(f'WS disconnected... {ex}')
+#         app.ws_manager.disconnect(websocket)
 
 
 if __name__ == "__main__":
+
+    # setup local env config
+    os.environ['API_ADDRESS'] = 'http://localhost'
+    os.environ['API_PORT'] = '8080'
+
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8081)
 
     # HF_HUB_OFFLINE=1

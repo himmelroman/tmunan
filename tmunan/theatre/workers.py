@@ -1,7 +1,7 @@
 from enum import Enum
 
 from tmunan.display.hls import HLS
-from tmunan.imagine.image_generator import ImageGenerator
+from tmunan.imagine.image_generator import ImageGenerator, ImageGeneratorRemote
 from tmunan.listen.asr import ASR
 from tmunan.read.text_generator import TextGenerator
 
@@ -26,9 +26,9 @@ class AppWorkers:
             self.read = TextGenerator()
             self.read.start()
 
-    def init_imagine(self, model_size='large'):
+    def init_imagine(self, api_base_address=None, api_port=None):
         if not self.imagine:
-            self.imagine = ImageGenerator(model_size=model_size)
+            self.imagine: ImageGenerator = ImageGeneratorRemote(api_base_address, api_port)
             self.imagine.start()
 
     def init_listen(self):
