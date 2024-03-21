@@ -96,7 +96,7 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
     # init
     app.workers.init_display(output_dir=script_dir,
                              image_height=img_config.height, image_width=img_config.width,
-                             kf_duration=img_config.key_frame_period, kf_repeat=img_config.key_frame_repeat,
+                             kf_period=img_config.key_frame_period, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
 
     # set text instructions

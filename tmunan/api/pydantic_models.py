@@ -49,4 +49,3 @@ class ImageSequence(BaseModel):
 class ImageSequenceScript(BaseModel):
     sequences: List[ImageSequence]
     loop: bool = False
-    transition: TaskType

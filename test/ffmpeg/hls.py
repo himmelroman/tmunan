@@ -10,7 +10,7 @@ from tmunan.display.hls import HLS
 def dir2hls(in_fps, out_fps, key_frame_repeat, input_dir, output_dir):
 
     images = Path(input_dir).glob('*.png')
-    hlser = HLS(input_shape=(512, 512), kf_duration=in_fps, kf_repeat=key_frame_repeat, output_fps=out_fps,
+    hlser = HLS(input_shape=(512, 512), kf_period=in_fps, kf_repeat=key_frame_repeat, output_fps=out_fps,
                 hls_path=Path(output_dir))
     hlser.start()
 

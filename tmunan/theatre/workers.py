@@ -37,10 +37,10 @@ class AppWorkers:
             self.listen.start()
 
     def init_display(self, output_dir, image_height, image_width,
-                     kf_duration, kf_repeat, fps=12):
+                     kf_period, kf_repeat, fps=12):
         self.stop_display()
         self.display = HLS(input_shape=(image_height, image_width),
-                           kf_duration=kf_duration,
+                           kf_period=kf_period,
                            kf_repeat=kf_repeat,
                            output_fps=fps,
                            hls_path=output_dir / 'hls' / 'manifest.m3u8')

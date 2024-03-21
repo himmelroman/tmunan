@@ -44,7 +44,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
         # save arguments
         self.input_shape = input_shape
-        self.kf_duration = kf_period
+        self.kf_period = kf_period
         self.kf_repeat = kf_repeat
         self.output_fps = output_fps
         self.preset = preset
@@ -63,7 +63,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
             "format": "rawvideo",
             "pix_fmt": "rgb24",
             "s": f"{self.input_shape[1]}x{self.input_shape[0]}",
-            "framerate": f"1/{self.kf_duration}",
+            "framerate": f"1/{self.kf_period}",
         }
         self.output_settings = {
             "g": self.output_fps,
