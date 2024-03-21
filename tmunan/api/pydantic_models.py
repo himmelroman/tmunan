@@ -5,6 +5,10 @@ from pydantic import BaseModel
 from tmunan.imagine.sd_lcm.lcm_bg_task import TaskType
 
 
+class Prompt(BaseModel):
+    text: str
+
+
 class ImageInstructions(BaseModel):
     height: int | None = 768
     width: int | None = 768

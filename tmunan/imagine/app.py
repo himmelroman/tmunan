@@ -13,7 +13,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 
 from tmunan.imagine.sd_lcm.lcm import LCM
-from tmunan.api.pydantic_models import ImageInstructions
+from tmunan.api.pydantic_models import ImageInstructions, Prompt
 
 
 class AppSettings(BaseSettings):
@@ -72,17 +72,17 @@ def get_image_by_id(image_id: str):
 
 
 @app.post("/api/imagine/txt2img",)
-def txt2img(prompt: str, config: ImageInstructions, req: Request):
+def txt2img(prompt: Prompt, img_config: ImageInstructions, req: Request):
 
     # generate image
     print(f'Generating image with prompt: {prompt}')
     images = app.lcm.txt2img(
-        prompt=prompt,
-        num_inference_steps=config.num_inference_steps,
-        guidance_scale=config.guidance_scale,
-        height=config.height, width=config.width,
-        seed=config.seed,
-        randomize_seed=config.seed is None
+        prompt=prompt.text,
+        num_inference_steps=img_config.num_inference_steps,
+        guidance_scale=img_config.guidance_scale,
+        height=img_config.height, width=img_config.width,
+        seed=img_config.seed,
+        randomize_seed=img_config.seed is None
     )
 
     # save image to file
@@ -93,12 +93,12 @@ def txt2img(prompt: str, config: ImageInstructions, req: Request):
     # return file
     return {
         'image_id': image_id,
-        'image_url': f'{req.base_url}/api/imagine/{image_id}'
+        'image_url': f'{req.base_url}api/imagine/{image_id}'
     }
 
 
 @app.post("/api/imagine/img2img",)
-def img2img(prompt: str, image_id: str, config: ImageInstructions, request: Request, grid: bool = False):
+def img2img(prompt: Prompt, image_id: str, img_config: ImageInstructions, request: Request):
 
     # build image path
     image_url = f'{app.context.cache_dir}/{image_id}.png'
@@ -106,11 +106,11 @@ def img2img(prompt: str, image_id: str, config: ImageInstructions, request: Requ
     # generate image
     images = app.lcm.img2img(
         image_url=image_url,
-        prompt=prompt,
-        num_inference_steps=config.num_inference_steps,
-        guidance_scale=config.guidance_scale,
-        height=config.height, width=config.width,
-        strength=config.strength
+        prompt=prompt.text,
+        num_inference_steps=img_config.num_inference_steps,
+        guidance_scale=img_config.guidance_scale,
+        height=img_config.height, width=img_config.width,
+        strength=img_config.strength
     )
 
     # save image to file
@@ -121,7 +121,7 @@ def img2img(prompt: str, image_id: str, config: ImageInstructions, request: Requ
     # return file
     return {
         'image_id': image_id,
-        'image_url': f'{request.base_url}/api/imagine/{image_id}'
+        'image_url': f'{request.base_url}api/imagine/{image_id}'
     }
 
 
