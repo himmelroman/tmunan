@@ -95,8 +95,7 @@ class ImageScript:
 
             # check transition type
             if seq.transition == TaskType.Image2Image and self.last_image_path is not None:
-                self.image_gen.request_image(
-                    task=TaskType.Image2Image.value,
+                self.image_gen.img2img(
                     image_url=self.last_image_path,
                     prompt=prompt,
                     num_inference_steps=img_config.num_inference_steps,
@@ -106,8 +105,7 @@ class ImageScript:
                 )
 
             else:
-                self.image_gen.request_image(
-                    task=TaskType.Text2Image.value,
+                self.image_gen.txt2img(
                     prompt=prompt,
                     num_inference_steps=img_config.num_inference_steps,
                     guidance_scale=img_config.guidance_scale,
