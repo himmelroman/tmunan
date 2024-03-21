@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     running = True
 
-    t2i = ImageGenerator(model_id='large')
+    t2i = ImageGenerator(model_size='large')
     t2i.on_image_ready += handle_image_ready
     t2i.on_startup += request_image
     t2i.on_shutdown += mark_shutdown
