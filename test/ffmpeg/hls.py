@@ -42,4 +42,4 @@ if __name__ == "__main__":
 
     dir2hls(in_fps=3, key_frame_repeat=2, out_fps=24,
             input_dir=args.input_dir,
-            output_dir=args.output_dir / 'hls.m3u8')
+            output_dir=args.hls_output_path / 'hls.m3u8')
