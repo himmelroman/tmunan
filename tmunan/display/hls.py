@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from tmunan.common.exec import BackgroundExecutor
+from tmunan.common.exec import BackgroundExecutor, ForkMonitoredProcess
 from tmunan.display.hls_bg_task import Image2HLSBackgroundTask
 
 
@@ -14,6 +14,7 @@ class HLS:
                  hls_path: Path):
 
         # create HLS executor
+        BackgroundExecutor.WORKER_PROCESS_CLASS = ForkMonitoredProcess
         self.hls_executor = BackgroundExecutor(Image2HLSBackgroundTask,
                                                input_shape=input_shape,
                                                kf_period=kf_period,
@@ -28,5 +29,5 @@ class HLS:
         self.hls_executor.stop()
 
     def push_image(self, image):
-        print(f'HLS pusing image: {image}')
+        print(f'HLS pushing image: {len(image)}')
         self.hls_executor.push_input(image)
