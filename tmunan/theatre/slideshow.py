@@ -39,10 +39,11 @@ class Slideshow(Performance):
 
         # load image
         image = load_image(image_info['image_path'])
+        image_array = np.array(image, dtype=np.uint8)
 
         # push image
-        print(f'on_image_ready fired - pushing: {image}')
-        self.display.push_image(np.array(image, dtype=np.uint8))
+        print(f'on_image_ready fired - pushing: {len(image_array)}')
+        self.display.push_image(image_array)
 
     def run(self, img_script: ImageSequenceScript, img_config: ImageInstructions, seq_id: str):
 
