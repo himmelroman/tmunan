@@ -35,11 +35,11 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input_dir', required=False, type=Path,
                         default='/Users/himmelroman/.cache/theatre/script_d92e9879/seq_1c6678a8')
     parser.add_argument('-o', '--hls_output_path', required=False, type=Path,
-                        default='/tmp/multi_hls/hls.m3u8')
+                        default='/tmp/multi_hls')
     args = parser.parse_args()
 
     # dir2hls(in_fps=2, out_fps=12, input_dir=args.input_dir, output_dir=args.hls_output_path)
 
-    dir2hls(in_fps=1, out_fps=24, key_frame_repeat=1,
-            input_dir='/Users/himmelroman/.cache/theatre/script_d92e9879/seq_1c6678a8',
-            output_dir='/tmp/multi_hls/hls.m3u8')
+    dir2hls(in_fps=3, key_frame_repeat=2, out_fps=24,
+            input_dir=args.input_dir,
+            output_dir=args.output_dir / 'hls.m3u8')

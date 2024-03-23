@@ -211,6 +211,7 @@ class BackgroundExecutor:
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
+                # logger.exception('Sleeping...')
                 continue
             except Exception as e:
                 logger.exception('Error processing item!')
