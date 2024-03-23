@@ -99,6 +99,8 @@ class Image2HLSBackgroundTask(BackgroundTask):
             .run_async(pipe_stdin=True)
         )
 
+        self.logger.info('HLS Task started!')
+
     def cleanup(self):
         self.logger.info('Cleanup started...')
 
