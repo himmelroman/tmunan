@@ -28,6 +28,7 @@ class AppSettings(BaseSettings):
 
         # ensure cache dir exists
         Path.mkdir(Path(self.cache_dir), parents=True, exist_ok=True)
+        Path.mkdir(Path(self.cache_dir) / 'hls', parents=True, exist_ok=True)
 
 
 @asynccontextmanager
@@ -75,6 +76,7 @@ app.workers = AppWorkers()
 # Static mounts
 app.mount("/ui", StaticFiles(directory=Path(os.path.realpath(__file__)).parent.with_name('ui'), html=True), name="ui")
 app.mount("/cache", StaticFiles(directory=app.context.cache_dir), name="cache")
+app.mount("/hls", StaticFiles(directory=app.context.cache_dir + '/hls'), name="hls")
 
 
 @app.post("/api/read/prompt",)
@@ -94,7 +96,7 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
     script_dir = Path(app.context.cache_dir) / f'script_{script_id}'
 
     # init
-    app.workers.init_display(output_dir=script_dir,
+    app.workers.init_display(output_dir=Path(app.context.cache_dir),
                              image_height=img_config.height, image_width=img_config.width,
                              kf_period=img_config.key_frame_period, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
@@ -145,11 +147,11 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
 if __name__ == "__main__":
 
     # setup local env config
-    #os.environ['API_ADDRESS'] = 'http://localhost'
+    # os.environ['API_ADDRESS'] = 'http://localhost'
     os.environ['API_ADDRESS'] = 'http://3.255.31.250'
     os.environ['API_PORT'] = '8080'
 
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8081)
+    uvicorn.run(app, host="0.0.0.0", port=9090)
 
     # HF_HUB_OFFLINE=1

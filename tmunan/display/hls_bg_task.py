@@ -15,7 +15,7 @@ class HLSPresets(enum.Enum):
 
     DEFAULT_CPU = {
         "vcodec": "libx264",
-        "preset": "veryfast",
+        "preset": "fast",
         "video_bitrate": "6M",
         "maxrate": "6M",
         "bufsize": "6M",
@@ -70,9 +70,10 @@ class Image2HLSBackgroundTask(BackgroundTask):
             "sc_threshold": 0,
             "format": "hls",
             "hls_time": 1,
-            "hls_list_size": 2 * 60,              # 10 minutes keep
+            "hls_list_size": 0,
             "hls_flags": "independent_segments",  # +append_list",    # "split_by_time", "delete_segments"
             "flush_packets": 1,
+            "pix_fmt": "yuv420p",
             **preset.value,
             **hls_kwargs,
         }
@@ -100,9 +101,14 @@ class Image2HLSBackgroundTask(BackgroundTask):
 
     def cleanup(self):
         self.logger.info('Cleanup started...')
+
+        self.logger.info('Closing STDIN')
         self.ffmpeg_process.stdin.close()
+
+        self.logger.info('Waiting for ffmpeg process to finish...')
         self.ffmpeg_process.wait()
         self.ffmpeg_process = None
+
         self.logger.info('Cleanup finished.')
 
     def exec(self, image: np.ndarray[np.uint8, Any]):

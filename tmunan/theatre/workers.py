@@ -1,4 +1,6 @@
+import shutil
 from enum import Enum
+from pathlib import Path
 
 from tmunan.display.hls import HLS
 from tmunan.imagine.image_generator import ImageGenerator, ImageGeneratorRemote
@@ -38,7 +40,16 @@ class AppWorkers:
 
     def init_display(self, output_dir, image_height, image_width,
                      kf_period, kf_repeat, fps=12):
+
+        # stop if running
         self.stop_display()
+
+        # prepare hls dir
+        hls_dir = output_dir / 'hls'
+        shutil.rmtree(hls_dir)
+        Path.mkdir(hls_dir, parents=True, exist_ok=True)
+
+        # HLS generator
         self.display = HLS(input_shape=(image_height, image_width),
                            kf_period=kf_period,
                            kf_repeat=kf_repeat,
