@@ -1,5 +1,5 @@
+import enum
 import atexit
-import platform
 import threading
 import multiprocessing
 
@@ -111,10 +111,14 @@ class BackgroundTask(ABC):
 
 class BackgroundExecutor:
 
-    # Choose process context based on platform
-    WORKER_PROCESS_CLASS = SpawnMonitoredProcess    # ForkMonitoredProcess if platform.system() == "Linux" else SpawnMonitoredProcess
+    class ProcessCreationMethod(enum):
+        Fork = 0
+        Spawn = 1
 
-    def __init__(self, task_class: Type[BackgroundTask], *args, **kwargs):
+    def __init__(self, task_class: Type[BackgroundTask], proc_method: ProcessCreationMethod, *args, **kwargs):
+
+        # process method
+        self.worker_process_type = ForkMonitoredProcess if proc_method == self.ProcessCreationMethod.Fork else SpawnMonitoredProcess
 
         # task
         self._task_class = task_class
@@ -125,7 +129,7 @@ class BackgroundExecutor:
         self._input_queue = multiprocessing.Queue()
         self._output_queue = multiprocessing.Queue()
         self._stop_event = multiprocessing.Event()
-        self._proc = self.WORKER_PROCESS_CLASS(
+        self._proc = self.worker_process_type(
             target=self.run,
             args=(self._input_queue, self._output_queue, self._stop_event,
                   self._task_class, self._task_args, self._task_kwargs))

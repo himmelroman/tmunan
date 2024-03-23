@@ -14,8 +14,8 @@ class HLS:
                  hls_path: Path):
 
         # create HLS executor
-        BackgroundExecutor.WORKER_PROCESS_CLASS = ForkMonitoredProcess
-        self.hls_executor = BackgroundExecutor(Image2HLSBackgroundTask,
+        self.hls_executor = BackgroundExecutor(task_class=Image2HLSBackgroundTask,
+                                               proc_method=BackgroundExecutor.ProcessCreationMethod.Fork,
                                                input_shape=input_shape,
                                                kf_period=kf_period,
                                                kf_repeat=kf_repeat,

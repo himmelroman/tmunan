@@ -44,7 +44,11 @@ class ImageGeneratorLocal(ImageGenerator):
         super().__init__()
 
         # executor
-        self.lcm_executor = BackgroundExecutor(LCMBackgroundTask, model_size=model_size)
+        self.lcm_executor = BackgroundExecutor(
+            task_class=LCMBackgroundTask,
+            proc_method=BackgroundExecutor.ProcessCreationMethod.Spawn,
+            model_size=model_size
+        )
 
     def start(self):
         self.lcm_executor.start()
