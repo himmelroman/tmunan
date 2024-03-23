@@ -111,7 +111,7 @@ class BackgroundTask(ABC):
 
 class BackgroundExecutor:
 
-    class ProcessCreationMethod(enum):
+    class ProcessCreationMethod(enum.Enum):
         Fork = 0
         Spawn = 1
 
