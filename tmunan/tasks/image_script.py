@@ -160,6 +160,9 @@ class ImageScript:
         script_dir = f'{self.cache_dir}/script_{script_id}/'
         Path.mkdir(Path(script_dir), exist_ok=True, parents=True)
 
+        # count loops
+        loop_number = 1
+
         # run until stopped
         continuity_prompts = None
         while not self.stop_requested:
@@ -193,7 +196,12 @@ class ImageScript:
                 self.run_image_sequence(effective_seq, config, seq_id=seq_id, parent_dir=script_dir)
 
             # stop, unless loop requested
-            if script.loop:
+            print(f'Loop: {script.loop=}, {script.loop_count=}, {loop_number=}')
+            if script.loop and loop_number < script.loop_count:
+
+                print(f'Looping!')
+                # increment loop number
+                loop_number += 1
 
                 # generate new seed
                 config.seed = self.image_gen.get_random_seed()
@@ -202,6 +210,7 @@ class ImageScript:
                 continuity_prompts = self.reverse_prompt_weights(script.sequences[-1].prompts)
 
             else:
+                print(f'Breaking!')
                 break
 
     @classmethod

@@ -58,3 +58,4 @@ class ImageSequence(BaseModel):
 class ImageSequenceScript(BaseModel):
     sequences: List[ImageSequence]
     loop: bool = False
+    loop_count: int = 10
