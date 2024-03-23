@@ -35,6 +35,7 @@ class Slideshow(Performance):
         self.image_script_task.set_text_prompt(text_prompt)
 
     def display_image(self, image_info):
+        print(f'on_image_ready fired with: {image_info}')
 
         # put on queue
         image = load_image(image_info['image_path'])
