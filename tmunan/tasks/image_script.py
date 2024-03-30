@@ -93,7 +93,7 @@ class ImageScript:
             print(f'Generating image {i} with prompt: {prompt}')
 
             # take the time before start of image generation
-            start_time = time.time()
+            img_gen_start_time = time.time()
             self.sync_event.clear()
 
             # determine transition type
@@ -126,13 +126,32 @@ class ImageScript:
             # wait until image is ready
             self.sync_event.wait()
 
-            # check elapsed time since image generation request
-            elapsed_time = time.time() - start_time
-            sleep_time = img_config.key_frame_period - elapsed_time
+            # to keep RT - we need to sleep some time
+            sleep_time = self.calc_rtf_sleep_time(img_config, img_gen_start_time)
             if sleep_time > 0:
-                pass
-                #print(f'Sleeping for: {sleep_time}')
-                #time.sleep(sleep_time)
+                self.logger.info(f'Sleeping for: {sleep_time}')
+                time.sleep(sleep_time)
+
+    @staticmethod
+    def calc_rtf_sleep_time(img_config: ImageInstructions, img_gen_start_time) -> int:
+
+        # check elapsed time since image generation request
+        # Image Gen:  |------|
+        # Image DL:           |-|
+        # Video Gen:             |---|
+        # Video DL:                   |-|
+        # Video Play:                    |-----|-----|-----|      (kf_repeat)
+        #             S      E
+        # Req. Sleep:        |--------------------|?
+
+        image_gen_time = time.time() - img_gen_start_time
+        image_dl_time = 0
+        video_gen_time = 0
+        video_dl_time = 0
+        video_play_time = img_config.key_frame_period * img_config.key_frame_repeat
+        sleep_time = video_play_time - image_gen_time
+
+        return int(sleep_time)
 
     def process_ready_image(self, image_url, image):
 

@@ -1,0 +1,42 @@
+<html>
+  <head>
+    <title>Tmunan - View</title>
+  </head>
+  <style>
+    video::-webkit-media-controls {
+      display:none !important;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+  <body>
+
+    <div style="text-align: center;">
+      <video id="video" autoplay playsinline></video>
+      <br><br>
+      <button id="fullscreenBtn">Fullscreen</button>
+    </div>
+
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const encodedUrl = urlParams.get('hls_url');
+      const hlsUrl = decodeURIComponent(encodedUrl);
+      console.log(`HLS Url: ${hlsUrl}`)
+
+      const video_elem = document.getElementById('video');
+      var hls = new Hls({debug: false,});
+      hls.loadSource(hlsUrl.toString());
+      hls.attachMedia(video_elem);
+      hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+          video_elem.muted = true;
+          video_elem.play();
+      });
+
+      // fullscreen button
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+      fullscreenBtn.addEventListener('click', function() {
+        video_elem.requestFullscreen();
+        video_elem.controls = false;
+      });
+    </script>
+  </body>
+</html>
