@@ -96,7 +96,7 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
     script_dir = Path(app.context.cache_dir) / f'script_{script_id}'
 
     # init
-    app.workers.init_display(output_dir=Path(app.context.cache_dir),
+    app.workers.init_display(output_dir=script_dir,
                              image_height=img_config.height, image_width=img_config.width,
                              kf_period=img_config.key_frame_period, kf_repeat=img_config.key_frame_repeat,
                              fps=img_config.output_fps)
@@ -111,7 +111,7 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
     # return file
     return {
         'script_id': script_id,
-        'hls_uri': request.base_url.replace(path=f'ui/index.html?display_id=script_{script_id}')
+        'hls_uri': request.base_url.replace(path=f'ui/control.html?display_id=script_{script_id}')
     }
 
 
@@ -147,8 +147,8 @@ def script(script: ImageSequenceScript, img_config: ImageInstructions, text_conf
 if __name__ == "__main__":
 
     # setup local env config
-    # os.environ['API_ADDRESS'] = 'http://localhost'
-    os.environ['API_ADDRESS'] = 'http://3.255.31.250'
+    os.environ['API_ADDRESS'] = 'http://localhost'
+    # os.environ['API_ADDRESS'] = 'http://3.255.31.250'
     os.environ['API_PORT'] = '8080'
 
     import uvicorn

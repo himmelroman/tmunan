@@ -23,12 +23,22 @@
       console.log(`HLS Url: ${hlsUrl}`)
 
       const video_elem = document.getElementById('video');
-      var hls = new Hls({debug: false,});
+      var hls = new Hls({live: true, latency: 3, maxLatency: 3, targetLatency: 3, debug: false,});
       hls.loadSource(hlsUrl.toString());
       hls.attachMedia(video_elem);
       hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+
+          // Play !
           video_elem.muted = true;
           video_elem.play();
+      });
+      hls.on(Hls.Events.LEVEL_LOADED, function(event, data) {
+
+        // Jump to the end when loading
+        if (video_elem.currentTime === 0) {
+            console.log(`Jumping to  ${data.details.totalduration - 1}`)
+            hls.startLoad(data.details.totalduration - 5, true);
+        }
       });
 
       // fullscreen button

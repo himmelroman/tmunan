@@ -4,33 +4,34 @@
         <title>Tmunan - View</title>
         <link rel="stylesheet" href="css/style.css">
         <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
-<!--        <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>-->
         <script src="scripts/video.js"></script>
+<!--        <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>-->
 <!--        <script src="scripts/audio.js"></script>-->
         <script type="application/javascript">
+
+            function openView() {
+
+                // build view url
+                const viewUrl = new URL('/ui/view.html', getBaseUrl().origin)
+                viewUrl.searchParams.set('hls_url', encodeURIComponent(getHlsUrl().toString()));
+
+                // open in new tab
+                window.open(viewUrl.toString(), '_blank');
+            }
+
             function initVideo() {
 
-                // Verify sequence-id param
-                const baseUrl = new URL(window.location.href);
-                if (baseUrl.searchParams.has("display_id")) {
+                // get video element
+                const video_element = document.getElementById('video')
 
-                    // build HLS url
-                    const dispId = baseUrl.searchParams.get("display_id");
-                    const hlsUrl = new URL(`/cache/${dispId}/hls/manifest.m3u8`, baseUrl);
-                    console.log(`HLS Url: ${hlsUrl}`)
-
-                    // get video element
-                    const video_element = document.getElementById('video')
-
-                    // init HLS player
-                    playVideo(video_element, hlsUrl.toString())
-                }
+                // init HLS player
+                playVideo(video_element, getHlsUrl().toString())
             }
+
             function post_text_prompt() {
 
                 // Prepare address
-                const baseUrl = new URL(window.location.href);
-                const postUrl = new URL(`/api/read/prompt`, baseUrl);
+                const postUrl = new URL(`/api/read/prompt`, getBaseUrl());
 
                 // Get value from textbox
                 const textInput = document.getElementById('text_input');
@@ -56,29 +57,52 @@
                     console.error("Error:", error);
                   });
             }
-            function initAudio() {
 
-                // build websocket url
-                const baseUrl = new URL(window.location.href);
-                const wsUrl = new URL(`/api/ws`, baseUrl);
-                wsUrl.protocol = "ws"
+            // function initAudio() {
+            //
+            //     // build websocket url
+            //     const baseUrl = new URL(window.location.href);
+            //     const wsUrl = new URL(`/api/ws`, baseUrl);
+            //     wsUrl.protocol = "ws"
+            //
+            //     // init audio sending via websocket
+            //     sendAudio(wsUrl.toString())
+            // }
 
-                // init audio sending via websocket
-                sendAudio(wsUrl.toString())
+            function getBaseUrl() {
+                return new URL(window.location.href);
             }
+            function getHlsUrl() {
+
+                const selfUrl = new URL(window.location.href);
+
+                // verify display_id param
+                if (selfUrl.searchParams.has("display_id")) {
+
+                    // build HLS url
+                    const dispId = selfUrl.searchParams.get("display_id");
+                    return new URL(`/cache/${dispId}/hls/manifest.m3u8`, getBaseUrl())
+                }
+            }
+
+            const baseUrl = getBaseUrl();
+            const hlsUrl = getHlsUrl();
+            console.log(`Base Url: ${baseUrl}`);
+            console.log(`HLS Url: ${hlsUrl}`);
 
             window.onload = function () {
                 initVideo();
                 // initAudio();
-            };
+            }
         </script>
     </head>
     <body>
         <div id="imageContainer">
             <video id="video" controls></video>
         </div>
-        <div>
+        <div style="text-align: center;">
             <label for="text_input">Text Prompt: </label>
+            <br><br>
             <input id="text_input" name="text_input">
             <button onclick="post_text_prompt();">Send</button>
         </div>
@@ -86,10 +110,9 @@
           <div id="config">
               <label for="config_api_address">API Address:</label><br>
               <input id="config_api_address" /><br>
-              <input type="button" onclick="updateConfig();" value="Save"><br>
-              <input type="button" onclick="fs();" value="Fullscreen">
+              <input type="button" onclick="openView();" value="Open View">
+              <input type="button" onclick="updateConfig();" value="Save">
           </div>
         </div>
-<!--        <div id="ffs" class="fs" onclick="fs()">XX</div>-->
     </body>
 </html>

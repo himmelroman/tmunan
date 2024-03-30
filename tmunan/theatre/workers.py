@@ -46,7 +46,7 @@ class AppWorkers:
 
         # prepare hls dir
         hls_dir = output_dir / 'hls'
-        shutil.rmtree(hls_dir)
+        shutil.rmtree(hls_dir, ignore_errors=True)
         Path.mkdir(hls_dir, parents=True, exist_ok=True)
 
         # HLS generator
