@@ -195,6 +195,10 @@ class ImageScript:
                     'image_path': str(self.last_image_path)
                 })
 
+                # sleep
+                if self.script_config.keep_rtf:
+                    time.sleep(self.image_config.key_frame_period)
+
             # sleep
             time.sleep(self.image_config.key_frame_period)
 
