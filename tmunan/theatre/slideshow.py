@@ -4,7 +4,7 @@ from tmunan.theatre.performance import Performance
 from tmunan.tasks.image_script import ImageScript
 
 from tmunan.imagine.sd_lcm.lcm import load_image
-from tmunan.api.pydantic_models import ImageSequence, ImageInstructions, ImageSequenceScript
+from tmunan.api.pydantic_models import ImageInstructions, ImageSequenceScript
 
 
 class Slideshow(Performance):
@@ -31,18 +31,15 @@ class Slideshow(Performance):
         self.read.on_prompt_ready += self.push_text
 
     def push_text(self, text_prompt):
-        print(f'on_prompt_ready fired with: {text_prompt}')
         self.image_script_task.set_text_prompt(text_prompt)
 
     def display_image(self, image_info):
-        print(f'on_image_ready fired with: {image_info}')
 
         # load image
         image = load_image(image_info['image_path'])
         image_array = np.array(image, dtype=np.uint8)
 
         # push image
-        print(f'on_image_ready fired - pushing: {len(image_array)}')
         self.display.push_image(image_array)
 
     def run(self, img_script: ImageSequenceScript, img_config: ImageInstructions, seq_id: str):

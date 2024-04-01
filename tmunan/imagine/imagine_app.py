@@ -19,7 +19,7 @@ from tmunan.api.pydantic_models import ImageInstructions, Prompt, BaseImage
 class AppSettings(BaseSettings):
 
     # fields
-    cache_dir: str = os.path.join(os.path.expanduser("~"), ".cache", 'theatre')
+    cache_dir: str = os.path.join(os.path.expanduser("~"), ".cache", 'theatre', 'imagine')
 
     def __init__(self, **values):
         super().__init__(**values)
@@ -32,10 +32,10 @@ class AppSettings(BaseSettings):
 async def lifespan(fastapi_app: FastAPI):
 
     # determine model size
-    model_size = 'large' if torch.cuda.is_available() else 'small'
+    model_size = 'large' if torch.cuda.is_available() else 'large'
 
     # LCM
-    app.lcm = LCM(txt2img_size=model_size, img2img_size=model_size)
+    app.lcm = LCM(txt2img_size=model_size, img2img_size=None)
     app.lcm.load()
 
     # FastAPI app lifespan

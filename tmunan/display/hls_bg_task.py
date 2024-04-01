@@ -54,7 +54,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
         # Prepare HLS dir
         self.out_path = Path(self.hls_path)
         if self.out_path.is_dir():
-            self.out_path = self.out_path / 'hls.m3u8'
+            self.out_path = self.out_path / 'hls' / 'hls.m3u8'
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
 
         # FFMPEG arguments
@@ -89,11 +89,11 @@ class Image2HLSBackgroundTask(BackgroundTask):
         # ffmpeg process
         self.logger.info(f"Starting ffmpeg: {self.input_settings=}, {self.output_settings=}")
         self.ffmpeg_process = (
-            ffmpeg.input("pipe:", **self.input_settings)
+            ffmpeg.input("pipe:", flags="low_delay", fflags="nobuffer", **self.input_settings)
             .filter("minterpolate", fps=self.output_fps, mi_mode="mci", scd="none")
             # .filter("minterpolate", fps=self.output_fps, mi_mode="blend", scd="none")
             # .filter("unsharp", lx=13, ly=13, la=1.2)
-            # .filter("cas", strength=0.8)
+            .filter("cas", strength=0.6)
             .output(str(self.out_path), **self.output_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)
@@ -119,5 +119,5 @@ class Image2HLSBackgroundTask(BackgroundTask):
         self.logger.info('Pushing image')
 
         # repeat image according to kf_repeat
-        for _ in range(self.kf_repeat):
-            self.ffmpeg_process.stdin.write(image.tobytes())
+        # for _ in range(self.kf_repeat):
+        self.ffmpeg_process.stdin.write(image.tobytes())

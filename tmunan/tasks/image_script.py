@@ -26,12 +26,16 @@ class ImageScript:
         self.image_gen = image_gen
         self.image_gen.on_image_ready += self.process_ready_image
         self.last_image_url = None
+        self.last_image_path = None
+        self.image_config = None
+        self.script_config = None
 
         # text
         self.external_text_prompt = None
 
         # internal
         self.stop_requested = False
+        self.feed_thread = None
         self.sync_event = threading.Event()
 
         # events
@@ -69,6 +73,10 @@ class ImageScript:
         self.seq_dir = Path(f'{parent_dir if parent_dir else self.cache_dir}/seq_{seq_id}/')
         Path.mkdir(Path(self.seq_dir), exist_ok=True, parents=True)
         self.logger.info(f'Saving images in {self.seq_dir}')
+
+        # save image config
+        self.image_config = img_config
+        self.feed_thread = None
 
         # verify seed
         if not img_config.seed:
@@ -114,6 +122,7 @@ class ImageScript:
             else:
 
                 # image 2 image
+                self.logger.info(f'Generating img2img based on: {self.last_image_url}')
                 self.image_gen.img2img(
                     prompt=prompt,
                     image_url=self.last_image_url,
@@ -127,10 +136,11 @@ class ImageScript:
             self.sync_event.wait()
 
             # to keep RT - we need to sleep some time
-            sleep_time = self.calc_rtf_sleep_time(img_config, img_gen_start_time)
-            if sleep_time > 0:
-                self.logger.info(f'Sleeping for: {sleep_time}')
-                time.sleep(sleep_time)
+            if self.script_config.keep_rtf:
+                sleep_time = self.calc_rtf_sleep_time(img_config, img_gen_start_time)
+                if sleep_time > 0:
+                    self.logger.info(f'Sleeping for: {sleep_time}')
+                    time.sleep(sleep_time)
 
     @staticmethod
     def calc_rtf_sleep_time(img_config: ImageInstructions, img_gen_start_time) -> int:
@@ -145,13 +155,10 @@ class ImageScript:
         # Req. Sleep:        |--------------------|?
 
         image_gen_time = time.time() - img_gen_start_time
-        image_dl_time = 0
-        video_gen_time = 0
-        video_dl_time = 0
         video_play_time = img_config.key_frame_period * img_config.key_frame_repeat
         sleep_time = video_play_time - image_gen_time
 
-        return int(sleep_time)
+        return sleep_time
 
     def process_ready_image(self, image_url, image):
 
@@ -165,19 +172,40 @@ class ImageScript:
         image_path = self.seq_dir / f'{now_ts}.png'
         image.save(str(image_path))
 
-        # save last image id
+        # save last image
+        self.last_image_path = image_path
         self.last_image_url = image_url
+        self.logger.info(f'Updated last image: {self.last_image_url}')
 
-        # notify image ready
-        self.on_image_ready.notify({
-            'image_path': str(image_path)
-        })
+        # start thread
+        if not self.feed_thread:
+            self.feed_thread = threading.Thread(target=self.feed_thread_worker)
+            self.feed_thread.start()
+
+    def feed_thread_worker(self):
+
+        # loop while script is running
+        while not self.stop_requested:
+
+            # push image & repeat as specified
+            for _ in range(self.image_config.key_frame_repeat):
+
+                # fire image
+                self.on_image_ready.notify({
+                    'image_path': str(self.last_image_path)
+                })
+
+            # sleep
+            time.sleep(self.image_config.key_frame_period)
 
     def run_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
 
         # prepare dir
         script_dir = f'{self.cache_dir}/script_{script_id}/'
         Path.mkdir(Path(script_dir), exist_ok=True, parents=True)
+
+        # save config
+        self.script_config = script
 
         # count loops
         loop_number = 1
@@ -218,7 +246,6 @@ class ImageScript:
             print(f'Loop: {script.loop=}, {script.loop_count=}, {loop_number=}')
             if script.loop and loop_number < script.loop_count:
 
-                print(f'Looping!')
                 # increment loop number
                 loop_number += 1
 
@@ -229,8 +256,14 @@ class ImageScript:
                 continuity_prompts = self.reverse_prompt_weights(script.sequences[-1].prompts)
 
             else:
-                print(f'Breaking!')
                 break
+
+        # stop feed thread
+        self.stop()
+
+        # wait and kill thread
+        time.sleep(self.image_config.key_frame_period + 1)
+        self.feed_thread = None
 
     @classmethod
     def reverse_prompt_weights(cls, prompts: List[SequencePrompt]):
@@ -261,4 +294,5 @@ class ImageScript:
             return text if weight == 1.0 else f'({text}){round(weight, 3)}'
 
         # build master prompt string
-        return ', '.join(format_prompt(p.text, calc_weight(p)) for p in prompts)
+        prompt_parts = {format_prompt(p.text, calc_weight(p)) for p in prompts if calc_weight(p) > 0.1}
+        return ', '.join(prompt_parts)

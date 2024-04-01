@@ -35,10 +35,10 @@
       hls.on(Hls.Events.LEVEL_LOADED, function(event, data) {
 
         // Jump to the end when loading
-        if (video_elem.currentTime === 0) {
-            console.log(`Jumping to  ${data.details.totalduration - 1}`)
-            hls.startLoad(data.details.totalduration - 5, true);
-        }
+        // if (video_elem.currentTime === 0) {
+        //     console.log(`Jumping to  ${data.details.totalduration - 1}`)
+        //     hls.startLoad(data.details.totalduration - 5, true);
+        // }
       });
 
       // fullscreen button
