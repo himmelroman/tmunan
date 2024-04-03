@@ -2,6 +2,7 @@ import uuid
 import time
 import datetime
 import threading
+import numpy as np
 from typing import List
 from pathlib import Path
 from copy import deepcopy
@@ -82,8 +83,11 @@ class ImageScript:
         if not img_config.seed:
             img_config.seed = self.image_gen.get_random_seed()
 
-        # prepare transition type index
-        # trans_index = [seg.type for seg in seq.transitions.segments for _ in range(seg.count)]
+        # precalculate prompt weights
+        for p in seq.prompts:
+            # calculate unless already specified
+            if p.weight_list is None:
+                p.weight_list = np.linspace(p.start_weight, p.end_weight, seq.num_images, endpoint=True)
 
         # iterate as many times as requested
         for i in range(0, seq.num_images):
@@ -92,7 +96,7 @@ class ImageScript:
             if self.stop_requested:
                 break
 
-            # take the time before start of image generation
+            # mark the time before start of image generation
             img_gen_start_time = time.time()
             self.sync_event.clear()
 
@@ -104,10 +108,10 @@ class ImageScript:
                     effective_prompts.insert(0, self.external_text_prompt)
 
                 # gen prompt for current sequence progress
-                prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
+                prompt = self.gen_seq_prompt(effective_prompts, i)
 
                 # gen image
-                print(f'Generating image {i} with prompt: {prompt}')
+                self.logger.info(f'Generating image {i} with prompt: {prompt}')
                 self.image_gen.txt2img(
                     prompt=prompt,
                     num_inference_steps=img_config.num_inference_steps,
@@ -122,7 +126,7 @@ class ImageScript:
 
                 # get prompt with strength weight
                 self.logger.info(f'Prompt: {seq.prompts[0]}')
-                strength = self.calc_weight(seq.prompts[0], (i / seq.num_images * 100))
+                strength = seq.prompts[0].weight_list[i]
 
                 self.logger.info(f'Generating img2img based on: {seq.base_image_url}, {strength=}')
                 self.image_gen.img2img(
@@ -290,18 +294,17 @@ class ImageScript:
 
         return reversed_prompt_list
 
-    @classmethod
-    def calc_weight(cls, p, prog):
-        weight_step = (p.end_weight - p.start_weight) / 100  # How much is one percent?
-        return p.start_weight + (weight_step * prog)  # How progressed is this sequence?
+    # @classmethod
+    # def calc_weight(cls, p, prog):
+    #     weight_step = (p.end_weight - p.start_weight) / 100  # How much is one percent?
+    #     return p.start_weight + (weight_step * prog)  # How progressed is this sequence?
 
-
     @classmethod
-    def gen_seq_prompt(cls, prompts, prog: float):
+    def gen_seq_prompt(cls, prompts, iteration):
 
         def format_prompt(text, weight):
             return text if weight == 1.0 else f'({text}){round(weight, 3)}'
 
         # build master prompt string
-        prompt_parts = {format_prompt(p.text, cls.calc_weight(p, prog)) for p in prompts if cls.calc_weight(p, prog) > 0.05}
+        prompt_parts = {format_prompt(p.text, p.weight_list[iteration]) for p in prompts if p.weight_list[iteration] > 0.05}
         return ', '.join(prompt_parts)

@@ -107,7 +107,9 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
         num_inference_steps=img_config.num_inference_steps,
         guidance_scale=img_config.guidance_scale,
         height=img_config.height, width=img_config.width,
-        strength=img_config.strength
+        strength=img_config.strength,
+        seed=img_config.seed,
+        randomize_seed=img_config.seed is None
     )
 
     # save image to file

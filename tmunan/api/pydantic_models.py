@@ -38,6 +38,7 @@ class SequencePrompt(BaseModel):
     text: str
     start_weight: float = 1
     end_weight: float = 1
+    weight_list: List[float] | None = None
 
 
 class ImageSequence(BaseModel):

@@ -198,7 +198,9 @@ class LCM:
                 width: int = 512,
                 num_inference_steps: int = 4,
                 guidance_scale: float = 1.0,
-                strength: float = 0.6
+                strength: float = 0.6,
+                seed: int = 0,
+                randomize_seed: bool = False,
                 ):
 
         if not self.img2img_pipe:
@@ -209,8 +211,10 @@ class LCM:
         base_image = load_image(image_url)
         self.logger.info(f"Image loaded! {base_image}")
 
-        # set seed
-        generator = torch.manual_seed(0)
+        # seed
+        if randomize_seed:
+            seed = self.get_random_seed()
+        torch.manual_seed(seed)
 
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {prompt=}, seed=0")
@@ -221,7 +225,7 @@ class LCM:
                                    height=width, width=height,
                                    guidance_scale=guidance_scale,
                                    strength=strength,
-                                   generator=generator
+                                   seed=seed
                                    ).images
         elapsed_time = time.time() - start_time
         self.logger.info(f"Done generating img2img: {elapsed_time=}")
