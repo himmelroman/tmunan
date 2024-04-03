@@ -36,7 +36,6 @@ class TextInstructions(BaseModel):
 
 class SequencePrompt(BaseModel):
     text: str
-    negative_text: str
     start_weight: float = 1
     end_weight: float = 1
 

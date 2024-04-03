@@ -32,7 +32,7 @@ class AppSettings(BaseSettings):
 async def lifespan(fastapi_app: FastAPI):
 
     # determine model size
-    model_size = 'large' if torch.cuda.is_available() else 'small'
+    model_size = 'large' if torch.cuda.is_available() else 'large'
 
     # LCM
     app.lcm = LCM(txt2img_size=model_size, img2img_size=model_size)
@@ -78,7 +78,6 @@ def txt2img(prompt: Prompt, img_config: ImageInstructions, req: Request):
     print(f'Generating image with prompt: {prompt}')
     images = app.lcm.txt2img(
         prompt=prompt.text,
-        negative_prompt=prompt.negative_text,
         num_inference_steps=img_config.num_inference_steps,
         guidance_scale=img_config.guidance_scale,
         height=img_config.height, width=img_config.width,
@@ -105,7 +104,6 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
     images = app.lcm.img2img(
         image_url=base_image.image_url,
         prompt=prompt.text,
-        negative_prompt=prompt.negative_text,
         num_inference_steps=img_config.num_inference_steps,
         guidance_scale=img_config.guidance_scale,
         height=img_config.height, width=img_config.width,
@@ -126,6 +124,6 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8090)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
 
     # HF_HUB_OFFLINE=1

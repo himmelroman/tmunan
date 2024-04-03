@@ -121,7 +121,6 @@ class LCM:
 
     def txt2img(self,
                 prompt: str,
-                negative_prompt: str = "",
                 height: int = 512,
                 width: int = 512,
                 num_inference_steps: int = 4,
@@ -139,7 +138,7 @@ class LCM:
         torch.manual_seed(seed)
 
         # gen prompt
-        prompt_dict = self.gen_prompt(prompt, negative_prompt, seed)
+        prompt_dict = self.gen_prompt(prompt, seed)
 
         # run image generation
         self.logger.info(f"Generating txt2img: {prompt=}, {seed=}")
@@ -193,9 +192,8 @@ class LCM:
         return result
 
     def img2img(self,
-                image_url: str,
                 prompt: str,
-                negative_prompt: str = "",
+                image_url: str,
                 height: int = 512,
                 width: int = 512,
                 num_inference_steps: int = 4,
@@ -218,7 +216,6 @@ class LCM:
         self.logger.info(f"Generating img2img: {prompt=}, seed=0")
         start_time = time.time()
         result = self.img2img_pipe(prompt=prompt,
-                                   negative_prompt=negative_prompt,
                                    image=base_image,
                                    num_inference_steps=num_inference_steps,
                                    height=width, width=height,
@@ -231,21 +228,18 @@ class LCM:
 
         return result
 
-    def gen_prompt(self, prompt, negative_prompt, seed):
+    def gen_prompt(self, prompt, seed):
 
         # check if we're using compel (needed for SDXL model)
         if self.compel:
 
             # create compel prompt components
-            post_cond, post_pooled = self.compel(prompt)
-            neg_cond, neg_pooled = self.compel(negative_prompt)
+            conditioning, pooled = self.compel(prompt)
             seed_generator = torch.Generator().manual_seed(seed)
 
             return {
-                'prompt_embeds': post_cond,
-                'pooled_prompt_embeds': post_pooled,
-                'negative_prompt_embeds': neg_cond,
-                'negative_pooled_prompt_embeds': neg_pooled,
+                'prompt_embeds': conditioning,
+                'pooled_prompt_embeds': pooled,
                 'generator': seed_generator
             }
 
@@ -253,7 +247,6 @@ class LCM:
 
             return {
                 'prompt': prompt,
-                'negative_prompt': negative_prompt,
                 'seed': seed
             }
 

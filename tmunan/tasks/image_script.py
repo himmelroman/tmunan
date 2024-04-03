@@ -105,13 +105,11 @@ class ImageScript:
 
                 # gen prompt for current sequence progress
                 prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
-                negative_prompt = self.gen_negative_seq_prompt(effective_prompts)
 
                 # gen image
                 print(f'Generating image {i} with prompt: {prompt}')
                 self.image_gen.txt2img(
                     prompt=prompt,
-                    negative_prompt=negative_prompt,
                     num_inference_steps=img_config.num_inference_steps,
                     guidance_scale=img_config.guidance_scale,
                     height=img_config.height, width=img_config.width,
@@ -129,7 +127,6 @@ class ImageScript:
                 self.logger.info(f'Generating img2img based on: {seq.base_image_url}, {strength=}')
                 self.image_gen.img2img(
                     prompt=seq.prompts[0].text,
-                    negative_prompt=seq.prompts[0].negative_text,
                     image_url=seq.base_image_url,
                     strength=strength,
                     guidance_scale=img_config.guidance_scale,
@@ -224,7 +221,7 @@ class ImageScript:
         continuity_prompts = None
         while not self.stop_requested:
 
-            # iterate sequences
+            # iterate as many times as requested
             for i, seq in enumerate(script.sequences):
 
                 # check if we should stop
@@ -243,14 +240,13 @@ class ImageScript:
                     continuity_prompts = None
 
                 # if this is NOT the first sequence
-                # if previous sequence is NOT an Image2Image sequence
-                if i > 0 and script.sequences[i-1].transition != TaskType.Image2Image:
+                if i > 0:
 
                     # iterate prompts from previous sequence
                     reversed_prompts = self.reverse_prompt_weights(script.sequences[i - 1].prompts)
                     effective_seq.prompts.extend(reversed_prompts)
 
-                # run sequence
+                # display sequence
                 self.run_image_sequence(effective_seq, config, seq_id=seq_id, parent_dir=script_dir)
 
             # stop, unless loop requested
@@ -308,9 +304,4 @@ class ImageScript:
 
         # build master prompt string
         prompt_parts = {format_prompt(p.text, cls.calc_weight(p, prog)) for p in prompts if cls.calc_weight(p, prog) > 0.05}
-        return ', '.join(prompt_parts)
-
-    @classmethod
-    def gen_negative_seq_prompt(cls, prompts):
-        prompt_parts = {p.negative_text for p in prompts}
         return ', '.join(prompt_parts)
