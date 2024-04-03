@@ -15,10 +15,10 @@ class HLSPresets(enum.Enum):
 
     DEFAULT_CPU = {
         "vcodec": "libx264",
-        "preset": "fast",
+        "preset": "veryfast",
         "video_bitrate": "6M",
         "maxrate": "6M",
-        "bufsize": "6M",
+        "bufsize": "2M",
     }
     DEFAULT_CUDA = {
         "vcodec": "h264_nvenc",
