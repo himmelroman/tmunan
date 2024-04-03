@@ -7,7 +7,6 @@ from tmunan.imagine.sd_lcm.lcm_bg_task import TaskType
 
 class Prompt(BaseModel):
     text: str
-    negative_text: str
 
 
 class BaseImage(BaseModel):
