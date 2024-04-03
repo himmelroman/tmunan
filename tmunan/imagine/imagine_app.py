@@ -35,7 +35,7 @@ async def lifespan(fastapi_app: FastAPI):
     model_size = 'large' if torch.cuda.is_available() else 'large'
 
     # LCM
-    app.lcm = LCM(txt2img_size=model_size, img2img_size=None)
+    app.lcm = LCM(txt2img_size=model_size, img2img_size=model_size)
     app.lcm.load()
 
     # FastAPI app lifespan
