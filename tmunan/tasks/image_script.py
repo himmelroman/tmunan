@@ -83,7 +83,7 @@ class ImageScript:
             img_config.seed = self.image_gen.get_random_seed()
 
         # prepare transition type index
-        trans_index = [seg.type for seg in seq.transitions.segments for _ in range(seg.count)]
+        # trans_index = [seg.type for seg in seq.transitions.segments for _ in range(seg.count)]
 
         # iterate as many times as requested
         for i in range(0, seq.num_images):
@@ -92,25 +92,22 @@ class ImageScript:
             if self.stop_requested:
                 break
 
-            effective_prompts = deepcopy(seq.prompts)
-            if self.external_text_prompt:
-                effective_prompts.insert(0, self.external_text_prompt)
-
-            # gen prompt for current sequence progress
-            prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
-            print(f'Generating image {i} with prompt: {prompt}')
-
             # take the time before start of image generation
             img_gen_start_time = time.time()
             self.sync_event.clear()
 
-            # determine transition type
-            transition_type = trans_index[i % len(trans_index)]
+            # check sequence task type
+            if seq.transition == TaskType.Text2Image:
 
-            # check transition type
-            if transition_type == TaskType.Text2Image or self.last_image_url is None:
+                effective_prompts = deepcopy(seq.prompts)
+                if self.external_text_prompt:
+                    effective_prompts.insert(0, self.external_text_prompt)
 
-                # text 2 image
+                # gen prompt for current sequence progress
+                prompt = self.gen_seq_prompt(effective_prompts, (i / seq.num_images * 100))
+
+                # gen image
+                print(f'Generating image {i} with prompt: {prompt}')
                 self.image_gen.txt2img(
                     prompt=prompt,
                     num_inference_steps=img_config.num_inference_steps,
@@ -119,16 +116,21 @@ class ImageScript:
                     seed=img_config.seed,
                     randomize_seed=False
                 )
-            else:
 
-                # image 2 image
-                self.logger.info(f'Generating img2img based on: {self.last_image_url}')
+            # check sequence task type
+            elif seq.transition == TaskType.Image2Image:
+
+                # get prompt with strength weight
+                self.logger.info(f'Prompt: {seq.prompts[0]}')
+                strength = self.calc_weight(seq.prompts[0], (i / seq.num_images * 100))
+
+                self.logger.info(f'Generating img2img based on: {seq.base_image_url}, {strength=}')
                 self.image_gen.img2img(
-                    prompt=prompt,
-                    image_url=self.last_image_url,
-                    num_inference_steps=img_config.num_inference_steps,
+                    prompt=seq.prompts[0].text,
+                    image_url=seq.base_image_url,
+                    strength=strength,
                     guidance_scale=img_config.guidance_scale,
-                    strength=img_config.strength,
+                    num_inference_steps=img_config.num_inference_steps,
                     height=img_config.height, width=img_config.width
                 )
 
@@ -200,7 +202,8 @@ class ImageScript:
                     time.sleep(self.image_config.key_frame_period)
 
             # sleep
-            time.sleep(self.image_config.key_frame_period)
+            if not self.script_config.keep_rtf:
+                time.sleep(self.image_config.key_frame_period)
 
     def run_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):
 
@@ -288,15 +291,17 @@ class ImageScript:
         return reversed_prompt_list
 
     @classmethod
-    def gen_seq_prompt(cls, prompts, prog: float):
+    def calc_weight(cls, p, prog):
+        weight_step = (p.end_weight - p.start_weight) / 100  # How much is one percent?
+        return p.start_weight + (weight_step * prog)  # How progressed is this sequence?
 
-        def calc_weight(p):
-            weight_step = (p.end_weight - p.start_weight) / 100  # How much is one percent?
-            return p.start_weight + (weight_step * prog)  # How progressed is this sequence?
+
+    @classmethod
+    def gen_seq_prompt(cls, prompts, prog: float):
 
         def format_prompt(text, weight):
             return text if weight == 1.0 else f'({text}){round(weight, 3)}'
 
         # build master prompt string
-        prompt_parts = {format_prompt(p.text, calc_weight(p)) for p in prompts if calc_weight(p) > 0.1}
+        prompt_parts = {format_prompt(p.text, cls.calc_weight(p, prog)) for p in prompts if cls.calc_weight(p, prog) > 0.05}
         return ', '.join(prompt_parts)

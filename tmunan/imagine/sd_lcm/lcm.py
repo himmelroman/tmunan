@@ -205,7 +205,9 @@ class LCM:
             raise Exception('Text to Image pipe not initialized!')
 
         # load image
-        prompt_image = load_image(image_url)
+        self.logger.info(f"Loading image from: {image_url}")
+        base_image = load_image(image_url)
+        self.logger.info(f"Image loaded! {base_image}")
 
         # set seed
         generator = torch.manual_seed(0)
@@ -214,7 +216,7 @@ class LCM:
         self.logger.info(f"Generating img2img: {prompt=}, seed=0")
         start_time = time.time()
         result = self.img2img_pipe(prompt=prompt,
-                                   image=prompt_image,
+                                   image=base_image,
                                    num_inference_steps=num_inference_steps,
                                    height=width, width=height,
                                    guidance_scale=guidance_scale,

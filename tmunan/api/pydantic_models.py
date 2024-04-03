@@ -29,15 +29,6 @@ class ReadTextPrompt(BaseModel):
     text: str
 
 
-class TransitionSegment(BaseModel):
-    type: TaskType
-    count: int
-
-
-class TransitionInstructions(BaseModel):
-    segments: List[TransitionSegment]
-
-
 class TextInstructions(BaseModel):
     start_weight: float = 1
     end_weight: float = 1
@@ -50,9 +41,10 @@ class SequencePrompt(BaseModel):
 
 
 class ImageSequence(BaseModel):
+    transition: TaskType
     prompts: List[SequencePrompt]
+    base_image_url: str | None = None
     num_images: int = 10
-    transitions: TransitionInstructions
 
 
 class ImageSequenceScript(BaseModel):
