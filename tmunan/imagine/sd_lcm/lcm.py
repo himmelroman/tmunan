@@ -224,8 +224,7 @@ class LCM:
                                    num_inference_steps=num_inference_steps,
                                    height=width, width=height,
                                    guidance_scale=guidance_scale,
-                                   strength=strength,
-                                   seed=seed
+                                   strength=strength
                                    ).images
         elapsed_time = time.time() - start_time
         self.logger.info(f"Done generating img2img: {elapsed_time=}")

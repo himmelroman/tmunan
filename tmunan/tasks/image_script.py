@@ -125,10 +125,9 @@ class ImageScript:
             elif seq.transition == TaskType.Image2Image:
 
                 # get prompt with strength weight
-                self.logger.info(f'Prompt: {seq.prompts[0]}')
                 strength = seq.prompts[0].weight_list[i]
 
-                self.logger.info(f'Generating img2img based on: {seq.base_image_url}, {strength=}')
+                self.logger.info(f'Generating image from: {seq.base_image_url} with prompt: {seq.prompts[0].text}')
                 self.image_gen.img2img(
                     prompt=seq.prompts[0].text,
                     image_url=seq.base_image_url,
