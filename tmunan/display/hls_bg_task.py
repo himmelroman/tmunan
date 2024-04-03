@@ -15,10 +15,10 @@ class HLSPresets(enum.Enum):
 
     DEFAULT_CPU = {
         "vcodec": "libx264",
-        "preset": "fast",
+        "preset": "veryfast",
         "video_bitrate": "6M",
         "maxrate": "6M",
-        "bufsize": "6M",
+        "bufsize": "2M",
     }
     DEFAULT_CUDA = {
         "vcodec": "h264_nvenc",
@@ -93,7 +93,7 @@ class Image2HLSBackgroundTask(BackgroundTask):
             .filter("minterpolate", fps=self.output_fps, mi_mode="mci", scd="none")
             # .filter("minterpolate", fps=self.output_fps, mi_mode="blend", scd="none")
             # .filter("unsharp", lx=13, ly=13, la=1.2)
-            .filter("cas", strength=0.6)
+            # .filter("cas", strength=0.6)
             .output(str(self.out_path), **self.output_settings)
             .overwrite_output()
             .run_async(pipe_stdin=True)
@@ -119,5 +119,4 @@ class Image2HLSBackgroundTask(BackgroundTask):
         self.logger.info('Pushing image')
 
         # repeat image according to kf_repeat
-        # for _ in range(self.kf_repeat):
         self.ffmpeg_process.stdin.write(image.tobytes())
