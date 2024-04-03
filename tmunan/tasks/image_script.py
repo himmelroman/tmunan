@@ -127,10 +127,13 @@ class ImageScript:
                 # get prompt with strength weight
                 strength = seq.prompts[0].weight_list[i]
 
+                # pick base image
+                base_image_url = self.last_image_url or seq.base_image_url
+
                 self.logger.info(f'Generating image from: {seq.base_image_url} with prompt: {seq.prompts[0].text}')
                 self.image_gen.img2img(
                     prompt=seq.prompts[0].text,
-                    image_url=seq.base_image_url,
+                    image_url=base_image_url,
                     strength=strength,
                     guidance_scale=img_config.guidance_scale,
                     num_inference_steps=img_config.num_inference_steps,
@@ -243,7 +246,7 @@ class ImageScript:
                     continuity_prompts = None
 
                 # if this is NOT the first sequence
-                if i > 0:
+                if i > 0 and seq.transition != TaskType.Image2Image:
 
                     # iterate prompts from previous sequence
                     reversed_prompts = self.reverse_prompt_weights(script.sequences[i - 1].prompts)
