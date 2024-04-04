@@ -27,7 +27,8 @@ class LCM:
             'adapter': "latent-consistency/lcm-lora-sdxl"
         },
         'large-turbo': {
-            'model': "stabilityai/sdxl-turbo"
+            'model': "stabilityai/sdxl-turbo",
+            'adapter': "latent-consistency/lcm-lora-sdxl"
         }
     }
 
@@ -43,7 +44,8 @@ class LCM:
         self.blend_engine = None
 
         # prompt
-        self.compel = None
+        self.txt2img_compel = None
+        self.img2img_compel = None
 
         # comp device
         self.device = self.get_device()
@@ -92,9 +94,15 @@ class LCM:
 
         # init prompt generator
         if self.model_size == 'large':
-            self.compel = Compel(
+            self.txt2img_compel = Compel(
                 tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
                 text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
+                returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
+                requires_pooled=[False, True]
+            )
+            self.img2img_compel = Compel(
+                tokenizer=[self.img2img_pipe.tokenizer, self.img2img_pipe.tokenizer_2],
+                text_encoder=[self.img2img_pipe.text_encoder, self.img2img_pipe.text_encoder_2],
                 returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
                 requires_pooled=[False, True]
             )
@@ -120,7 +128,7 @@ class LCM:
         torch.manual_seed(seed)
 
         # gen prompt
-        prompt_dict = self.gen_prompt(prompt, seed)
+        prompt_dict = self.gen_prompt(prompt, seed, self.txt2img_compel)
 
         # run image generation
         self.logger.info(f"Generating txt2img: {prompt=}, {seed=}")
@@ -198,10 +206,13 @@ class LCM:
             seed = self.get_random_seed()
         torch.manual_seed(seed)
 
+        # gen prompt
+        prompt_dict = self.gen_prompt(prompt, seed, self.img2img_compel)
+
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {prompt=}, seed=0")
         start_time = time.time()
-        result = self.img2img_pipe(prompt=prompt,
+        result = self.img2img_pipe(**prompt_dict,
                                    image=base_image,
                                    num_inference_steps=num_inference_steps,
                                    height=width, width=height,
@@ -213,13 +224,13 @@ class LCM:
 
         return result
 
-    def gen_prompt(self, prompt, seed):
+    def gen_prompt(self, prompt, seed, compel):
 
         # check if we're using compel (needed for SDXL model)
-        if self.compel:
+        if compel:
 
             # create compel prompt components
-            conditioning, pooled = self.compel(prompt)
+            conditioning, pooled = compel(prompt)
             seed_generator = torch.Generator().manual_seed(seed)
 
             return {
