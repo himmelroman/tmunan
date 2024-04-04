@@ -3,7 +3,7 @@ from diffusers.utils import make_image_grid
 
 if __name__ == '__main__':
 
-    lcm = LCM(txt2img_size='small')
+    lcm = LCM(model_size='small')
     lcm.load()
 
     res = lcm.txt2img(

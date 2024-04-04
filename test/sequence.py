@@ -98,7 +98,7 @@ def gen_scale_sequence(prompt1, prompt2, frames=10):
 if __name__ == "__main__":
 
     # LCM
-    lcm = LCM(txt2img_size='large')
+    lcm = LCM(model_size='large')
     lcm.load(torch_device='mps')
 
     prompt = 'medieval oil painting, clean, convent library, big wooden table, bearded priests sitting and drinking beer from bottles, sharp 4k'

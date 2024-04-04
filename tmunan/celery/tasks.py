@@ -12,8 +12,9 @@ class LCMTask(Task):
     @property
     def lcm(self):
         if self._lcm is None:
-            self._lcm = LCM(txt2img_size='small', img2img_size='small')
+            self._lcm = LCM(model_size='small')
         return self._lcm
+
 
 
 @celery_app.task(base=LCMTask, bind=True)

@@ -33,7 +33,7 @@ class LCMBackgroundTask(BackgroundTask):
 
         try:
             # load model
-            self.lcm = LCM(txt2img_size=self.model_size, img2img_size=self.model_size)
+            self.lcm = LCM(model_size=self.model_size)
             self.lcm.load()
 
             # init task map

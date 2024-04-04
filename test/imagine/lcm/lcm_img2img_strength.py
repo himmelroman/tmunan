@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     images = list()
 
-    # lcm = LCM(txt2img_size='medium', img2img_size='medium')
+    # lcm = LCM(model_size='medium')
     # lcm.load()
     rig = ImageGeneratorRemote('http://localhost', 8080)
     rig.on_image_ready += lambda img_id, img: images.append(img)

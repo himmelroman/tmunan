@@ -107,7 +107,7 @@ def blend_sequence_prompts(lcm: LCM, prompts, n_steps):
 if __name__ == '__main__':
 
     # Image generation pipeline
-    lcm = LCM(txt2img_size='large-turbo')
+    lcm = LCM(model_size='large-turbo')
     lcm.load()
 
     # Example usage
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         image.save(f'/tmp/{i}.png')
 
     #
-    # lcm = LCM(txt2img_size='large')
+    # lcm = LCM(model_size='large')
     # lcm.load()
     # res = lcm.txt2img(
     #     prompt='bunny running around screaming at everybody',

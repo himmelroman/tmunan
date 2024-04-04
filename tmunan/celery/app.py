@@ -26,7 +26,7 @@ class LCMTask(Task):
         signals.worker_before_create_process.connect(self.load)
 
     def load(self, **kwargs):
-        self._lcm = LCM(txt2img_size='small', img2img_size='small')
+        self._lcm = LCM(model_size='small')
         self._lcm.load()
 
     @property

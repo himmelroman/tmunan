@@ -32,11 +32,10 @@ class LCM:
     }
 
     # constructor
-    def __init__(self, txt2img_size=None, img2img_size=None):
+    def __init__(self, model_size=None):
 
         # model sizes
-        self.txt2img_size = txt2img_size
-        self.img2img_size = img2img_size
+        self.model_size = model_size
 
         # pipelines
         self.txt2img_pipe = None
@@ -67,55 +66,38 @@ class LCM:
         self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image
-        if self.txt2img_size:
+        self.logger.info(f"Loading txt2img model: {self.model_map[self.model_size]['model']}")
+        self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
+            self.model_map[self.model_size]['model'],
+            torch_dtype=torch.float16).to(self.device)
 
-            # load txt2img model
-            self.logger.info(f"Loading txt2img model: {self.model_map[self.txt2img_size]['model']}")
-            self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
-                self.model_map[self.txt2img_size]['model'],
-                # local_files_only=True,
-                torch_dtype=torch.float16).to(self.device)
+        # check for LCM adapter
+        if self.model_map[self.model_size].get('adapter'):
 
-            # check for LCM adapter
-            if self.model_map[self.txt2img_size].get('adapter'):
+            # update scheduler
+            self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
-                # update scheduler
-                self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
+            # load and fuse sd_lcm lora
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_size]['adapter']}")
+            self.txt2img_pipe.load_lora_weights(self.model_map[self.model_size]['adapter'],
+                                                weight_name='pytorch_lora_weights.safetensors')
+            self.txt2img_pipe.fuse_lora()
 
-                # load and fuse sd_lcm lora
-                self.logger.info(f"Loading LCM Lora: {self.model_map[self.txt2img_size]['adapter']}")
-                self.txt2img_pipe.load_lora_weights(self.model_map[self.txt2img_size]['adapter'],
-                                                    weight_name='pytorch_lora_weights.safetensors')
-                self.txt2img_pipe.fuse_lora()
+        # load img2img model
+        self.logger.info(f"Loading img2img model: {self.model_map[self.model_size]['model']}")
+        self.img2img_pipe = AutoPipelineForImage2Image.from_pipe(self.txt2img_pipe).to(self.device)
+        # self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
+        #     self.model_map[self.img2img_size]['model'],
+        #     torch_dtype=torch.float16).to(self.device)
 
-            # init prompt generator
-            if self.txt2img_size == 'large':
-                self.compel = Compel(
-                    tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
-                    text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
-                    returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
-                    requires_pooled=[False, True]
-                )
-
-        # image to image
-        if self.img2img_size:
-
-            # load img2img model
-            self.logger.info(f"Loading img2img model: {self.model_map[self.img2img_size]['model']}")
-            self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
-                self.model_map[self.img2img_size]['model'],
-                torch_dtype=torch.float16).to(self.device)
-
-            # check for LCM adapter
-            if self.model_map[self.img2img_size].get('adapter'):
-
-                # update scheduler
-                self.img2img_pipe.scheduler = LCMScheduler.from_config(self.img2img_pipe.scheduler.config)
-
-                # load LCM-LoRA
-                self.logger.info(f"Loading LCM Lora: {self.model_map[self.img2img_size]['adapter']}")
-                self.img2img_pipe.load_lora_weights(self.model_map[self.img2img_size]['adapter'])
-                self.img2img_pipe.fuse_lora()
+        # init prompt generator
+        if self.model_size == 'large':
+            self.compel = Compel(
+                tokenizer=[self.txt2img_pipe.tokenizer, self.txt2img_pipe.tokenizer_2],
+                text_encoder=[self.txt2img_pipe.text_encoder, self.txt2img_pipe.text_encoder_2],
+                returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
+                requires_pooled=[False, True]
+            )
 
         self.logger.info("Loading models finished.")
 

@@ -11,7 +11,7 @@ class ImagineWorker(Worker):
         super().__init__(**kwargs)
 
         # LCM
-        self.lcm = LCM(txt2img_size='small', img2img_size='small')
+        self.lcm = LCM(model_size='small')
 
     def on_start(self):
         super().on_start()
