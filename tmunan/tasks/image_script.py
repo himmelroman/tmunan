@@ -65,10 +65,10 @@ class ImageScript:
     #     # run script
     #     self.run_script(script, config, script_id)
 
-    def run_image_sequence(self, seq: ImageSequence, img_config: ImageInstructions, seq_id, parent_dir=None):
+    def run_image_sequence(self, seq: ImageSequence, global_img_config: ImageInstructions, seq_id, parent_dir=None):
 
         self.logger.info(f'Starting image sequence {seq=}')
-        self.logger.info(f'Image configuration {img_config=}')
+        self.logger.info(f'Image configuration {global_img_config=}')
 
         # prepare dir
         self.seq_dir = Path(f'{parent_dir if parent_dir else self.cache_dir}/seq_{seq_id}/')
@@ -76,12 +76,13 @@ class ImageScript:
         self.logger.info(f'Saving images in {self.seq_dir}')
 
         # save image config
-        self.image_config = img_config
+        self.image_config = global_img_config
         self.feed_thread = None
 
         # verify seed
-        if not img_config.seed:
-            img_config.seed = self.image_gen.get_random_seed()
+        seed = seq.img_config.seed or global_img_config.seed
+        if not seed:
+            seed = self.image_gen.get_random_seed()
 
         # precalculate prompt weights
         for p in seq.prompts:
@@ -114,30 +115,30 @@ class ImageScript:
                 self.logger.info(f'Generating image {i} with prompt: {prompt}')
                 self.image_gen.txt2img(
                     prompt=prompt,
-                    num_inference_steps=img_config.num_inference_steps,
-                    guidance_scale=img_config.guidance_scale,
-                    height=img_config.height, width=img_config.width,
-                    seed=img_config.seed,
-                    randomize_seed=False
+                    guidance_scale=seq.img_config.guidance_scale or global_img_config.guidance_scale,
+                    num_inference_steps=seq.img_config.num_inference_steps or global_img_config.num_inference_steps,
+                    height=global_img_config.height, width=global_img_config.width,
+                    seed=seed, randomize_seed=seed is None
                 )
 
             # check sequence task type
             elif seq.transition == TaskType.Image2Image:
 
-                # get prompt with strength weight
-                strength = seq.prompts[0].weight_list[i]
-
                 # pick base image
                 base_image_url = self.last_image_url or seq.base_image_url
 
-                self.logger.info(f'Generating image from: {seq.base_image_url} with prompt: {seq.prompts[0].text}')
+                # gen prompt for current sequence progress
+                prompt = self.gen_seq_prompt(seq.prompts, i)
+
+                self.logger.info(f'Generating image from: {base_image_url} with prompt: {prompt}, str: {seq.img_config.strength or global_img_config.strength}')
                 self.image_gen.img2img(
-                    prompt=seq.prompts[0].text,
+                    prompt=prompt,
                     image_url=base_image_url,
-                    strength=strength,
-                    guidance_scale=img_config.guidance_scale,
-                    num_inference_steps=img_config.num_inference_steps,
-                    height=img_config.height, width=img_config.width
+                    strength=seq.img_config.strength or global_img_config.strength,
+                    guidance_scale=seq.img_config.guidance_scale or global_img_config.guidance_scale,
+                    num_inference_steps=seq.img_config.num_inference_steps or global_img_config.num_inference_steps,
+                    height=global_img_config.height, width=global_img_config.width,
+                    seed=None, randomize_seed=True
                 )
 
             # wait until image is ready
@@ -145,7 +146,7 @@ class ImageScript:
 
             # to keep RT - we need to sleep some time
             if self.script_config.keep_rtf:
-                sleep_time = self.calc_rtf_sleep_time(img_config, img_gen_start_time)
+                sleep_time = self.calc_rtf_sleep_time(global_img_config, img_gen_start_time)
                 if sleep_time > 0:
                     self.logger.info(f'Sleeping for: {sleep_time}')
                     time.sleep(sleep_time)
@@ -164,14 +165,11 @@ class ImageScript:
 
         image_gen_time = time.time() - img_gen_start_time
         video_play_time = img_config.key_frame_period * img_config.key_frame_repeat
-        sleep_time = video_play_time - image_gen_time
+        sleep_time = video_play_time  # - image_gen_time
 
         return sleep_time
 
     def process_ready_image(self, image_url, image):
-
-        # release sync event
-        self.sync_event.set()
 
         # generate timestamp
         now_ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
@@ -185,10 +183,16 @@ class ImageScript:
         self.last_image_url = image_url
         self.logger.info(f'Updated last image: {self.last_image_url}')
 
+        # output image
+        self.feed_image()
+
+        # release sync event
+        self.sync_event.set()
+
         # start thread
-        if not self.feed_thread:
-            self.feed_thread = threading.Thread(target=self.feed_thread_worker)
-            self.feed_thread.start()
+        # if not self.feed_thread:
+        #     self.feed_thread = threading.Thread(target=self.feed_thread_worker)
+        #     self.feed_thread.start()
 
     def feed_thread_worker(self):
 
@@ -196,19 +200,24 @@ class ImageScript:
         while not self.stop_requested:
 
             # push image & repeat as specified
-            for _ in range(self.image_config.key_frame_repeat):
-
-                # fire image
-                self.on_image_ready.notify({
-                    'image_path': str(self.last_image_path)
-                })
-
-                # sleep
-                if self.script_config.keep_rtf:
-                    time.sleep(self.image_config.key_frame_period)
+            self.feed_image()
 
             # sleep
             if not self.script_config.keep_rtf:
+                time.sleep(self.image_config.key_frame_period)
+
+    def feed_image(self):
+
+        # push image & repeat as specified
+        for _ in range(self.image_config.key_frame_repeat):
+
+            # fire image
+            self.on_image_ready.notify({
+                'image_path': str(self.last_image_path)
+            })
+
+            # sleep
+            if self.script_config.keep_rtf:
                 time.sleep(self.image_config.key_frame_period)
 
     def run_script(self, script: ImageSequenceScript, config: ImageInstructions, script_id):

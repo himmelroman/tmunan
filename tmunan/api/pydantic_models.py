@@ -14,12 +14,12 @@ class BaseImage(BaseModel):
 
 
 class ImageInstructions(BaseModel):
+    num_inference_steps: int | None = None
+    guidance_scale: float | None = None
+    strength: float | None = None
+    seed: int | None = None
     height: int | None = 768
     width: int | None = 768
-    num_inference_steps: int | None = 4
-    guidance_scale: float | None = 0.5
-    strength: float | None = 0.3
-    seed: int | None = None
     key_frame_period: int = 3
     key_frame_repeat: int = 2
     output_fps: int = 12
@@ -43,6 +43,7 @@ class SequencePrompt(BaseModel):
 
 class ImageSequence(BaseModel):
     transition: TaskType
+    img_config: ImageInstructions | None = None
     prompts: List[SequencePrompt]
     base_image_url: str | None = None
     num_images: int = 10
