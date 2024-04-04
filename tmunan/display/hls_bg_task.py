@@ -116,8 +116,4 @@ class Image2HLSBackgroundTask(BackgroundTask):
     def exec(self, image: np.ndarray[np.uint8, Any]):
 
         # push image to ffmpeg's stdin
-        self.logger.info('Pushing image')
-
-        # repeat image according to kf_repeat
-        # for _ in range(self.kf_repeat):
         self.ffmpeg_process.stdin.write(image.tobytes())

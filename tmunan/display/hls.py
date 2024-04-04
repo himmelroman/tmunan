@@ -29,5 +29,5 @@ class HLS:
         self.hls_executor.stop()
 
     def push_image(self, image):
-        print(f'HLS pushing image: {len(image)}')
+        # print(f'HLS pushing image: {len(image)}')
         self.hls_executor.push_input(image)
