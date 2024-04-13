@@ -326,9 +326,23 @@ class ImageScript:
         def format_prompt(text, weight):
             return text if weight == 1.0 else f'({text}){round(weight, 3)}'
 
+        # prepare prompts
+        effective_prompts = set()
+        for p in prompts:
+
+            # default weight
+            weight = p.start_weight
+
+            # check if there's a weight list
+            if p.weight_list is not None:
+                weight = p.weight_list[iteration]
+
+            # drop prompts with low weight
+            if weight > 0.02:
+                effective_prompts.add(format_prompt(p.text, weight))
+
         # build master prompt string
-        prompt_parts = {format_prompt(p.text, p.weight_list[iteration]) for p in prompts if p.weight_list[iteration] > 0.02}
-        return ', '.join(prompt_parts)
+        return ', '.join(effective_prompts)
 
     @classmethod
     def get_model_attribute(cls, model: BaseModel, model_base: BaseModel, attribute):
