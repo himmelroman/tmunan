@@ -7,6 +7,9 @@ from typing import List
 from pathlib import Path
 from copy import deepcopy
 
+from diffusers.utils import load_image
+from pydantic import BaseModel
+
 from tmunan.common.event import Event
 from tmunan.common.log import get_logger
 from tmunan.imagine.sd_lcm.lcm_bg_task import TaskType
@@ -80,7 +83,7 @@ class ImageScript:
         self.feed_thread = None
 
         # verify seed
-        seed = seq.img_config.seed or global_img_config.seed
+        seed = self.get_model_attribute(seq.img_config, global_img_config, 'seed')
         if not seed:
             seed = self.image_gen.get_random_seed()
 
@@ -89,6 +92,12 @@ class ImageScript:
             # calculate unless already specified
             if p.weight_list is None:
                 p.weight_list = np.linspace(p.start_weight, p.end_weight, seq.num_images, endpoint=True)
+
+        # start with base image if provided
+        # if seq.transition == TaskType.Image2Image and seq.base_image_url:
+        #     image = load_image(str(seq.base_image_url))
+        #     image.resize((global_img_config.width, global_img_config.height))
+        #     self.process_ready_image(seq.base_image_url, image)
 
         # iterate as many times as requested
         for i in range(0, seq.num_images):
@@ -115,8 +124,8 @@ class ImageScript:
                 self.logger.info(f'Generating image {i} with prompt: {prompt}')
                 self.image_gen.txt2img(
                     prompt=prompt,
-                    guidance_scale=seq.img_config.guidance_scale or global_img_config.guidance_scale,
-                    num_inference_steps=seq.img_config.num_inference_steps or global_img_config.num_inference_steps,
+                    guidance_scale=self.get_model_attribute(seq.img_config, global_img_config, 'guidance_scale'),
+                    num_inference_steps=self.get_model_attribute(seq.img_config, global_img_config, 'num_inference_steps'),
                     height=global_img_config.height, width=global_img_config.width,
                     seed=seed, randomize_seed=seed is None
                 )
@@ -130,13 +139,14 @@ class ImageScript:
                 # gen prompt for current sequence progress
                 prompt = self.gen_seq_prompt(seq.prompts, i)
 
-                self.logger.info(f'Generating image from: {base_image_url} with prompt: {prompt}, str: {seq.img_config.strength or global_img_config.strength}')
+                self.logger.info(f'Generating image from: {base_image_url} with prompt: {prompt}, '
+                                 f'strength: {self.get_model_attribute(seq.img_config, global_img_config, "strength")}')
                 self.image_gen.img2img(
                     prompt=prompt,
                     image_url=base_image_url,
-                    strength=seq.img_config.strength or global_img_config.strength,
-                    guidance_scale=seq.img_config.guidance_scale or global_img_config.guidance_scale,
-                    num_inference_steps=seq.img_config.num_inference_steps or global_img_config.num_inference_steps,
+                    strength=self.get_model_attribute(seq.img_config, global_img_config, 'strength'),
+                    guidance_scale=self.get_model_attribute(seq.img_config, global_img_config, 'guidance_scale'),
+                    num_inference_steps=self.get_model_attribute(seq.img_config, global_img_config, 'num_inference_steps'),
                     height=global_img_config.height, width=global_img_config.width,
                     seed=None, randomize_seed=True
                 )
@@ -317,5 +327,15 @@ class ImageScript:
             return text if weight == 1.0 else f'({text}){round(weight, 3)}'
 
         # build master prompt string
-        prompt_parts = {format_prompt(p.text, p.weight_list[iteration]) for p in prompts if p.weight_list[iteration] > 0.05}
+        prompt_parts = {format_prompt(p.text, p.weight_list[iteration]) for p in prompts if p.weight_list[iteration] > 0.02}
         return ', '.join(prompt_parts)
+
+    @classmethod
+    def get_model_attribute(cls, model: BaseModel, model_base: BaseModel, attribute):
+
+        if model:
+            attr_value = model.model_dump().get(attribute)
+            if attr_value:
+                return attr_value
+
+        return model_base.model_dump().get(attribute)
