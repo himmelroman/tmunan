@@ -141,6 +141,9 @@ class ImageScript:
                 # gen prompt for current sequence progress
                 prompt = self.gen_seq_prompt(seq.prompts, i)
 
+                # determine seed
+                seq_seed = seq.img_config.model_dump().get('seed')
+
                 self.logger.info(f'Generating image from: {base_image_url} with prompt: {prompt}, '
                                  f'strength: {self.get_model_attribute(seq.img_config, global_img_config, "strength")}')
                 self.image_gen.img2img(
@@ -150,7 +153,7 @@ class ImageScript:
                     guidance_scale=self.get_model_attribute(seq.img_config, global_img_config, 'guidance_scale'),
                     num_inference_steps=self.get_model_attribute(seq.img_config, global_img_config, 'num_inference_steps'),
                     height=global_img_config.height, width=global_img_config.width,
-                    seed=None, randomize_seed=True
+                    seed=seq_seed, randomize_seed=seq_seed is None
                 )
 
             # wait until image is ready
