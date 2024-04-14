@@ -94,6 +94,8 @@ class ImageScript:
                 p.weight_list = np.linspace(p.start_weight, p.end_weight, seq.num_images, endpoint=True)
 
         # start with base image if provided
+        if seq.base_image_url:
+            self.last_image_url = None
         # if seq.transition == TaskType.Image2Image and seq.base_image_url:
         #     image = load_image(str(seq.base_image_url))
         #     image.resize((global_img_config.width, global_img_config.height))
@@ -327,7 +329,8 @@ class ImageScript:
             return text if weight == 1.0 else f'({text}){round(weight, 3)}'
 
         # prepare prompts
-        effective_prompts = set()
+        unique_prompts = set()
+        effective_prompts = list()
         for p in prompts:
 
             # default weight
@@ -338,8 +341,9 @@ class ImageScript:
                 weight = p.weight_list[iteration]
 
             # drop prompts with low weight
-            if weight > 0.02:
-                effective_prompts.add(format_prompt(p.text, weight))
+            if p.text not in unique_prompts and weight > 0.02:
+                unique_prompts.add(p.text)
+                effective_prompts.append(format_prompt(p.text, weight))
 
         # build master prompt string
         return ', '.join(effective_prompts)

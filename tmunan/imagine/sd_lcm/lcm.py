@@ -210,14 +210,14 @@ class LCM:
         prompt_dict = self.gen_prompt(prompt, seed, self.img2img_compel)
 
         # pass prompt and image to pipeline
-        self.logger.info(f"Generating img2img: {prompt=}, seed=0")
+        self.logger.info(f"Generating img2img: {image_url=}, {prompt_dict=}, {num_inference_steps=}, {guidance_scale=}, {strength=}, {seed=}")
         start_time = time.time()
         result = self.img2img_pipe(**prompt_dict,
                                    image=base_image,
                                    num_inference_steps=num_inference_steps,
-                                   height=width, width=height,
                                    guidance_scale=guidance_scale,
-                                   strength=strength
+                                   strength=strength,
+                                   height=width, width=height,
                                    ).images
         elapsed_time = time.time() - start_time
         self.logger.info(f"Done generating img2img: {elapsed_time=}")
