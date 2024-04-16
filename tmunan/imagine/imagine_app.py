@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 import torch
 from fastapi import FastAPI, Request
+from fastapi import File, UploadFile
 from fastapi.responses import FileResponse
 from pydantic_settings import BaseSettings
 
@@ -32,7 +33,7 @@ class AppSettings(BaseSettings):
 async def lifespan(fastapi_app: FastAPI):
 
     # determine model size
-    model_size = 'large' if torch.cuda.is_available() else 'large'
+    model_size = 'large' if torch.cuda.is_available() else 'small'
 
     # LCM
     app.lcm = LCM(model_size=model_size, ip_adapter_folder='/home/ubuntu/.cache/theatre/imagine/rubin_style')
@@ -123,6 +124,51 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
         'image_id': image_id,
         'image_url': f'{request.base_url}api/imagine/{image_id}'
     }
+
+
+@app.post("/api/imagine/img2img_upload")
+def img2img_upload(request: Request, file: UploadFile = File(...)):
+
+    # save uploaded file
+    file_path = f'{app.context.cache_dir}/upload_img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}.png'
+    save_file(file, file_path)
+
+    # generate image
+    images = app.lcm.img2img(
+        image_url=file_path,
+        prompt="high quality",
+        num_inference_steps=5,
+        guidance_scale=1.0,
+        height=768, width=768,
+        strength=0.6,
+        # ip_adapter_weight=0.7,
+        seed=0,
+        randomize_seed=True
+    )
+
+    # save image to file
+    image_id = f'img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
+    file_path = f'{app.context.cache_dir}/{image_id}.png'
+    images[0].save(file_path)
+
+    # return file
+    return {
+        'image_id': image_id,
+        'image_url': f'{request.base_url}api/imagine/{image_id}'
+    }
+
+
+def save_file(file: UploadFile, target_path):
+    try:
+        with open(target_path, 'wb') as f:
+            while contents := file.file.read(1024 * 1024):
+                f.write(contents)
+
+    except Exception:
+        return {"message": "There was an error uploading the file"}
+
+    finally:
+        file.file.close()
 
 
 if __name__ == "__main__":

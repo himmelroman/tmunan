@@ -8,6 +8,9 @@ torch.mps.empty_cache()
 model_id = "SimianLuo/LCM_Dreamshaper_v7"
 lcm_lora_id = "latent-consistency/lcm-lora-sdv1-5"
 
+model_id = "stabilityai/stable-diffusion-xl-base-1.0"
+lcm_lora_id = "latent-consistency/lcm-lora-sdxl"
+
 pipeline = AutoPipelineForImage2Image.from_pretrained(model_id, torch_dtype=torch.float16).to('mps')
 
 pipeline.load_ip_adapter("h94/IP-Adapter", subfolder="models",

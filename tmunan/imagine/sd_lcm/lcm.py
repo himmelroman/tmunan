@@ -100,7 +100,7 @@ class LCM:
         #     torch_dtype=torch.float16).to(self.device)
 
         # check if ip-adapter source folder was provided
-        if self.ip_adapter_folder:
+        if self.ip_adapter_folder and Path(self.ip_adapter_folder).exists():
 
             # load style images
             self.ip_adapter_images = self.load_ip_adapter_images()
@@ -130,13 +130,16 @@ class LCM:
 
     def load_ip_adapter_images(self):
 
-        # iterate style folder images
-        style_images = list()
-        for child_path in Path(self.ip_adapter_folder).iterdir():
-            if child_path.is_file():
-                img = load_image(str(child_path))
-                style_images.append(img)
-        return style_images
+        if Path(self.ip_adapter_folder).exists():
+
+            # iterate style folder images
+            style_images = list()
+            for child_path in Path(self.ip_adapter_folder).iterdir():
+                if child_path.is_file():
+                    img = load_image(str(child_path))
+                    style_images.append(img)
+
+            return style_images
 
     def txt2img(self,
                 prompt: str,
@@ -248,7 +251,7 @@ class LCM:
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {image_url=}\n{prompt=}\n"
                          f"{num_inference_steps=}, {guidance_scale=}, "
-                         f"{strength=}, {ip_adapter_weight=},"
+                         f"{strength=}, {ip_adapter_weight=}, "
                          f"{seed=}")
         start_time = time.time()
         result = self.img2img_pipe(**prompt_dict,
