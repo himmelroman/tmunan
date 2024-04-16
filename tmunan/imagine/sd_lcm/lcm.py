@@ -247,7 +247,9 @@ class LCM:
 
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {image_url=}\n{prompt=}\n"
-                         f"{num_inference_steps=}, {guidance_scale=}, {strength=}, {seed=}")
+                         f"{num_inference_steps=}, {guidance_scale=}, "
+                         f"{strength=}, {ip_adapter_weight=},"
+                         f"{seed=}")
         start_time = time.time()
         result = self.img2img_pipe(**prompt_dict,
                                    **ip_adapter_params,
