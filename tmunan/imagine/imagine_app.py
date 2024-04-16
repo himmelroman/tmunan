@@ -141,7 +141,7 @@ def img2img_upload(file: UploadFile = File(...)):
         guidance_scale=1.0,
         height=768, width=768,
         strength=0.5,
-        ip_adapter_weight=0.7,
+        # ip_adapter_weight=0.7,
         seed=0,
         randomize_seed=True
     )
