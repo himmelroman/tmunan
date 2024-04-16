@@ -139,7 +139,7 @@ def img2img_upload(request: Request, file: UploadFile = File(...)):
         prompt="high quality",
         num_inference_steps=4,
         guidance_scale=1.0,
-        height=768, width=768,
+        height=1024, width=1024,
         strength=0.2,
         # ip_adapter_weight=0.7,
         seed=0,
