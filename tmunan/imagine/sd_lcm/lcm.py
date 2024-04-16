@@ -1,5 +1,6 @@
 import random
 import time
+from pathlib import Path
 
 import torch
 import numpy as np
@@ -16,27 +17,33 @@ class LCM:
     model_map = {
         'small': {
             'model': "SimianLuo/LCM_Dreamshaper_v7",
-            'adapter': "latent-consistency/lcm-lora-sdv1-5"
+            'lcm_lora': "latent-consistency/lcm-lora-sdv1-5",
+            'ip_adapter': "ip-adapter_sd15.bin",
+            'subfolder': "models"
         },
         'medium': {
             'model': "segmind/SSD-1B",
-            'adapter': "latent-consistency/lcm-lora-ssd-1b"
+            'lcm_lora': "latent-consistency/lcm-lora-ssd-1b",
+            'ip_adapter': "ip-adapter_sdxl.bin",
+            'subfolder': "models"
         },
         'large': {
             'model': "stabilityai/stable-diffusion-xl-base-1.0",
-            'adapter': "latent-consistency/lcm-lora-sdxl"
-        },
-        'large-turbo': {
-            'model': "stabilityai/sdxl-turbo",
-            'adapter': "latent-consistency/lcm-lora-sdxl"
+            'lcm_lora': "latent-consistency/lcm-lora-sdxl",
+            'ip_adapter': "ip-adapter_sdxl.bin",
+            'subfolder': "sdxl_models"
         }
     }
 
     # constructor
-    def __init__(self, model_size=None):
+    def __init__(self, model_size=None, ip_adapter_folder=None):
 
         # model sizes
         self.model_size = model_size
+
+        # ip adapter
+        self.ip_adapter_folder = ip_adapter_folder
+        self.ip_adapter_images = None
 
         # pipelines
         self.txt2img_pipe = None
@@ -73,15 +80,15 @@ class LCM:
             self.model_map[self.model_size]['model'],
             torch_dtype=torch.float16).to(self.device)
 
-        # check for LCM adapter
-        if self.model_map[self.model_size].get('adapter'):
+        # check for LCM lora
+        if self.model_map[self.model_size].get('lcm_lora'):
 
             # update scheduler
             self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
 
             # load and fuse sd_lcm lora
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_size]['adapter']}")
-            self.txt2img_pipe.load_lora_weights(self.model_map[self.model_size]['adapter'],
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_size]['lcm_lora']}")
+            self.txt2img_pipe.load_lora_weights(self.model_map[self.model_size]['lcm_lora'],
                                                 weight_name='pytorch_lora_weights.safetensors')
             self.txt2img_pipe.fuse_lora()
 
@@ -91,6 +98,18 @@ class LCM:
         # self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
         #     self.model_map[self.img2img_size]['model'],
         #     torch_dtype=torch.float16).to(self.device)
+
+        # check if ip-adapter source folder was provided
+        if self.ip_adapter_folder:
+
+            # load style images
+            self.ip_adapter_images = self.load_ip_adapter_images()
+
+            # load adapter
+            self.logger.info(f"Loading IPAdapter model: {self.model_map[self.model_size]['ip_adapter']}")
+            self.img2img_pipe.load_ip_adapter("h94/IP-Adapter",
+                                              subfolder=self.model_map[self.model_size]['subfolder'],
+                                              weight_name=[self.model_map[self.model_size]['ip_adapter']] * len(self.ip_adapter_images))
 
         # init prompt generator
         if self.model_size == 'large':
@@ -108,6 +127,16 @@ class LCM:
             )
 
         self.logger.info("Loading models finished.")
+
+    def load_ip_adapter_images(self):
+
+        # iterate style folder images
+        style_images = list()
+        for child_path in Path(self.ip_adapter_folder).iterdir():
+            if child_path.is_file():
+                img = load_image(str(child_path))
+                style_images.append(img)
+        return style_images
 
     def txt2img(self,
                 prompt: str,
@@ -189,6 +218,7 @@ class LCM:
                 num_inference_steps: int = 4,
                 guidance_scale: float = 1.0,
                 strength: float = 0.6,
+                ip_adapter_weight: float = 0.6,
                 seed: int = 0,
                 randomize_seed: bool = False,
                 ):
@@ -209,11 +239,18 @@ class LCM:
         # gen prompt
         prompt_dict = self.gen_prompt(prompt, seed, self.img2img_compel)
 
+        # prepare ip-adapter params
+        ip_adapter_params = dict()
+        if self.ip_adapter_images:
+            ip_adapter_params['ip_adapter_image'] = self.ip_adapter_images
+            self.img2img_pipe.set_ip_adapter_scale([ip_adapter_weight] * len(self.ip_adapter_images))
+
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {image_url=}\n{prompt=}\n"
                          f"{num_inference_steps=}, {guidance_scale=}, {strength=}, {seed=}")
         start_time = time.time()
         result = self.img2img_pipe(**prompt_dict,
+                                   **ip_adapter_params,
                                    image=base_image,
                                    num_inference_steps=num_inference_steps,
                                    guidance_scale=guidance_scale,

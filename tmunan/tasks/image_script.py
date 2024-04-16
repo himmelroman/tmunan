@@ -136,7 +136,10 @@ class ImageScript:
             elif seq.transition == TaskType.Image2Image:
 
                 # pick base image
-                base_image_url = self.last_image_url or seq.base_image_url
+                if seq.base_image_fixed:
+                    base_image_url = seq.base_image_url
+                else:
+                    base_image_url = self.last_image_url or seq.base_image_url
 
                 # gen prompt for current sequence progress
                 prompt = self.gen_seq_prompt(seq.prompts, i)

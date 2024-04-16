@@ -46,6 +46,7 @@ class ImageSequence(BaseModel):
     img_config: ImageInstructions | None = None
     prompts: List[SequencePrompt]
     base_image_url: str | None = None
+    base_image_fixed: bool | None = False
     num_images: int = 10
 
 

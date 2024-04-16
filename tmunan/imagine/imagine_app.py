@@ -35,7 +35,7 @@ async def lifespan(fastapi_app: FastAPI):
     model_size = 'large' if torch.cuda.is_available() else 'large'
 
     # LCM
-    app.lcm = LCM(model_size=model_size)
+    app.lcm = LCM(model_size=model_size, ip_adapter_folder='/home/ubuntu/.cache/theatre/imagine/rubin_style')
     app.lcm.load()
 
     # FastAPI app lifespan
