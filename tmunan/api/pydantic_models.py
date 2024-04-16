@@ -17,6 +17,7 @@ class ImageInstructions(BaseModel):
     num_inference_steps: int | None = None
     guidance_scale: float | None = None
     strength: float | None = None
+    ip_adapter_weight: float | None = None
     seed: int | None = None
     height: int | None = 768
     width: int | None = 768
