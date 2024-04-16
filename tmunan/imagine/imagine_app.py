@@ -139,7 +139,7 @@ def img2img_upload(file: UploadFile = File(...)):
     images = app.lcm.img2img(
         image_url=file_path,
         prompt="Reuven Rubin style painting, high quality",
-        num_inference_steps=6,
+        num_inference_steps=5,
         guidance_scale=1.0,
         height=1080, width=1920,
         strength=0.3,
