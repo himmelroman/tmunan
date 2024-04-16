@@ -107,6 +107,7 @@ class LCM:
 
             # load style images
             self.ip_adapter_images = self.load_ip_adapter_images()
+            self.logger.info(f"Loaded {len(self.ip_adapter_images)} style images...")
 
             # load adapter
             self.logger.info(f"Loading IPAdapter model: {self.model_map[self.model_size]['ip_adapter']}")
