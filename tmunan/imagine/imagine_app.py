@@ -127,7 +127,7 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
 
 
 @app.post("/api/imagine/img2img_upload")
-def img2img_upload(request: Request, file: UploadFile = File(...)):
+def img2img_upload(file: UploadFile = File(...)):
 
     # save uploaded file
     file_path = f'{app.context.cache_dir}/upload_img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}.png'
@@ -152,10 +152,7 @@ def img2img_upload(request: Request, file: UploadFile = File(...)):
     images[0].save(file_path)
 
     # return file
-    return {
-        'image_id': image_id,
-        'image_url': f'{request.base_url}api/imagine/{image_id}'
-    }
+    return FileResponse(file_path)
 
 
 def save_file(file: UploadFile, target_path):
