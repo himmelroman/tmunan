@@ -246,7 +246,7 @@ class LCM:
         ip_adapter_params = dict()
         if self.ip_adapter_images:
             ip_adapter_params['ip_adapter_image'] = self.ip_adapter_images
-            self.img2img_pipe.set_ip_adapter_scale([ip_adapter_weight] * len(self.ip_adapter_images))
+            self.img2img_pipe.set_ip_adapter_scale([1 / len(self.ip_adapter_images)] * len(self.ip_adapter_images))
 
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {image_url=}\n{prompt=}\n"
