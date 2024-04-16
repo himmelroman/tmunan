@@ -137,10 +137,10 @@ def img2img_upload(request: Request, file: UploadFile = File(...)):
     images = app.lcm.img2img(
         image_url=file_path,
         prompt="high quality",
-        num_inference_steps=4,
+        num_inference_steps=5,
         guidance_scale=1.0,
         height=1024, width=1024,
-        strength=0.2,
+        strength=0.3,
         # ip_adapter_weight=0.7,
         seed=0,
         randomize_seed=True
