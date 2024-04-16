@@ -78,7 +78,10 @@ class LCM:
         self.logger.info(f"Loading txt2img model: {self.model_map[self.model_size]['model']}")
         self.txt2img_pipe = AutoPipelineForText2Image.from_pretrained(
             self.model_map[self.model_size]['model'],
-            torch_dtype=torch.float16).to(self.device)
+            torch_dtype=torch.float16,
+            safety_checker=None,
+            requires_safety_checker=False
+        ).to(self.device)
 
         # check for LCM lora
         if self.model_map[self.model_size].get('lcm_lora'):
