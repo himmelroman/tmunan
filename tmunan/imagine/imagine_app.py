@@ -1,4 +1,5 @@
 import os
+import ssl
 from datetime import datetime
 
 from pathlib import Path
@@ -61,6 +62,9 @@ middleware = [
 
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
+
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain('/home/ubuntu/tmunan/cert.pem', keyfile='/home/ubuntu/tmunan/key.pem')
 
 # App components
 app.context = AppSettings()
@@ -143,7 +147,6 @@ def img2img_upload(file: UploadFile = File(...)):
         guidance_scale=1.0,
         height=1080, width=1920,
         strength=0.3,
-        # ip_adapter_weight=0.7,
         seed=0,
         randomize_seed=True
     )
