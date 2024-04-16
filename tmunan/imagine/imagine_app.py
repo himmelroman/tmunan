@@ -141,7 +141,7 @@ def img2img_upload(file: UploadFile = File(...)):
         prompt="Reuven Rubin style painting, high quality",
         num_inference_steps=6,
         guidance_scale=1.0,
-        height=2048, width=2048,
+        height=1080, width=1920,
         strength=0.3,
         # ip_adapter_weight=0.7,
         seed=0,
