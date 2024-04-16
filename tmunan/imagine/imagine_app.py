@@ -142,7 +142,7 @@ def img2img_upload(file: UploadFile = File(...)):
         num_inference_steps=6,
         guidance_scale=1.0,
         height=1024, width=1024,
-        strength=0.4,
+        strength=0.3,
         # ip_adapter_weight=0.7,
         seed=0,
         randomize_seed=True
