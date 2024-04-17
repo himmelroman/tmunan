@@ -3,9 +3,13 @@ import PIL.Image
 
 from io import BytesIO
 
-
-url = 'http://52.208.62.108:8080/api/imagine/img2img_upload'
+# load file
 files = [('file', open('/Users/himmelroman/Desktop/Bialik/snippet/out.png', 'rb'))]
+
+# base url
+url = 'http://52.208.62.108:8080/api/imagine/img2img_upload'
+
+# post data
 resp = requests.post(
     url=url,
     params={
