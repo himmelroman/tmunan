@@ -153,7 +153,7 @@ def img2img_upload(file: UploadFile = File(...)):
 
     # save image to file
     image_id = f'img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
-    file_path = f'{app.context.cache_dir}/{image_id}.png'
+    file_path = f'{app.context.cache_dir}/{image_id}.jpg'
     images[0].save(file_path)
 
     # return file
