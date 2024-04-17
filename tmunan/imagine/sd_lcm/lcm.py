@@ -5,11 +5,12 @@ from pathlib import Path
 import torch
 import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
-from diffusers.utils import load_image, make_image_grid
 from diffusers import LCMScheduler, AutoPipelineForText2Image, AutoPipelineForImage2Image
+from diffusers.utils import make_image_grid
 # from latentblending import BlendingEngine
 
 from tmunan.common.log import get_logger
+from tmunan.common.utils import load_image
 
 
 class LCM:

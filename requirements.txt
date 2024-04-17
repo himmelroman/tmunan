@@ -4,6 +4,7 @@ fastapi==0.108.0
 python-multipart
 pydantic-settings
 websockets~=11.0.3
+requests
 celery
 
 # ml
