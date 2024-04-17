@@ -63,8 +63,8 @@ middleware = [
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
 
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain('/home/ubuntu/tmunan/cert.pem', keyfile='/home/ubuntu/tmunan/key.pem')
+# ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+# ssl_context.load_cert_chain('/home/ubuntu/tmunan/cert.pem', keyfile='/home/ubuntu/tmunan/key.pem')
 
 # App components
 app.context = AppSettings()
