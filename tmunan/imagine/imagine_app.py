@@ -3,9 +3,10 @@ from datetime import datetime
 
 from pathlib import Path
 from contextlib import asynccontextmanager
+from typing import Annotated
 
 import torch
-from fastapi import UploadFile, HTTPException
+from fastapi import UploadFile, HTTPException, Query
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.gzip import GZipMiddleware
@@ -136,7 +137,14 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
 
 
 @app.post("/api/imagine/img2img_upload")
-def img2img_upload(file: UploadFile):
+def img2img_upload(
+        file: UploadFile,
+        prompt: Annotated[str | None, Query(min_length=1, max_length=256)] = None,
+        num_inference_steps: Annotated[int | None, Query(gt=2, le=50)] = None,
+        guidance_scale: Annotated[float | None, Query(ge=0, le=1.0)] = None,
+        strength: Annotated[float | None, Query(ge=0, le=1.0)] = None,
+        seed: Annotated[int | None, Query(ge=0)] = None
+):
 
     try:
         # save uploaded file
@@ -146,13 +154,13 @@ def img2img_upload(file: UploadFile):
         # generate image
         images = app.lcm.img2img(
             image_url=input_file_path,
-            prompt="painting, art",
-            num_inference_steps=4,
-            guidance_scale=1.0,
+            prompt=prompt or "painting, art",
+            num_inference_steps=num_inference_steps or 4,
+            guidance_scale=guidance_scale or 1.0,
+            strength=strength or 0.4,
             height=1080, width=1920,
-            strength=0.4,
-            seed=0,
-            randomize_seed=True
+            seed=seed or 0,
+            randomize_seed=seed is None
         )
 
         # save image to file
