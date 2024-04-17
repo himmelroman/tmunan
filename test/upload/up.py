@@ -1,8 +1,27 @@
 import requests
+import PIL.Image
 
-# url = 'http://127.0.0.1:8080/api/imagine/img2img_upload'
-url = 'http://3.255.31.250:8080/api/imagine/img2img_upload'
-# files = [('files', open('images/1.png', 'rb')), ('files', open('images/2.png', 'rb'))]
+from io import BytesIO
+
+
+url = 'http://52.208.62.108:8080/api/imagine/img2img_upload'
 files = [('file', open('/Users/himmelroman/Desktop/Bialik/snippet/out.png', 'rb'))]
-resp = requests.post(url=url, files=files)
-print(resp.json())
+resp = requests.post(
+    url=url,
+    params={
+        'prompt': 'custom art, futuristic shit',
+        'num_inference_steps': 7,
+        'guidance_scale': 0.333,
+        'strength': 0.6,
+        'seed': 7777777
+    },
+    files=files,
+    stream=True
+)
+
+if resp.status_code == 200:
+    img = PIL.Image.open(BytesIO(resp.content))
+    img.show()
+else:
+    print(resp.json())
+    resp.raise_for_status()
