@@ -7,7 +7,6 @@ from typing import List
 from pathlib import Path
 from copy import deepcopy
 
-from diffusers.utils import load_image
 from pydantic import BaseModel
 
 from tmunan.common.event import Event

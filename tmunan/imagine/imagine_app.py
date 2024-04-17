@@ -1,14 +1,12 @@
-import gzip
 import os
-import ssl
 from datetime import datetime
 
 from pathlib import Path
 from contextlib import asynccontextmanager
 
 import torch
-from fastapi import FastAPI, Request, BackgroundTasks
-from fastapi import File, UploadFile
+from fastapi import UploadFile
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic_settings import BaseSettings
