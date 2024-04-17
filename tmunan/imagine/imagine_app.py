@@ -147,10 +147,10 @@ def img2img_upload(file: UploadFile = File(...)):
     images = app.lcm.img2img(
         image_url=file_path,
         prompt="painting, art",
-        num_inference_steps=5,
+        num_inference_steps=4,
         guidance_scale=1.0,
         height=1080, width=1920,
-        strength=0.5,
+        strength=0.35,
         seed=0,
         randomize_seed=True
     )
