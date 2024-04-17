@@ -9,6 +9,7 @@ import torch
 from fastapi import FastAPI, Request
 from fastapi import File, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic_settings import BaseSettings
 
 from starlette.middleware import Middleware
@@ -63,6 +64,8 @@ middleware = [
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
 
+# add gzip middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 # ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 # ssl_context.load_cert_chain('/home/ubuntu/tmunan/cert.pem', keyfile='/home/ubuntu/tmunan/key.pem')
 
