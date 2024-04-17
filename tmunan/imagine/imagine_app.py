@@ -1,3 +1,4 @@
+import gzip
 import os
 import ssl
 from datetime import datetime

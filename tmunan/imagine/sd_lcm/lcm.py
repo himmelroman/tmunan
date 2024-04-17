@@ -88,6 +88,7 @@ class LCM:
 
             # update scheduler
             self.txt2img_pipe.scheduler = LCMScheduler.from_config(self.txt2img_pipe.scheduler.config)
+            self.txt2img_pipe.enable_model_cpu_offload()
 
             # load and fuse sd_lcm lora
             self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_size]['lcm_lora']}")
@@ -98,6 +99,7 @@ class LCM:
         # load img2img model
         self.logger.info(f"Loading img2img model: {self.model_map[self.model_size]['model']}")
         self.img2img_pipe = AutoPipelineForImage2Image.from_pipe(self.txt2img_pipe).to(self.device)
+        self.img2img_pipe.enable_model_cpu_offload()
         # self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
         #     self.model_map[self.img2img_size]['model'],
         #     torch_dtype=torch.float16).to(self.device)
@@ -172,7 +174,8 @@ class LCM:
         result = self.txt2img_pipe(**prompt_dict,
                                    num_inference_steps=num_inference_steps,
                                    guidance_scale=guidance_scale,
-                                   height=height, width=width
+                                   height=height, width=width,
+                                   num_images_per_prompt=1
                                    ).images
         elapsed_time = time.time() - start_time
         self.logger.info(f"Done generating txt2img: {elapsed_time=}")
@@ -265,6 +268,7 @@ class LCM:
                                    guidance_scale=guidance_scale,
                                    strength=strength,
                                    height=width, width=height,
+                                   num_images_per_prompt=1
                                    ).images
         elapsed_time = time.time() - start_time
         self.logger.info(f"Done generating img2img: {elapsed_time=}")
