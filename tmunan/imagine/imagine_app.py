@@ -7,11 +7,12 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 
 import torch
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi import File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic_settings import BaseSettings
+from starlette.background import BackgroundTask
 
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
@@ -137,15 +138,15 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
 
 
 @app.post("/api/imagine/img2img_upload")
-def img2img_upload(file: UploadFile = File(...)):
+def img2img_upload(file: UploadFile):
 
     # save uploaded file
-    file_path = f'{app.context.cache_dir}/upload_img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}.png'
-    save_file(file, file_path)
+    input_file_path = f'{app.context.cache_dir}/upload_img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}.png'
+    save_file(file, input_file_path)
 
     # generate image
     images = app.lcm.img2img(
-        image_url=file_path,
+        image_url=input_file_path,
         prompt="painting, art",
         num_inference_steps=4,
         guidance_scale=1.0,
@@ -157,11 +158,19 @@ def img2img_upload(file: UploadFile = File(...)):
 
     # save image to file
     image_id = f'img2img_{datetime.now().strftime("%Y_%m_%d-%I_%M_%S")}'
-    file_path = f'{app.context.cache_dir}/{image_id}.jpg'
-    images[0].save(file_path)
+    output_file_path = f'{app.context.cache_dir}/{image_id}.jpg'
+    images[0].save(output_file_path)
 
-    # return file
-    return FileResponse(file_path)
+    # respond
+    return FileResponse(
+        output_file_path,
+        background=BackgroundTask(clean_files, [input_file_path, output_file_path])
+    )
+
+
+def clean_files(file_path_list):
+    for file_path in file_path_list:
+        Path(file_path).unlink(missing_ok=True)
 
 
 def save_file(file: UploadFile, target_path):
