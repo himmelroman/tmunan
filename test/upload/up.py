@@ -4,19 +4,20 @@ import PIL.Image
 from io import BytesIO
 
 # load file
-files = [('file', open('/Users/himmelroman/Desktop/Bialik/snippet/out.png', 'rb'))]
+files = [('file', open('/Users/himmelroman/Desktop/Bialik/me.png', 'rb'))]
 
 # base url
-url = 'http://52.208.62.108:8080/api/imagine/img2img_upload'
+url = 'http://54.74.136.111:8080/api/imagine/img2img_upload'
 
 # post data
 resp = requests.post(
     url=url,
     params={
-        'prompt': 'custom art, futuristic shit',
-        'num_inference_steps': 7,
+        'prompt': 'Reuven Rubin painting',
         'guidance_scale': 0.8,
-        'strength': 0.6,
+        'strength': 0.4,
+        'ip_adapter_weight': 0.1,
+        'num_inference_steps': 7,
         'seed': 7777777
     },
     files=files,
