@@ -64,6 +64,7 @@ middleware = [
 
 # FastAPI app
 app = FastAPI(middleware=middleware, lifespan=lifespan)
+app.in_progress = False
 
 # add gzip middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -146,6 +147,11 @@ def img2img_upload(
         num_inference_steps: Annotated[int | None, Query(gt=2, le=50)] = None,
         seed: Annotated[int | None, Query(ge=0)] = None
 ):
+    if app.in_progress:
+        raise HTTPException(status_code=500, detail="Image generation in progress")
+
+    # flag in progress
+    app.in_progress = True
 
     try:
         # save uploaded file
@@ -183,6 +189,9 @@ def img2img_upload(
 def clean_files(file_path_list):
     for file_path in file_path_list:
         Path(file_path).unlink(missing_ok=True)
+
+    # clear in progress
+    app.in_progress = False
 
 
 def save_file(file: UploadFile, target_path):
