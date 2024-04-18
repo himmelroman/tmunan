@@ -140,9 +140,10 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
 def img2img_upload(
         file: UploadFile,
         prompt: Annotated[str | None, Query(min_length=1, max_length=256)] = None,
-        num_inference_steps: Annotated[int | None, Query(gt=2, le=50)] = None,
-        guidance_scale: Annotated[float | None, Query(ge=0, le=1.0)] = None,
         strength: Annotated[float | None, Query(ge=0, le=1.0)] = None,
+        guidance_scale: Annotated[float | None, Query(ge=0, le=1.0)] = None,
+        ip_adapter_weight: Annotated[float | None, Query(ge=0, le=1.0)] = None,
+        num_inference_steps: Annotated[int | None, Query(gt=2, le=50)] = None,
         seed: Annotated[int | None, Query(ge=0)] = None
 ):
 
@@ -158,6 +159,7 @@ def img2img_upload(
             num_inference_steps=num_inference_steps or 4,
             guidance_scale=guidance_scale or 1.0,
             strength=strength or 0.4,
+            ip_adapter_weight=ip_adapter_weight or 0.8,
             height=1080, width=1920,
             seed=seed or 0,
             randomize_seed=seed is None
