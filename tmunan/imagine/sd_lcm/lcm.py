@@ -108,13 +108,16 @@ class LCM:
 
             # load style images
             self.ip_adapter_images = self.load_ip_adapter_images()
-            self.logger.info(f"Loaded {len(self.ip_adapter_images)} style images...")
+            self.logger.info(f"Found {len(self.ip_adapter_images)} style images...")
 
             # load adapter
-            self.logger.info(f"Loading IPAdapter model: {self.model_map[self.model_size]['ip_adapter']}")
-            self.img2img_pipe.load_ip_adapter("h94/IP-Adapter",
-                                              subfolder=self.model_map[self.model_size]['subfolder'],
-                                              weight_name=[self.model_map[self.model_size]['ip_adapter']] * len(self.ip_adapter_images))
+            if len(self.ip_adapter_images) > 0:
+                self.logger.info(f"Loading IPAdapter model: {self.model_map[self.model_size]['ip_adapter']}")
+                self.img2img_pipe.load_ip_adapter("h94/IP-Adapter",
+                                                  subfolder=self.model_map[self.model_size]['subfolder'],
+                                                  weight_name=[self.model_map[self.model_size]['ip_adapter']] * len(self.ip_adapter_images))
+            else:
+                self.logger.info(f"Not loading IPAdapter!")
 
         # init prompt generator
         if self.model_size == 'large':
@@ -250,7 +253,7 @@ class LCM:
 
         # prepare ip-adapter params
         ip_adapter_params = dict()
-        if self.ip_adapter_images:
+        if len(self.ip_adapter_images) > 0:
             ip_adapter_params['ip_adapter_image'] = self.ip_adapter_images
             self.img2img_pipe.set_ip_adapter_scale([ip_adapter_weight / len(self.ip_adapter_images)] * len(self.ip_adapter_images))
 
