@@ -227,7 +227,7 @@ class LCM:
                 num_inference_steps: int = 4,
                 guidance_scale: float = 1.0,
                 strength: float = 0.6,
-                # ip_adapter_weight: float = 0.6,
+                ip_adapter_weight: float = 0.6,
                 seed: int = 0,
                 randomize_seed: bool = False,
                 ):
@@ -252,12 +252,12 @@ class LCM:
         ip_adapter_params = dict()
         if self.ip_adapter_images:
             ip_adapter_params['ip_adapter_image'] = self.ip_adapter_images
-            self.img2img_pipe.set_ip_adapter_scale([0.8 / len(self.ip_adapter_images)] * len(self.ip_adapter_images))
+            self.img2img_pipe.set_ip_adapter_scale([ip_adapter_weight / len(self.ip_adapter_images)] * len(self.ip_adapter_images))
 
         # pass prompt and image to pipeline
         self.logger.info(f"Generating img2img: {image_url=}\n{prompt=}\n"
                          f"{num_inference_steps=}, {guidance_scale=}, "
-                         f"{strength=}, "   # {ip_adapter_weight=}, "
+                         f"{strength=}, {ip_adapter_weight=}, "
                          f"{seed=}")
         start_time = time.time()
         result = self.img2img_pipe(**prompt_dict,

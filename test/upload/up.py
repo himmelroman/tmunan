@@ -15,7 +15,7 @@ resp = requests.post(
     params={
         'prompt': 'custom art, futuristic shit',
         'num_inference_steps': 7,
-        'guidance_scale': 0.333,
+        'guidance_scale': 0.8,
         'strength': 0.6,
         'seed': 7777777
     },
