@@ -16,8 +16,12 @@ from tmunan.common.utils import load_image
 class LCM:
 
     model_map = {
+        'sdxs': {
+            'model': "IDKiro/sdxs-512-dreamshaper",
+        },
         'small': {
             'model': "SimianLuo/LCM_Dreamshaper_v7",
+            # 'model': "lykon/dreamshaper-8-lcm",
             'lcm_lora': "latent-consistency/lcm-lora-sdv1-5",
             'ip_adapter': "ip-adapter_sd15.bin",
             'subfolder': "models"
@@ -111,7 +115,7 @@ class LCM:
             self.logger.info(f"Found {len(self.ip_adapter_images)} style images...")
 
             # load adapter
-            if len(self.ip_adapter_images) > 0:
+            if self.ip_adapter_images:
                 self.logger.info(f"Loading IPAdapter model: {self.model_map[self.model_size]['ip_adapter']}")
                 self.img2img_pipe.load_ip_adapter("h94/IP-Adapter",
                                                   subfolder=self.model_map[self.model_size]['subfolder'],
@@ -253,7 +257,7 @@ class LCM:
 
         # prepare ip-adapter params
         ip_adapter_params = dict()
-        if len(self.ip_adapter_images) > 0:
+        if self.ip_adapter_images:
             ip_adapter_params['ip_adapter_image'] = self.ip_adapter_images
             self.img2img_pipe.set_ip_adapter_scale([ip_adapter_weight / len(self.ip_adapter_images)] * len(self.ip_adapter_images))
 
