@@ -15,7 +15,7 @@ from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, Med
 from av import VideoFrame
 from diffusers import ControlNetModel, StableDiffusionControlNetPipeline
 
-from tmunan.imagine.sd_lcm.lcm import LCM
+# from tmunan.imagine.sd_lcm.lcm import LCM
 
 ROOT = os.path.dirname(__file__)
 
