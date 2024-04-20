@@ -269,7 +269,7 @@ if __name__ == "__main__":
     # load LCM
     # lcm = LCM(model_size='small')
     # lcm.load()
-    device = "mps"
+    device = "cuda"
     weight_type = torch.float16
 
     controlnet = ControlNetModel.from_pretrained(
