@@ -167,7 +167,7 @@ async def offer(request):
 
     pc = RTCPeerConnection(
         configuration=RTCConfiguration([
-            # RTCIceServer("stun:stun.relay.metered.ca:80"),
+            RTCIceServer("stun:stun.relay.metered.ca:80"),
             RTCIceServer("turn:global.relay.metered.ca:80", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
             RTCIceServer("turn:global.relay.metered.ca:80?transport=tcp", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
             # RTCIceServer("turn:global.relay.metered.ca:443", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
