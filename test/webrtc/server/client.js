@@ -18,6 +18,13 @@ function createPeerConnection() {
     if (document.getElementById('use-stun').checked) {
         config.iceServers = [
             {
+                urls: ['stun:stun.l.google.com:19302']
+            }
+        ];
+
+        /*
+        config.iceServers = [
+            {
                 urls: "stun:stun.relay.metered.ca:80",
             },
             {
@@ -41,6 +48,7 @@ function createPeerConnection() {
                 credential: "9ZUQ3gDC/0/kvKJ8",
             },
         ];
+         */
     }
 
     pc = new RTCPeerConnection(config);
