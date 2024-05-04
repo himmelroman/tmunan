@@ -168,10 +168,16 @@ async def offer(request):
     pc = RTCPeerConnection(
         configuration=RTCConfiguration([
             RTCIceServer("stun:stun.relay.metered.ca:80"),
-            RTCIceServer("turn:global.relay.metered.ca:80", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
-            RTCIceServer("turn:global.relay.metered.ca:80?transport=tcp", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
-            # RTCIceServer("turn:global.relay.metered.ca:443", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
-            # RTCIceServer("turns:global.relay.metered.ca:443?transport=tcp", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
+            RTCIceServer(
+                urls=[
+                    "turn:global.relay.metered.ca:80",
+                    "turn:global.relay.metered.ca:80?transport=tcp",
+                    "turn:global.relay.metered.ca:443",
+                    "turns:global.relay.metered.ca:443?transport=tcp"
+                ],
+                username="f78886871923839a14bf4731",
+                credential="9ZUQ3gDC/0/kvKJ8"
+            )
         ])
     )
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
