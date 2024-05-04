@@ -114,7 +114,7 @@ def img2img(prompt: Prompt, base_image: BaseImage, img_config: ImageInstructions
 
     # generate image
     images = app.lcm.img2img(
-        image_url=base_image.image_url,
+        image=base_image.image_url,
         prompt=prompt.text,
         num_inference_steps=img_config.num_inference_steps,
         guidance_scale=img_config.guidance_scale,
@@ -160,7 +160,7 @@ def img2img_upload(
 
         # generate image
         images = app.lcm.img2img(
-            image_url=input_file_path,
+            image=input_file_path,
             prompt=prompt or "painting, art",
             num_inference_steps=num_inference_steps or 4,
             guidance_scale=guidance_scale or 1.0,

@@ -10,7 +10,7 @@ from pathlib import Path
 import cv2
 import torch
 from aiohttp import web
-from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
 from av import VideoFrame
 from diffusers import ControlNetModel, StableDiffusionControlNetPipeline
@@ -83,7 +83,7 @@ class VideoTransformTrack(MediaStreamTrack):
                 output_type="pil",
                 controlnet_conditioning_scale=1.2
             )
-            res_image = res.images[0] # .resize(640, 480)
+            res_image = res.images[0]   # .resize(640, 480)
 
             # pack resulting frame
             print(f'Outputing new frame: {frame.pts=}, {frame.time_base=}')
@@ -165,7 +165,15 @@ async def offer(request):
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    pc = RTCPeerConnection()
+    pc = RTCPeerConnection(
+        configuration=RTCConfiguration([
+            RTCIceServer("stun:stun.l.google:19302"),
+            RTCIceServer("turn:global.relay.metered.ca:80", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
+            RTCIceServer("turn:global.relay.metered.ca:80?transport=tcp", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
+            RTCIceServer("turn:global.relay.metered.ca:443", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
+            RTCIceServer("turns:global.relay.metered.ca:443?transport=tcp", "f78886871923839a14bf4731", "9ZUQ3gDC/0/kvKJ8"),
+        ])
+    )
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     pcs.add(pc)
 

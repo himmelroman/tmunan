@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     res2 = lcm.img2img(
         prompt='forest',
-        image_url='/Users/himmelroman/Desktop/Bialik/me.png',
+        image='/Users/himmelroman/Desktop/Bialik/me.png',
         num_inference_steps=1,
         guidance_scale=0.0,
         height=512, width=512,

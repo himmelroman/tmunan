@@ -2,6 +2,9 @@ import random
 import time
 from pathlib import Path
 
+import PIL
+from PIL import Image
+
 import torch
 import numpy as np
 from compel import Compel, ReturnedEmbeddingsType
@@ -228,7 +231,7 @@ class LCM:
 
     def img2img(self,
                 prompt: str,
-                image_url: str,
+                image: str,
                 height: int = 512,
                 width: int = 512,
                 num_inference_steps: int = 4,
@@ -243,9 +246,12 @@ class LCM:
             raise Exception('Text to Image pipe not initialized!')
 
         # load image
-        self.logger.info(f"Loading image from: {image_url}")
-        base_image = load_image(image_url)
-        self.logger.info(f"Image loaded! {base_image}")
+        if type(image) is str:
+            self.logger.info(f"Loading image from: {image}")
+            base_image = load_image(image)
+            self.logger.info(f"Image loaded! {base_image}")
+        else:
+            base_image = image
 
         # seed
         if randomize_seed:
@@ -262,7 +268,7 @@ class LCM:
             self.img2img_pipe.set_ip_adapter_scale([ip_adapter_weight / len(self.ip_adapter_images)] * len(self.ip_adapter_images))
 
         # pass prompt and image to pipeline
-        self.logger.info(f"Generating img2img: {image_url=}\n{prompt=}\n"
+        self.logger.info(f"Generating img2img: {prompt=}, "
                          f"{num_inference_steps=}, {guidance_scale=}, "
                          f"{strength=}, {ip_adapter_weight=}, "
                          f"{seed=}")

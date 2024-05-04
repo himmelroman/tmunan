@@ -28,7 +28,7 @@ def gen_strength_sequence(init_image_path, start=15, end=80):
 
         # generate image
         images = lcm.img2img(
-            image_url=init_image_path,
+            image=init_image_path,
             prompt=prompt2,
             height=1024,
             width=1024,
@@ -49,7 +49,7 @@ def gen_morph_sequence(init_image_path, frames=10, strength=25):
 
         # generate image
         images = lcm.img2img(
-            image_url=init_image_path,
+            image=init_image_path,
             prompt=prompt2,
             height=1024,
             width=1024,

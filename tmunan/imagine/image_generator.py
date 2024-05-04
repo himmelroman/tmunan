@@ -1,7 +1,11 @@
+import io
 from abc import ABC
 from concurrent.futures import ThreadPoolExecutor
 
 import logging
+from io import BytesIO
+
+import PIL
 import requests
 from PIL import Image
 
@@ -109,6 +113,47 @@ class ImageGeneratorRemote(ImageGenerator):
 
         # submit work
         self.http_exec_pool.submit(self._download_image, url, data)
+
+    def img2img_upload(self, image: Image, **img_config):
+
+        # prepare request
+        url = f'{self.imagine_address}:{self.imagine_port}/api/imagine/img2img_upload'
+
+        mem_file = io.BytesIO()
+        image.save(mem_file, format="JPEG")
+        mem_file.seek(0)
+
+        files = [('file',mem_file)]
+        params = img_config
+
+        # run sync
+        return self._upload_image(url, files, params)
+
+        # submit work
+        # self.http_exec_pool.submit(self._upload_image, url, files, params)
+
+    def _upload_image(self, url: str, files: list, params: dict):
+
+        try:
+            # post request
+            resp = requests.post(
+                url=url,
+                params=params,
+                files=files,
+                stream=True,
+                timeout=60
+            )
+            resp.raise_for_status()
+
+            # get image from response
+            img = PIL.Image.open(BytesIO(resp.content))
+
+            return img
+            # fire result event
+            # self.on_image_ready.fire(url, img)
+
+        except Exception as ex:
+            logging.exception('Error requesting for image!')
 
     def _download_image(self, url: str, data: dict):
 

@@ -76,7 +76,7 @@ def img2img(self: task,
 
     # generate image
     images = self.lcm.img2img(
-        image_url=image_url,
+        image=image_url,
         prompt=prompt,
         height=height,
         width=width,
