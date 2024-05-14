@@ -3,10 +3,10 @@ from time import perf_counter
 
 import torch
 
-import benchmark.candidates.hyper_sd as hyper_sd
+import benchmark.candidates.hyper as hyper_sd
 import benchmark.candidates.turbo as turbo
 import benchmark.candidates.sdxs as sdxs
-import benchmark.candidates.latent_consistency as latent_consistency
+import benchmark.candidates.lcm as latent_consistency
 
 
 def run_inference(pipe, **pipe_args):
@@ -194,6 +194,22 @@ def benchmark_sdxl_turbo(device, prompt, height, width):
     return perf
 
 
+def optimize_pipe(pipe):
+
+    # torch
+    torch.set_grad_enabled(False)
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+
+    # memory format
+    pipe.unet.to(memory_format=torch.channels_last)
+    pipe.vae.to(memory_format=torch.channels_last)
+
+    # torch compile
+    # pipe.unet = torch.compile(pipe.unet, mode="max-autotune", fullgraph=True)
+    pipe.vae.decode = torch.compile(pipe.vae.decode, mode="max-autotune", fullgraph=True)
+
+
 if __name__ == '__main__':
 
     # determine device
@@ -211,17 +227,17 @@ if __name__ == '__main__':
     height = 512
     width = 512
     perf_results['sdxs'] = benchmark_sdxs(device, prompt, height, width)
-    perf_results['sd_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
-    perf_results['latent_consistency_sd15'] = benchmark_latent_consistency_sd15(device, prompt, height, width)
+    # perf_results['sd_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
+    # perf_results['latent_consistency_sd15'] = benchmark_latent_consistency_sd15(device, prompt, height, width)
     perf_results['hyper_sd_sd15'] = benchmark_hyper_sd_sd15(device, prompt, height, width)
 
     # SDXL models
     height = 512
     width = 512
     perf_results['sdxl_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
-    perf_results['latent_consistency_sdxl'] = benchmark_latent_consistency_sdxl(device, prompt, height, width)
+    # perf_results['latent_consistency_sdxl'] = benchmark_latent_consistency_sdxl(device, prompt, height, width)
     perf_results['hyper_sd_sdxl_1step'] = benchmark_hyper_sd_sdxl_1step(device, prompt, height, width)
-    perf_results['hyper_sd_sdxl_2step'] = benchmark_hyper_sd_sdxl_2step(device, prompt, height, width)
+    # perf_results['hyper_sd_sdxl_2step'] = benchmark_hyper_sd_sdxl_2step(device, prompt, height, width)
     # DOESN'T WORK: perf_results['hyper_sd_sdxl_unet'] = benchmark_hyper_sd_sdxl_unet(device, prompt, height, width)
 
     for p in perf_results:
