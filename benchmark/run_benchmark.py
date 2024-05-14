@@ -209,7 +209,7 @@ def optimize_pipe(pipe):
 
     # torch compile
     # pipe.unet = torch.compile(pipe.unet, mode="max-autotune", fullgraph=True)
-    # pipe.vae = torch.compile(pipe.vae, mode="max-autotune", fullgraph=True)
+    pipe.vae.decode = torch.compile(pipe.vae.decode, mode="max-autotune", fullgraph=True)
 
 
 if __name__ == '__main__':
