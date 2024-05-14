@@ -11,6 +11,8 @@ import benchmark.candidates.lcm as latent_consistency
 
 def run_inference(pipe, **pipe_args):
 
+    optimize_pipe(pipe)
+
     perf_list = []
     image_list = []
     for _ in range(5):
