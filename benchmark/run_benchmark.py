@@ -208,8 +208,8 @@ def optimize_pipe(pipe):
     pipe.vae.to(memory_format=torch.channels_last)
 
     # torch compile
-    # pipe.unet = torch.compile(pipe.unet, mode="max-autotune", fullgraph=True)
-    pipe.vae.decode = torch.compile(pipe.vae.decode, mode="max-autotune", fullgraph=True)
+    pipe.unet = torch.compile(pipe.unet, mode="max-autotune", fullgraph=True)
+    # pipe.vae.decode = torch.compile(pipe.vae.decode, mode="max-autotune", fullgraph=True)
 
 
 if __name__ == '__main__':
