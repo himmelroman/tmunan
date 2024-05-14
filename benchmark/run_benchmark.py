@@ -15,7 +15,7 @@ def run_inference(pipe, **pipe_args):
 
     perf_list = []
     image_list = []
-    for _ in range(5):
+    for _ in range(10):
 
         t_start = perf_counter()
         images = pipe(**pipe_args).images
@@ -208,8 +208,8 @@ def optimize_pipe(pipe):
     pipe.vae.to(memory_format=torch.channels_last)
 
     # torch compile
-    # pipe.unet = torch.compile(pipe.unet, mode="max-autotune", fullgraph=True)
-    pipe.vae.decode = torch.compile(pipe.vae.decode, mode="max-autotune", fullgraph=True)
+    pipe.unet = torch.compile(pipe.unet, mode="max-autotune", fullgraph=True)
+    pipe.vae = torch.compile(pipe.vae, mode="max-autotune", fullgraph=True)
 
 
 if __name__ == '__main__':
@@ -228,19 +228,21 @@ if __name__ == '__main__':
     # SD 1.5 models
     height = 512
     width = 512
-    perf_results['sdxs'] = benchmark_sdxs(device, prompt, height, width)
+    # perf_results['sdxs'] = benchmark_sdxs(device, prompt, height, width)
     # perf_results['sd_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
     # perf_results['latent_consistency_sd15'] = benchmark_latent_consistency_sd15(device, prompt, height, width)
     perf_results['hyper_sd_sd15'] = benchmark_hyper_sd_sd15(device, prompt, height, width)
+    print(f"Mean for hyper_sd_sd15: {np.mean(perf_results['hyper_sd_sd15'][1:])}")
 
     # SDXL models
     height = 512
     width = 512
-    perf_results['sdxl_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
+    # perf_results['sdxl_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
     # perf_results['latent_consistency_sdxl'] = benchmark_latent_consistency_sdxl(device, prompt, height, width)
     perf_results['hyper_sd_sdxl_1step'] = benchmark_hyper_sd_sdxl_1step(device, prompt, height, width)
     # perf_results['hyper_sd_sdxl_2step'] = benchmark_hyper_sd_sdxl_2step(device, prompt, height, width)
     # DOESN'T WORK: perf_results['hyper_sd_sdxl_unet'] = benchmark_hyper_sd_sdxl_unet(device, prompt, height, width)
+    print(f"Mean for hyper_sd_sdxl_1step: {np.mean(perf_results['hyper_sd_sdxl_1step'][1:])}")
 
     for p in perf_results:
         print(f'Mean for {p}: {np.mean(perf_results[p][1:])}')
