@@ -2,12 +2,12 @@ import os
 from datetime import datetime
 
 from pathlib import Path
-from contextlib import asynccontextmanager
 from typing import Annotated
+from contextlib import asynccontextmanager
 
 import torch
-from fastapi import UploadFile, HTTPException, Query
 from fastapi import FastAPI, Request
+from fastapi import UploadFile, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic_settings import BaseSettings
@@ -18,6 +18,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from tmunan.imagine.sd_lcm.lcm import LCM
 from tmunan.api.pydantic_models import ImageInstructions, Prompt, BaseImage
+from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 
 
 class AppSettings(BaseSettings):
@@ -41,7 +42,8 @@ async def lifespan(fastapi_app: FastAPI):
     model_size = cuda_model_size if torch.cuda.is_available() else other_model_size
 
     # LCM
-    app.lcm = LCM(model_size=model_size, ip_adapter_folder='/home/ubuntu/.cache/theatre/imagine/rubin_style')
+    # app.lcm = LCM(model_size=model_size, ip_adapter_folder='/home/ubuntu/.cache/theatre/imagine/rubin_style')
+    app.lcm = StreamLCM(model_size='small')
     app.lcm.load()
 
     # FastAPI app lifespan

@@ -2,8 +2,8 @@ import numpy as np
 from time import perf_counter
 
 import torch
-import torch._dynamo
-torch._dynamo.config.suppress_errors = True
+# import torch._dynamo
+# torch._dynamo.config.suppress_errors = True
 
 import benchmark.candidates.hyper as hyper_sd
 import benchmark.candidates.turbo as turbo
