@@ -4,6 +4,8 @@ import time
 import uuid
 import logging
 import mimetypes
+from pathlib import Path
+
 import markdown2
 from types import SimpleNamespace
 
@@ -213,12 +215,10 @@ class App:
         if not os.path.exists("public"):
             os.makedirs("public")
 
-        self.app.mount(
-            "/", StaticFiles(
-                directory="/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public",
-                html=True),
-            name="public"
-        )
+        # serve FE
+        fe_path = '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public'
+        if Path(fe_path).exists():
+            self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
 
     @staticmethod
     def bytes_to_pil(image_bytes: bytes) -> Image.Image:
