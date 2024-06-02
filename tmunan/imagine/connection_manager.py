@@ -1,10 +1,11 @@
-from typing import Dict, Union
-from uuid import UUID
 import asyncio
+import logging
+from uuid import UUID
+from types import SimpleNamespace
+from typing import Dict, Union
+
 from fastapi import WebSocket
 from starlette.websockets import WebSocketState
-import logging
-from types import SimpleNamespace
 
 Connections = Dict[UUID, Dict[str, Union[WebSocket, asyncio.Queue]]]
 

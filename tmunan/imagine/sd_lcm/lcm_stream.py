@@ -13,6 +13,10 @@ from tmunan.common.utils import load_image
 
 
 class StreamLCM:
+    """
+    This is cool
+    But also look at :obj:`~LCM`
+    """
 
     model_map = {
         'small': {
