@@ -30,21 +30,16 @@ from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 # fix mime error on windows
 mimetypes.add_type("application/javascript", ".js")
 
-page_content = """<h1 class="text-3xl font-bold">StreamDiffusion</h1>
-<h3 class="text-xl font-bold">Image-to-Image SD-Turbo</h3>
+page_content = """<h1 class="text-3xl font-bold">Tmunan - StreamApp</h1>
+<h3 class="text-xl font-bold">Tmunan - Image-to-Image</h3>
 <p class="text-sm">
-    This demo showcases
+    This is a demo showcases 
     <a
-    href="https://github.com/cumulo-autumn/StreamDiffusion"
-    target="_blank"
-    class="text-blue-500 underline hover:no-underline">StreamDiffusion
-</a>
-Image to Image pipeline using
-    <a
-    href="https://huggingface.co/stabilityai/sd-turbo"
-    target="_blank"
-    class="text-blue-500 underline hover:no-underline">SD-Turbo</a
-    > with a MJPEG stream server.
+        href="https://github.com/himmelroman/StreamDiffusion"
+        target="_blank"
+        class="text-blue-500 underline hover:no-underline">StreamDiffusion (himmelroman)
+    </a>
+    Image to Image pipeline with a MJPEG stream server.
 </p>
 """
 
@@ -63,7 +58,7 @@ class StreamInputParams(BaseModel):
         id="prompt",
     )
     strength: float = Field(
-        2.0, min=0.0, max=2.5, title="Strength", disabled=True, hide=True, id="strength"
+        1.5, min=0.0, max=2.5, title="Strength", disabled=True, hide=True, id="strength"
     )
     # negative_prompt: str = Field(
     #     default_negative_prompt,

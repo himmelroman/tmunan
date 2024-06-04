@@ -1,4 +1,4 @@
-FROM himmelroman/stream-diffusion:img2img
+FROM stream-diffusion:mine
 
 USER root
 WORKDIR /root/app
