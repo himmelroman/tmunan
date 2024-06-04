@@ -216,7 +216,9 @@ class App:
             os.makedirs("public")
 
         # serve FE
-        fe_path = '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public'
+        fe_path = os.environ.get(
+            'STATIC_SERVE',
+            '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public')
         if Path(fe_path).exists():
             self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
 
