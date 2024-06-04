@@ -7,7 +7,7 @@ websockets~=11.0.3
 requests
 
 # ml
-compel~=2.0.2
+compel
 
 # front
 markdown2
