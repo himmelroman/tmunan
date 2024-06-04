@@ -1,8 +1,11 @@
 FROM himmelroman/stream-diffusion:img2img
 
-RUN mkdir $HOME/app && cd $HOME/app
-RUN git clone https://github.com/himmelroman/tmunan.git
+USER root
+WORKDIR $HOME/app
+RUN cd $HOME/app &&  \
+    git clone https://github.com/himmelroman/tmunan.git
 
-RUN pip install -r tmunan/requirements_stream.txt
-
+RUN $HOME/app && \
+    pip install -r $HOME/app/tmunan/requirements_stream.txt
+π
 CMD ["uvicorn",  "tmunan.imagine.imagine_app:app", "--host", "0.0.0.0", "--port", "8080"]
