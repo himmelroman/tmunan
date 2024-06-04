@@ -207,7 +207,7 @@ class App:
                 {
                     "info": info_schema,
                     "input_params": input_params,
-                    "max_queue_size": 0,    # self.args.max_queue_size,
+
                     "page_content": page_content if info.page_content else "",
                 }
             )
@@ -219,6 +219,7 @@ class App:
         fe_path = os.environ.get(
             'STATIC_SERVE',
             '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public')
+        print(f"FE Path: {fe_path}")
         if Path(fe_path).exists():
             self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
             print(f"Mounted static: {fe_path}")
