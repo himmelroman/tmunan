@@ -1,0 +1,13 @@
+# fastapi
+uvicorn==0.25.0
+fastapi==0.109.1
+python-multipart==0.0.7
+pydantic-settings
+websockets~=11.0.3
+requests
+
+# front
+markdown2
+
+# media
+ffmpeg-python==0.2.0
