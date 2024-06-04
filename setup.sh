@@ -6,3 +6,6 @@ screen -R tmunan
 mkdir -p /home/ubuntu/.cache/theatre/imagine/rubin_style
 curl https://b5ff-62-56-134-6.ngrok-free.app/rubin3.jpg > /home/ubuntu/.cache/theatre/imagine/rubin_style/rubin3.jpg
 CUDA_MODEL_SIZE=small uvicorn tmunan.imagine.imagine_app:app --host 0.0.0.0 --port 8080
+
+# Run on GPU server with CUDA
+docker run -ti --rm -v ~/.cache/huggingface:/home/user/.cache/huggingface -p 8080:8080 --gpus all himmelroman/stream-diffusion:stream
