@@ -221,6 +221,7 @@ class App:
             '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public')
         if Path(fe_path).exists():
             self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
+            print(f"Mounted static: {fe_path}")
 
     @staticmethod
     def bytes_to_pil(image_bytes: bytes) -> Image.Image:
