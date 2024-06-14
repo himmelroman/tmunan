@@ -1,3 +1,4 @@
+import os
 import time
 import random
 
@@ -40,7 +41,7 @@ class StreamLCM:
     }
 
     # constructor
-    def __init__(self, model_size=None):
+    def __init__(self, model_size=None, cache_dir=None):
 
         # model sizes
         self.model_size = model_size
@@ -62,6 +63,7 @@ class StreamLCM:
 
         # env
         self.logger = get_logger(self.__class__.__name__)
+        self.cache_dir = cache_dir or os.environ.get("HF_HOME")
 
     @classmethod
     def get_device(cls):
@@ -111,9 +113,13 @@ class StreamLCM:
 
         # accelerate with tensor-rt
         if self.device == 'cuda':
+
+            self.logger.info(f"Accelerating with TensorRT! {self.cache_dir=}")
             from streamdiffusion.acceleration.tensorrt import accelerate_with_tensorrt
             self.stream = accelerate_with_tensorrt(
-                self.stream, "engines", max_batch_size=2,
+                stream=self.stream,
+                engine_dir=self.cache_dir,
+                max_batch_size=2
             )
 
         self.logger.info("Loading models finished.")
