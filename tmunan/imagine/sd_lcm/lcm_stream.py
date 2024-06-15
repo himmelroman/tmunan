@@ -195,7 +195,7 @@ class StreamLCM:
 
         # pre-process image
         t_start_pre = time.perf_counter()
-        input_latent = self.stream.image_processor.preprocess(image, height, width).to(
+        input_latent = self.stream.image_processor.preprocess(base_image, height, width).to(
             device=self.device,
             dtype=self.img2img_pipe.dtype
         )

@@ -1,12 +1,12 @@
 import io
 import os
-import time
 import uuid
 import logging
 import mimetypes
 from pathlib import Path
 
 import markdown2
+from PIL import Image
 from types import SimpleNamespace
 
 from fastapi import Request
@@ -14,18 +14,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, WebSocket, HTTPException, WebSocketDisconnect
 from fastapi.responses import StreamingResponse, JSONResponse
-
 from pydantic import BaseModel, Field
 
-import torch
-from PIL import Image
 from tmunan.imagine.connection_manager import ConnectionManager, ServerFullException
 from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
-
-# from config import config, Args
-# from util import pil_to_frame, bytes_to_pil
-# from connection_manager import ConnectionManager, ServerFullException
-# from img2img import Pipeline
 
 # fix mime error on windows
 mimetypes.add_type("application/javascript", ".js")
@@ -58,7 +50,10 @@ class StreamInputParams(BaseModel):
         id="prompt",
     )
     strength: float = Field(
-        1.5, min=0.0, max=2.5, title="Strength", disabled=True, hide=True, id="strength"
+        1.0, min=1.0, max=2.5, title="Strength", disabled=True, hide=True, id="strength"
+    )
+    guidance_scale: float = Field(
+        1.0, min=1.0, max=2.5, title="Guidance Scale", disabled=True, hide=True, id="guidance_scale"
     )
     # negative_prompt: str = Field(
     #     default_negative_prompt,
@@ -66,6 +61,7 @@ class StreamInputParams(BaseModel):
     #     field="textarea",
     #     id="negative_prompt",
     # )
+
     width: int = Field(
         512, min=2, max=15, title="Width", disabled=True, hide=True, id="width"
     )
@@ -76,8 +72,8 @@ class StreamInputParams(BaseModel):
 
 class App:
     def __init__(self):
-        self.stream_lcm = StreamLCM(model_size='small')
         self.app = FastAPI()
+        self.stream_lcm = StreamLCM(model_size='small')
         self.conn_manager = ConnectionManager()
         self.init_app()
 
@@ -87,8 +83,8 @@ class App:
 
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
             allow_credentials=True,
+            allow_origins=["*"],
             allow_methods=["*"],
             allow_headers=["*"],
         )
@@ -112,7 +108,7 @@ class App:
         async def handle_websocket_data(user_id: uuid.UUID):
             if not self.conn_manager.check_user(user_id):
                 return HTTPException(status_code=404, detail="User not found")
-            last_time = time.time()
+            # last_time = time.time()
             try:
                 while True:
 
@@ -131,23 +127,26 @@ class App:
                     #     return
 
                     data = await self.conn_manager.receive_json(user_id)
+                    logging.info(f"Websocket Data: {data}")
                     if data["status"] == "next_frame":
                         info = ServerInfo()
                         params = await self.conn_manager.receive_json(user_id)
+                        logging.info(f"Websocket Data: {data}")
                         params = StreamInputParams(**params)
                         params = SimpleNamespace(**params.model_dump())
                         if info.input_mode == "image":
                             image_data = await self.conn_manager.receive_bytes(user_id)
-                            if len(image_data) == 0:
+                            if image_data is None or len(image_data) == 0:
                                 await self.conn_manager.send_json(
                                     user_id, {"status": "send_frame"}
                                 )
                                 continue
+                            logging.info(f"Websocket Data: {len(image_data)}")
                             params.image = self.bytes_to_pil(image_data)
                         await self.conn_manager.update_data(user_id, params)
 
             except Exception as e:
-                logging.error(f"Websocket Error: {e}, {user_id} ")
+                logging.exception(f"Websocket Error: {e}, {user_id} ")
                 await self.conn_manager.disconnect(user_id)
 
         @self.app.get("/api/queue")
@@ -161,7 +160,7 @@ class App:
 
                 async def generate():
                     while True:
-                        last_time = time.time()
+                        # last_time = time.time()
                         await self.conn_manager.send_json(
                             user_id, {"status": "send_frame"}
                         )
@@ -171,7 +170,8 @@ class App:
                         image = self.stream_lcm.img2img(
                             prompt=params.prompt,
                             image=params.image,
-                            strength=params.strength
+                            guidance_scale=params.guidance_scale,
+                            strength=params.strength,
                         )[0]
                         if image is None:
                             continue
@@ -202,7 +202,6 @@ class App:
                 {
                     "info": info_schema,
                     "input_params": input_params,
-
                     "page_content": page_content if info.page_content else "",
                 }
             )
@@ -238,9 +237,6 @@ class App:
         )
 
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# torch_dtype = torch.float16
-# pipeline = Pipeline(config, device, torch_dtype)
 app = App().app
 
 if __name__ == "__main__":

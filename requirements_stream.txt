@@ -6,6 +6,9 @@ pydantic-settings
 websockets~=11.0.3
 requests
 
+# utils
+fire
+
 # ml
 compel
 

@@ -15,26 +15,47 @@ class ServerFullException(Exception):
 
     pass
 
+#
+# class AsyncFixedSizeQueue(asyncio.Queue):
+#     """An asynchronous queue with a fixed size of 1 that overwrites on put."""
+#
+#     async def put(self, item):
+#         """Overrides the default put method. If full, get and discard the existing item asynchronously."""
+#
+#         print('Putting item on fixed-size queue')
+#         if self.full():
+#             try:
+#                 await self.get_nowait()  # Discard the existing item if possible
+#                 print('Discarded an outdated image!!')
+#             except asyncio.QueueEmpty:
+#                 pass  # Ignore QueueEmpty exception if queue was already empty
+#
+#         await super().put(item)  # Add the new item
+#         print('Put success')
+
 
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Connections = {}
 
     async def connect(
-        self, user_id: UUID, websocket: WebSocket, max_queue_size: int = 0
+            self, user_id: UUID, websocket: WebSocket, max_queue_size: int = 0
     ):
         await websocket.accept()
-        user_count = self.get_user_count()
-        print(f"User count: {user_count}")
-        if max_queue_size > 0 and user_count >= max_queue_size:
-            print("Server is full")
-            await websocket.send_json({"status": "error", "message": "Server is full"})
-            await websocket.close()
-            raise ServerFullException("Server is full")
+
+        # user_count = self.get_user_count()
+        # print(f"User count: {user_count}")
+        # if max_queue_size > 0 and user_count >= max_queue_size:
+        #     print("Server is full")
+        #     await websocket.send_json({"status": "error", "message": "Server is full"})
+        #     await websocket.close()
+        #     raise ServerFullException("Server is full")
+
         print(f"New user connected: {user_id}")
         self.active_connections[user_id] = {
             "websocket": websocket,
             "queue": asyncio.Queue(),
+            # "queue": AsyncFixedSizeQueue()
         }
         await websocket.send_json(
             {"status": "connected", "message": "Connected"},
