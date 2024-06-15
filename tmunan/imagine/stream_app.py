@@ -237,7 +237,7 @@ class App:
         frame_data = frame_data.getvalue()
         return (
                 b"--frame\r\n"
-                + b"Content-Type: image/jpeg\r\n"
+                + b"Content-Type: image/webp\r\n"
                 + f"Content-Length: {len(frame_data)}\r\n\r\n".encode()
                 + frame_data
                 + b"\r\n"
