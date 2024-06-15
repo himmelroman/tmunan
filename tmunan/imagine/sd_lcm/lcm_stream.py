@@ -95,7 +95,7 @@ class StreamLCM:
             torch_dtype=torch.float16,
             # cfg_type='self'
         )
-        self.stream.enable_similar_image_filter()
+        self.stream.enable_similar_image_filter(threshold=0.99, max_skip_frame=3)
 
         # check for LCM lora
         if self.model_map[self.model_size].get('lcm_lora'):
@@ -170,7 +170,7 @@ class StreamLCM:
             raise Exception('Image to Image pipe not initialized!')
 
         # seed
-        if randomize_seed:
+        if seed == 0 or randomize_seed:
             seed = self.get_random_seed()
 
         # update preparation

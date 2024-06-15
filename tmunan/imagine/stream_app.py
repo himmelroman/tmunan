@@ -1,5 +1,6 @@
 import io
 import os
+import sys
 import uuid
 import logging
 import mimetypes
@@ -54,6 +55,9 @@ class StreamInputParams(BaseModel):
     )
     guidance_scale: float = Field(
         1.0, min=1.0, max=2.5, title="Guidance Scale", disabled=True, hide=True, id="guidance_scale"
+    )
+    seed: int = Field(
+        0, min=0, max=sys.maxsize, title="Seed", disabled=True, hide=True, id="seed"
     )
     # negative_prompt: str = Field(
     #     default_negative_prompt,
@@ -172,6 +176,7 @@ class App:
                             image=params.image,
                             guidance_scale=params.guidance_scale,
                             strength=params.strength,
+                            seed=params.seed
                         )[0]
                         if image is None:
                             continue
