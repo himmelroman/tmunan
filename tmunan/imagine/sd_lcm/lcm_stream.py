@@ -93,6 +93,8 @@ class StreamLCM:
             self.img2img_pipe,
             t_index_list=[32, 45],
             torch_dtype=torch.float16,
+            width=768,
+            height=768,
             # cfg_type='self'
         )
         self.stream.enable_similar_image_filter(threshold=0.99, max_skip_frame=3)
@@ -191,7 +193,7 @@ class StreamLCM:
             self.logger.info(f"Image instance provided.")
 
         # convert and resize
-        base_image = base_image.convert("RGB").resize((width, height))
+        # base_image = base_image.convert("RGB").resize((width, height))
 
         # pre-process image
         t_start_pre = time.perf_counter()
