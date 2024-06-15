@@ -1,4 +1,4 @@
-FROM himmelroman/stream-diffusion:latest
+FROM himmelroman/stream-diffusion:mine
 
 USER root
 WORKDIR /root/app
