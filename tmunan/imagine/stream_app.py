@@ -176,7 +176,9 @@ class App:
                             image=params.image,
                             guidance_scale=params.guidance_scale,
                             strength=params.strength,
-                            # seed=params.seed
+                            seed=params.seed,
+                            height=params.height,
+                            width=params.width
                         )[0]
                         if image is None:
                             continue
