@@ -121,7 +121,12 @@ class StreamLCM:
             self.stream = accelerate_with_tensorrt(
                 stream=self.stream,
                 engine_dir=self.cache_dir,
-                max_batch_size=2
+                max_batch_size=2,
+                engine_build_options={
+                    'opt_image_height': 512,
+                    'opt_image_width': 910,
+                    'build_dynamic_shape': True
+                }
             )
 
         self.logger.info("Loading models finished.")
