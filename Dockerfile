@@ -2,6 +2,10 @@ FROM himmelroman/stream-diffusion:mine
 
 USER root
 WORKDIR /root/app
+
+RUN pip uninstall streamdiffusion && \
+    pip install git+https://github.com/himmelroman/StreamDiffusion.git@main#egg=streamdiffusion[tensorrt]
+
 RUN cd /root/app &&  \
     git clone https://github.com/himmelroman/tmunan.git
 
