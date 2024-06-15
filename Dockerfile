@@ -3,7 +3,7 @@ FROM himmelroman/stream-diffusion:mine
 USER root
 WORKDIR /root/app
 
-RUN pip uninstall streamdiffusion && \
+RUN pip uninstall -y streamdiffusion && \
     pip install git+https://github.com/himmelroman/StreamDiffusion.git@main#egg=streamdiffusion[tensorrt]
 
 RUN cd /root/app &&  \
