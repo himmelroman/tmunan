@@ -233,7 +233,7 @@ class App:
     @staticmethod
     def pil_to_frame(image: Image.Image) -> bytes:
         frame_data = io.BytesIO()
-        image.save(frame_data, format="JPEG")
+        image.save(frame_data, format="WEBP", quality=100, method=6)
         frame_data = frame_data.getvalue()
         return (
                 b"--frame\r\n"
