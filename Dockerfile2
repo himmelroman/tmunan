@@ -3,7 +3,7 @@ FROM nvcr.io/nvidia/pytorch:24.05-py3
 USER root
 WORKDIR /app
 
-RUN pip install git+https://github.com/himmelroman/StreamDiffusion.git@main#egg=streamdiffusion[tensorrt]
+RUN pip install git+https://github.com/himmelroman/StreamDiffusion.git@main#egg=streamdiffusion
 
 COPY requirements_stream.txt /app/requirements_stream.txt
 
