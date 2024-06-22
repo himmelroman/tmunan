@@ -1,0 +1,18 @@
+FROM nvcr.io/nvidia/pytorch:24.05-py3
+
+USER root
+WORKDIR /app
+
+RUN pip install git+https://github.com/himmelroman/StreamDiffusion.git@main#egg=streamdiffusion[tensorrt]
+
+COPY requirements_stream.txt /app/requirements_stream.txt
+
+RUN cd /app && \
+    pip install -r /app/requirements_stream.txt
+
+RUN cd /app && \
+    git clone https://github.com/himmelroman/tmunan.git
+
+ENV HF_HOME=/app/models
+WORKDIR /app/tmunan
+CMD ["uvicorn",  "tmunan.imagine.stream_app:app", "--host", "0.0.0.0", "--port", "8080"]

@@ -1,3 +1,5 @@
+import asyncio
+import copy
 import io
 import os
 import sys
@@ -81,6 +83,13 @@ class App:
         self.conn_manager = ConnectionManager()
         self.init_app()
 
+        self.default_params = {
+            'prompt': 'Lions in the sky',
+            'strength': 1.0
+        }
+        self.param_cache = StreamInputParams(**self.default_params)
+        # self.param_cache = SimpleNamespace(**self.param_cache.model_dump())
+
     def init_app(self):
 
         self.stream_lcm.load()
@@ -130,23 +139,27 @@ class App:
                     #     await self.conn_manager.disconnect(user_id)
                     #     return
 
-                    data = await self.conn_manager.receive_json(user_id)
-                    logging.info(f"Websocket Data: {data}")
-                    if data["status"] == "next_frame":
-                        info = ServerInfo()
-                        params = await self.conn_manager.receive_json(user_id)
-                        logging.info(f"Websocket Data: {data}")
-                        params = StreamInputParams(**params)
-                        params = SimpleNamespace(**params.model_dump())
-                        if info.input_mode == "image":
-                            image_data = await self.conn_manager.receive_bytes(user_id)
-                            if image_data is None or len(image_data) == 0:
-                                await self.conn_manager.send_json(
-                                    user_id, {"status": "send_frame"}
-                                )
-                                continue
-                            logging.info(f"Websocket Data: {len(image_data)}")
-                            params.image = self.bytes_to_pil(image_data)
+                    message = await self.conn_manager.receive(user_id)
+                    if message is None:
+                        continue
+
+                    elif message['type'] == 'json':
+                        self.param_cache = StreamInputParams(**message['data'])
+                        # self.param_cache = SimpleNamespace(**self.param_cache.model_dump())
+
+                    elif message['type'] == 'bytes':
+
+                        if self.param_cache is None:
+                            logging.warning('Image arrived, but params not initialized')
+                            continue
+
+                        if message['data'] is None or len(message['data']) == 0:
+                            logging.warning('Got empty data blob')
+                            continue
+
+                        params = copy.deepcopy(self.param_cache)
+                        params = params.model_dump()
+                        params['image'] = self.bytes_to_pil(message['data'])
                         await self.conn_manager.update_data(user_id, params)
 
             except Exception as e:
@@ -164,13 +177,16 @@ class App:
 
                 async def generate():
                     while True:
-                        # last_time = time.time()
+                        await asyncio.sleep(10)
                         await self.conn_manager.send_json(
                             user_id, {"status": "send_frame"}
                         )
                         params = await self.conn_manager.get_latest_data(user_id)
                         if params is None:
                             continue
+
+                        print('Starting img2img')
+                        params = SimpleNamespace(**params)
                         image = self.stream_lcm.img2img(
                             prompt=params.prompt,
                             image=params.image,

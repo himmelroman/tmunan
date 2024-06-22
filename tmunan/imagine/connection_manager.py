@@ -1,5 +1,8 @@
 import asyncio
+import json
 import logging
+import typing
+from json import JSONDecodeError
 from uuid import UUID
 from types import SimpleNamespace
 from typing import Dict, Union
@@ -7,31 +10,32 @@ from typing import Dict, Union
 from fastapi import WebSocket
 from starlette.websockets import WebSocketState
 
-Connections = Dict[UUID, Dict[str, Union[WebSocket, asyncio.Queue]]]
-
 
 class ServerFullException(Exception):
     """Exception raised when the server is full."""
 
     pass
 
-#
-# class AsyncFixedSizeQueue(asyncio.Queue):
-#     """An asynchronous queue with a fixed size of 1 that overwrites on put."""
-#
-#     async def put(self, item):
-#         """Overrides the default put method. If full, get and discard the existing item asynchronously."""
-#
-#         print('Putting item on fixed-size queue')
-#         if self.full():
-#             try:
-#                 await self.get_nowait()  # Discard the existing item if possible
-#                 print('Discarded an outdated image!!')
-#             except asyncio.QueueEmpty:
-#                 pass  # Ignore QueueEmpty exception if queue was already empty
-#
-#         await super().put(item)  # Add the new item
-#         print('Put success')
+
+class AsyncFixedSizeQueue(asyncio.Queue):
+    """An asynchronous queue with a fixed size of 1 that overwrites on put."""
+
+    async def put(self, item):
+        """Overrides the default put method. If full, empty the queue asynchronously."""
+
+        print('Putting item on fixed-size queue')
+        while not self.empty():
+            try:
+                await self.get()  # Discard the existing item if possible
+                print('Discarded an outdated image!!')
+            except asyncio.QueueEmpty:
+                break
+
+        await super().put(item)  # Add the new item
+        print('Put success')
+
+
+Connections = Dict[UUID, Dict[str, Union[WebSocket, AsyncFixedSizeQueue]]]
 
 
 class ConnectionManager:
@@ -54,8 +58,8 @@ class ConnectionManager:
         print(f"New user connected: {user_id}")
         self.active_connections[user_id] = {
             "websocket": websocket,
-            "queue": asyncio.Queue(),
-            # "queue": AsyncFixedSizeQueue()
+            # "queue": asyncio.Queue(),
+            "queue": AsyncFixedSizeQueue()
         }
         await websocket.send_json(
             {"status": "connected", "message": "Connected"},
@@ -66,13 +70,13 @@ class ConnectionManager:
     def check_user(self, user_id: UUID) -> bool:
         return user_id in self.active_connections
 
-    async def update_data(self, user_id: UUID, new_data: SimpleNamespace):
+    async def update_data(self, user_id: UUID, new_data):
         user_session = self.active_connections.get(user_id)
         if user_session:
             queue = user_session["queue"]
             await queue.put(new_data)
 
-    async def get_latest_data(self, user_id: UUID) -> SimpleNamespace:
+    async def get_latest_data(self, user_id: UUID):
         user_session = self.active_connections.get(user_id)
         if user_session:
             queue = user_session["queue"]
@@ -123,6 +127,33 @@ class ConnectionManager:
                 return await websocket.receive_json()
         except Exception as e:
             logging.error(f"Error: Receive json: {e}")
+
+    async def receive(self, user_id: UUID):
+
+        try:
+            websocket = self.get_websocket(user_id)
+            if websocket:
+
+                message = await websocket.receive()
+                if message is None:
+                    return
+
+                if message.get('text', None) is not None:
+                    try:
+                        return {
+                            'type': 'json',
+                            'data': json.loads(message["text"])
+                        }
+                    except JSONDecodeError as not_json:
+                        pass
+
+                return {
+                    'type': 'bytes',
+                    'data': typing.cast(bytes, message["bytes"])
+                }
+
+        except Exception as e:
+            logging.exception(f"Error: In Receive! {message=}")
 
     async def receive_bytes(self, user_id: UUID) -> bytes:
         try:
