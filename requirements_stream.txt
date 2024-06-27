@@ -24,4 +24,5 @@ colored
 markdown2
 
 # media
+Pillow
 ffmpeg-python>=0.2.0
