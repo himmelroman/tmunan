@@ -90,7 +90,7 @@ class StreamLCM:
             self.img2img_pipe,
             t_index_list=[32, 45],
             torch_dtype=torch.float16,
-            width=512,
+            width=910,
             height=512,
             # cfg_type='self'
         )
