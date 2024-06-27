@@ -90,7 +90,7 @@ class StreamLCM:
             self.img2img_pipe,
             t_index_list=[32, 45],
             torch_dtype=torch.float16,
-            width=910,
+            width=904,
             height=512,
             # cfg_type='self'
         )
@@ -121,7 +121,7 @@ class StreamLCM:
                 max_batch_size=2,
                 engine_build_options={
                     'opt_image_height': 512,
-                    'opt_image_width': 910,
+                    'opt_image_width': 904,
 
                     # 'build_dynamic_shape': True
                 }
