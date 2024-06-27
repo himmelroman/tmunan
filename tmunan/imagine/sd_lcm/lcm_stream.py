@@ -22,21 +22,18 @@ class StreamLCM:
     model_map = {
         'small': {
             'model': "SimianLuo/LCM_Dreamshaper_v7",
-            'lcm_lora': "latent-consistency/lcm-lora-sdv1-5",
-            'ip_adapter': "ip-adapter_sd15.bin",
-            'subfolder': "models"
+            'lcm_lora': "latent-consistency/lcm-lora-sdv1-5"
+        },
+        'turbo': {
+            'model': "stabilityai/sd-turbo"
         },
         'medium': {
             'model': "segmind/SSD-1B",
-            'lcm_lora': "latent-consistency/lcm-lora-ssd-1b",
-            'ip_adapter': "ip-adapter_sdxl.bin",
-            'subfolder': "models"
+            'lcm_lora': "latent-consistency/lcm-lora-ssd-1b"
         },
         'large': {
             'model': "stabilityai/stable-diffusion-xl-base-1.0",
-            'lcm_lora': "latent-consistency/lcm-lora-sdxl",
-            'ip_adapter': "ip-adapter_sdxl.bin",
-            'subfolder': "sdxl_models"
+            'lcm_lora': "latent-consistency/lcm-lora-sdxl"
         }
     }
 

@@ -79,7 +79,7 @@ class StreamInputParams(BaseModel):
 class App:
     def __init__(self):
         self.app = FastAPI()
-        self.stream_lcm = StreamLCM(model_size='small')
+        self.stream_lcm = StreamLCM(model_size='turbo')
         self.conn_manager = ConnectionManager()
         self.init_app()
 
@@ -141,6 +141,7 @@ class App:
 
                     message = await self.conn_manager.receive(user_id)
                     if message is None:
+                        await asyncio.sleep(0.01)
                         continue
 
                     elif message['type'] == 'json':
@@ -177,12 +178,13 @@ class App:
 
                 async def generate():
                     while True:
-                        await asyncio.sleep(10)
-                        await self.conn_manager.send_json(
-                            user_id, {"status": "send_frame"}
-                        )
+
+                        # await self.conn_manager.send_json(
+                        #     user_id, {"status": "send_frame"}
+                        # )
                         params = await self.conn_manager.get_latest_data(user_id)
                         if params is None:
+                            await asyncio.sleep(0.01)
                             continue
 
                         print('Starting img2img')
@@ -208,6 +210,7 @@ class App:
                     media_type="multipart/x-mixed-replace;boundary=frame",
                     headers={"Cache-Control": "no-cache"},
                 )
+
             except Exception as e:
                 logging.error(f"Streaming Error: {e}, {user_id} ")
                 return HTTPException(status_code=404, detail="User not found")

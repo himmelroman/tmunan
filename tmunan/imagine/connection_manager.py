@@ -2,10 +2,10 @@ import asyncio
 import json
 import logging
 import typing
-from json import JSONDecodeError
+
 from uuid import UUID
-from types import SimpleNamespace
 from typing import Dict, Union
+from json import JSONDecodeError
 
 from fastapi import WebSocket
 from starlette.websockets import WebSocketState
@@ -23,16 +23,14 @@ class AsyncFixedSizeQueue(asyncio.Queue):
     async def put(self, item):
         """Overrides the default put method. If full, empty the queue asynchronously."""
 
-        print('Putting item on fixed-size queue')
         while not self.empty():
             try:
                 await self.get()  # Discard the existing item if possible
-                print('Discarded an outdated image!!')
             except asyncio.QueueEmpty:
                 break
 
         await super().put(item)  # Add the new item
-        print('Put success')
+        print(f'Put success!, items in queue: {self.qsize()}')
 
 
 Connections = Dict[UUID, Dict[str, Union[WebSocket, AsyncFixedSizeQueue]]]
@@ -61,11 +59,7 @@ class ConnectionManager:
             # "queue": asyncio.Queue(),
             "queue": AsyncFixedSizeQueue()
         }
-        await websocket.send_json(
-            {"status": "connected", "message": "Connected"},
-        )
-        await websocket.send_json({"status": "wait"})
-        await websocket.send_json({"status": "send_frame"})
+        await websocket.send_json({"status": "connected", "message": "Connected"})
 
     def check_user(self, user_id: UUID) -> bool:
         return user_id in self.active_connections
@@ -128,8 +122,17 @@ class ConnectionManager:
         except Exception as e:
             logging.error(f"Error: Receive json: {e}")
 
+    async def receive_bytes(self, user_id: UUID) -> bytes:
+        try:
+            websocket = self.get_websocket(user_id)
+            if websocket:
+                return await websocket.receive_bytes()
+        except Exception as e:
+            logging.error(f"Error: Receive bytes: {e}")
+
     async def receive(self, user_id: UUID):
 
+        message = None
         try:
             websocket = self.get_websocket(user_id)
             if websocket:
@@ -138,6 +141,7 @@ class ConnectionManager:
                 if message is None:
                     return
 
+                # check if text was sent
                 if message.get('text', None) is not None:
                     try:
                         return {
@@ -147,18 +151,12 @@ class ConnectionManager:
                     except JSONDecodeError as not_json:
                         pass
 
-                return {
-                    'type': 'bytes',
-                    'data': typing.cast(bytes, message["bytes"])
-                }
+                # check if bytes were sent
+                elif message.get('bytes', None) is not None:
+                    return {
+                        'type': 'bytes',
+                        'data': typing.cast(bytes, message["bytes"])
+                    }
 
         except Exception as e:
             logging.exception(f"Error: In Receive! {message=}")
-
-    async def receive_bytes(self, user_id: UUID) -> bytes:
-        try:
-            websocket = self.get_websocket(user_id)
-            if websocket:
-                return await websocket.receive_bytes()
-        except Exception as e:
-            logging.error(f"Error: Receive bytes: {e}")
