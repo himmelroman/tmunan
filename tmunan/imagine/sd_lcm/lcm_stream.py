@@ -198,6 +198,7 @@ class StreamLCM:
         # base_image = base_image.convert("RGB").resize((width, height))
 
         # pre-process image
+        self.logger.info(f"Preproceesing Image: {height=}, {width=}")
         t_start_pre = time.perf_counter()
         input_latent = self.stream.image_processor.preprocess(base_image, height, width).to(
             device=self.device,
