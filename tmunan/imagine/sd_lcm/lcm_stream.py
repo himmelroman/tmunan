@@ -122,7 +122,7 @@ class StreamLCM:
                 engine_build_options={
                     'opt_image_height': 512,
                     'opt_image_width': 910,
-                    'build_dynamic_shape': True
+                    # 'build_dynamic_shape': True
                 }
             )
 
