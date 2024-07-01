@@ -15,7 +15,6 @@ services:
   nginx:
     image: nginx
     restart: unless-stopped
-    container_name: nginx
     ports:
       - "80:80"
       - "443:443"
