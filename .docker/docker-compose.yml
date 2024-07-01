@@ -10,7 +10,13 @@ services:
       - HF_HOME=/root/app/models
     ports:
       - "8080:8080"
-    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     logging:
       driver: "json-file"
       options:
