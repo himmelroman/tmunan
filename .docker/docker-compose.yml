@@ -1,4 +1,4 @@
-version: "3"
+version: '3.3'
 
 services:
   app:
@@ -10,13 +10,8 @@ services:
       - HF_HOME=/root/app/models
     ports:
       - "8080:8080"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    device_requests:
+      - capabilities: [ gpu ]
     logging:
       driver: "json-file"
       options:
