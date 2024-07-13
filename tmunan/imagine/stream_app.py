@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from tmunan.imagine.connection_manager import ConnectionManager, ServerFullException
 from tmunan.imagine.sd_lcm.lcm_control import ControlLCM
+from tmunan.imagine.sd_lcm.lcm_normal import NormalLCM
 from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 
 # fix mime error on windows
@@ -83,9 +84,11 @@ class App:
         # load image generator
         mode = os.environ.get('TMUNAN_IMAGE_MODE', 'stream')
         if mode == 'control':
-            self.image_generator = ControlLCM(model_id='xs')
+            self.image_generator = ControlLCM(model_id='hyper-sd')
         elif mode == 'stream':
-            self.image_generator = StreamLCM(model_size='small')
+            self.image_generator = StreamLCM(model_size='turbo')
+        elif mode == 'hyper':
+            self.image_generator = NormalLCM(model_id='hyper-sd')
 
         # load server
         self.app = FastAPI()

@@ -13,54 +13,46 @@ from tmunan.common.log import get_logger
 from tmunan.common.utils import load_image
 
 
-class StreamLCM:
+class SDGen:
     """
-    This is cool
-    But also look at :obj:`~LCM`
+    This is the abstract parent of all SD generators
     """
-
-    model_map = {
-        'lcm1.5': {
-            'model': "SimianLuo/LCM_Dreamshaper_v7",
-            'lcm_lora': "latent-consistency/lcm-lora-sdv1-5"
-        },
-        'turbo': {
-            'model': "stabilityai/sd-turbo"
-        },
-        'ssd-1b': {
-            'model': "segmind/SSD-1B",
-            'lcm_lora': "latent-consistency/lcm-lora-ssd-1b"
-        },
-        'sdxl': {
-            'model': "stabilityai/stable-diffusion-xl-base-1.0",
-            'lcm_lora': "latent-consistency/lcm-lora-sdxl"
-        }
-    }
 
     # constructor
-    def __init__(self, model_size=None, cache_dir=None):
+    def __init__(self, model_id, cache_dir=None):
 
         # model sizes
-        self.model_size = model_size
+        self.model_id = model_id
 
         # pipelines
-        self.stream = None
-        self.stream_cache = {
-            'prompt': None,
-            'guidance_scale': None,
-            'strength': None
-        }
         self.img2img_pipe = None
 
-        # prompt
-        self.img2img_compel = None
-
-        # comp device
+        # acceleration device
         self.device = self.get_device()
 
         # env
         self.logger = get_logger(self.__class__.__name__)
         self.cache_dir = cache_dir or os.environ.get("HF_HOME")
+
+    @classmethod
+    def get_model_map(cls):
+        return {
+            'lcm1.5': {
+                'model': "SimianLuo/LCM_Dreamshaper_v7",
+                'lcm_lora': "latent-consistency/lcm-lora-sdv1-5"
+            },
+            'turbo': {
+                'model': "stabilityai/sd-turbo"
+            },
+            'ssd-1b': {
+                'model': "segmind/SSD-1B",
+                'lcm_lora': "latent-consistency/lcm-lora-ssd-1b"
+            },
+            'sdxl': {
+                'model': "stabilityai/stable-diffusion-xl-base-1.0",
+                'lcm_lora': "latent-consistency/lcm-lora-sdxl"
+            }
+        }
 
     @classmethod
     def get_device(cls):

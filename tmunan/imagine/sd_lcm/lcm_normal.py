@@ -4,32 +4,25 @@ import random
 
 import torch
 import numpy as np
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
+from diffusers import AutoPipelineForImage2Image, TCDScheduler
 from huggingface_hub import hf_hub_download
 
 from tmunan.common.log import get_logger
 from tmunan.common.utils import load_image
 
 
-class ControlLCM:
+class NormalLCM:
     """
     This is cool
-    But also look at :obj:`~LCM`
     """
 
     model_map = {
-        'xs': {
-            'model': "IDKiro/sdxs-512-dreamshaper",
-            'control_net': "IDKiro/sdxs-512-dreamshaper-sketch"
-        },
         'hyper-sd': {
             'model': "runwayml/stable-diffusion-v1-5",
-            'control_net': "lllyasviel/control_v11f1e_sd15_tile",
             'lora': {
                 "repo_id": "ByteDance/Hyper-SD",
                 "filename": "Hyper-SD15-1step-lora.safetensors"
-            },
-            'scheduler': TCDScheduler
+            }
         }
     }
 
@@ -40,8 +33,7 @@ class ControlLCM:
         self.model_id = model_id
 
         # pipelines
-        self.control_net_model = None
-        self.control_net_pipe = None
+        self.img2img_pipe = None
 
         # comp device
         self.device = self.get_device()
@@ -64,18 +56,10 @@ class ControlLCM:
 
         self.logger.info(f"Loading models onto device: {self.device}")
 
-        # load control net model
-        self.logger.info(f"Loading ControlNet model: {self.model_map[self.model_id]['control_net']}")
-        self.control_net_model = ControlNetModel.from_pretrained(
-            self.model_map[self.model_id]['control_net'],
-            torch_dtype=torch.float16
-        ).to(self.device)
-
         # load model
         self.logger.info(f"Loading model: {self.model_map[self.model_id]['model']}")
-        self.control_net_pipe = StableDiffusionControlNetPipeline.from_pretrained(
+        self.img2img_pipe = AutoPipelineForImage2Image.from_pretrained(
             self.model_map[self.model_id]['model'],
-            controlnet=self.control_net_model,
             torch_dtype=torch.float16,
             safety_checker=None,
             requires_safety_checker=False
@@ -86,16 +70,14 @@ class ControlLCM:
 
             # load and fuse sd_lcm lora
             self.logger.info(f"Loading Lora: {self.model_map[self.model_id]['lora']}")
-            self.control_net_pipe.load_lora_weights(hf_hub_download(
+            self.img2img_pipe.load_lora_weights(hf_hub_download(
                 repo_id=self.model_map[self.model_id]['lora']["repo_id"],
                 filename=self.model_map[self.model_id]['lora']["filename"]
             ))
-            self.control_net_pipe.fuse_lora()
+            self.img2img_pipe.fuse_lora()
 
         # update scheduler
-        if self.model_map[self.model_id].get('scheduler'):
-            scheduler_class = self.model_map[self.model_id].get('scheduler')
-            self.control_net_pipe.scheduler = scheduler_class.from_config(self.control_net_pipe.scheduler.config)
+        TCDScheduler.from_config(self.img2img_pipe.scheduler.config)
 
         # # accelerate with tensor-rt
         # if self.device == 'cuda':
@@ -130,7 +112,7 @@ class ControlLCM:
                 randomize_seed: bool = False
                 ):
 
-        if not self.control_net_pipe:
+        if not self.img2img_pipe:
             raise Exception('Image to Image pipe not initialized!')
 
         # seed
@@ -148,16 +130,22 @@ class ControlLCM:
         # convert and resize
         # base_image = base_image.convert("RGB").resize((width, height))
 
+        self.logger.info(f"Generating img2img: {prompt=}, "
+                         f"{num_inference_steps=}, {guidance_scale=}, "
+                         f"{strength=}, {ip_adapter_weight=}, "
+                         f"{seed=}")
+
         # generate image
         t_start_stream = time.perf_counter()
-        result_image = self.control_net_pipe(
+        result_image = self.img2img_pipe(
             prompt=prompt,
             image=base_image,
-            width=width, height=height,
-            guidance_scale=guidance_scale,
             num_inference_steps=1,
             num_images_per_prompt=1,
-            controlnet_conditioning_scale=control_net_scale,
+            width=width, height=height,
+            guidance_scale=1.0,
+            strength=1.0,
+            eta=0.5,
             output_type="pil",
             seed=seed
         ).images
