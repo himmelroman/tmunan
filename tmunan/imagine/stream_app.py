@@ -1,9 +1,9 @@
-import asyncio
-import copy
 import io
 import os
 import sys
+import copy
 import uuid
+import asyncio
 import logging
 import mimetypes
 from pathlib import Path
@@ -20,6 +20,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from tmunan.imagine.connection_manager import ConnectionManager, ServerFullException
+from tmunan.imagine.sd_lcm.lcm_control import ControlLCM
 from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 
 # fix mime error on windows
@@ -78,8 +79,16 @@ class StreamInputParams(BaseModel):
 
 class App:
     def __init__(self):
+
+        # load image generator
+        mode = os.environ.get('TMUNAN_IMAGE_MODE', 'stream')
+        if mode == 'control':
+            self.image_generator = ControlLCM(model_id='xs')
+        elif mode == 'stream':
+            self.image_generator = StreamLCM(model_size='small')
+
+        # load server
         self.app = FastAPI()
-        self.stream_lcm = StreamLCM(model_size='turbo')
         self.conn_manager = ConnectionManager()
         self.init_app()
 
@@ -92,7 +101,7 @@ class App:
 
     def init_app(self):
 
-        self.stream_lcm.load()
+        self.image_generator.load()
 
         self.app.add_middleware(
             CORSMiddleware,
@@ -189,11 +198,12 @@ class App:
 
                         print('Starting img2img')
                         params = SimpleNamespace(**params)
-                        image = self.stream_lcm.img2img(
+                        image = self.image_generator.img2img(
                             prompt=params.prompt,
                             image=params.image,
                             guidance_scale=params.guidance_scale,
                             strength=params.strength,
+                            control_net_scale=params.strength,
                             seed=params.seed,
                             height=params.height,
                             width=params.width

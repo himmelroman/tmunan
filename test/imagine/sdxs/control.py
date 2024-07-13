@@ -26,13 +26,15 @@ if __name__ == '__main__':
     # control_image = Image.fromarray(255 - np.array(control_image))
 
     output_images = list()
-    for control_scale in [1.0, 1.1, 1.15, 1.2, 1.25, 1.3, 1.4]:
+    for control_scale in [0.0, 0.1, 0.5, 1.0, 1.5, 2.0]:
         output_images.append(pipe(
             prompt='frida kahlo, self portrait',
             image=image,
-            width=512,
-            height=512,
-            guidance_scale=0.5,
+            # width=512, height=512,
+            width=768, height=768,
+            # width=910, height=512,
+            # width=1024, height=576,
+            guidance_scale=0.8,
             num_inference_steps=1,
             num_images_per_prompt=1,
             output_type="pil",

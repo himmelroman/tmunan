@@ -166,6 +166,7 @@ class StreamLCM:
                 num_inference_steps: int = 4,
                 guidance_scale: float = 1.0,
                 strength: float = 0.6,
+                control_net_scale: float = 1.0,
                 ip_adapter_weight: float = 0.6,
                 seed: int = 0,
                 randomize_seed: bool = False,
