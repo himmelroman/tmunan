@@ -8,6 +8,7 @@ services:
       - ~/.cache/huggingface:/root/app/models
     environment:
       - HF_HOME=/root/app/models
+      - TMUNAN_IMAGE_MODE=${TMUNAN_IMAGE_MODE:-stream}
     ports:
       - "8080:8080"
     deploy:
