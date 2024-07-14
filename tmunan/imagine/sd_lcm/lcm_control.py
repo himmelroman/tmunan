@@ -6,6 +6,7 @@ import torch
 import numpy as np
 from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
 from huggingface_hub import hf_hub_download
+from streamdiffusion import StreamDiffusion
 
 from tmunan.common.log import get_logger
 from tmunan.common.utils import load_image
@@ -97,22 +98,13 @@ class ControlLCM:
             scheduler_class = self.model_map[self.model_id].get('scheduler')
             self.control_net_pipe.scheduler = scheduler_class.from_config(self.control_net_pipe.scheduler.config)
 
-        # # accelerate with tensor-rt
-        # if self.device == 'cuda':
-        #
-        #     self.logger.info(f"Accelerating with TensorRT! {self.cache_dir=}")
-        #     from streamdiffusion.acceleration.tensorrt import accelerate_with_tensorrt
-        #     self.stream = accelerate_with_tensorrt(
-        #         stream=self.stream,
-        #         engine_dir=f'{self.cache_dir}/tensorrt',
-        #         max_batch_size=2,
-        #         engine_build_options={
-        #             'opt_image_height': 512,
-        #             'opt_image_width': 904,
-        #
-        #             # 'build_dynamic_shape': True
-        #         }
-        #     )
+        # compile with pytorch
+        self.control_net_pipe.unet = torch.compile(
+            self.control_net_pipe.unet, mode="reduce-overhead", fullgraph=True
+        )
+        self.control_net_pipe.vae = torch.compile(
+            self.control_net_pipe.vae, mode="reduce-overhead", fullgraph=True
+        )
 
         self.logger.info("Loading models finished.")
 
