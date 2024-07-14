@@ -3,7 +3,7 @@ from diffusers.utils import load_image
 import numpy as np
 import cv2
 from PIL import Image
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
+from diffusers import TCDScheduler, ControlNetModel, StableDiffusionControlNetPipeline
 from huggingface_hub import hf_hub_download
 
 controlnet_checkpoint = "lllyasviel/control_v11p_sd15_canny"
