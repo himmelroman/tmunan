@@ -98,13 +98,16 @@ class ControlLCM:
             scheduler_class = self.model_map[self.model_id].get('scheduler')
             self.control_net_pipe.scheduler = scheduler_class.from_config(self.control_net_pipe.scheduler.config)
 
+        # accelerate
+        self.control_net_pipe.enable_xformers_memory_efficient_attention()
+
         # compile with pytorch
-        self.control_net_pipe.unet = torch.compile(
-            self.control_net_pipe.unet, mode="reduce-overhead", fullgraph=True
-        )
-        self.control_net_pipe.vae = torch.compile(
-            self.control_net_pipe.vae, mode="reduce-overhead", fullgraph=True
-        )
+        # self.control_net_pipe.unet = torch.compile(
+        #     self.control_net_pipe.unet, mode="reduce-overhead", fullgraph=True
+        # )
+        # self.control_net_pipe.vae = torch.compile(
+        #     self.control_net_pipe.vae, mode="reduce-overhead", fullgraph=True
+        # )
 
         self.logger.info("Loading models finished.")
 
