@@ -3,13 +3,9 @@ import time
 import random
 import numpy as np
 
-import cv2
-from PIL import Image
-
 import torch
 from huggingface_hub import hf_hub_download
 from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
-
 
 from tmunan.common.log import get_logger
 from tmunan.common.utils import load_image
