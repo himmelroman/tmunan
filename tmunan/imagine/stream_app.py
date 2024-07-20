@@ -6,16 +6,14 @@ import uuid
 import asyncio
 import logging
 import mimetypes
-from pathlib import Path
 
-import markdown2
 from PIL import Image
 from types import SimpleNamespace
 
 from fastapi import Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, WebSocket, HTTPException, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -26,25 +24,6 @@ from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 
 # fix mime error on windows
 mimetypes.add_type("application/javascript", ".js")
-
-page_content = """<h1 class="text-3xl font-bold">Tmunan - StreamApp</h1>
-<h3 class="text-xl font-bold">Tmunan - Image-to-Image</h3>
-<p class="text-sm">
-    This is a demo showcases 
-    <a
-        href="https://github.com/himmelroman/StreamDiffusion"
-        target="_blank"
-        class="text-blue-500 underline hover:no-underline">StreamDiffusion (himmelroman)
-    </a>
-    Image to Image pipeline with a MJPEG stream server.
-</p>
-"""
-
-
-class ServerInfo(BaseModel):
-    name: str = "StreamDiffusion img2img"
-    input_mode: str = "image"
-    page_content: str = page_content
 
 
 class StreamInputParams(BaseModel):
@@ -228,34 +207,17 @@ class App:
                 logging.error(f"Streaming Error: {e}, {user_id} ")
                 return HTTPException(status_code=404, detail="User not found")
 
-        # route to setup frontend
-        @self.app.get("/api/settings")
-        async def settings():
-            info_schema = ServerInfo.model_json_schema()
-            info = ServerInfo()
-            if info.page_content:
-                page_content = markdown2.markdown(info.page_content)
-
-            input_params = StreamInputParams.model_json_schema()
-            return JSONResponse(
-                {
-                    "info": info_schema,
-                    "input_params": input_params,
-                    "page_content": page_content if info.page_content else "",
-                }
-            )
-
         if not os.path.exists("public"):
             os.makedirs("public")
 
-        # serve FE
-        fe_path = os.environ.get(
-            'STATIC_SERVE',
-            '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public')
-        print(f"FE Path: {fe_path}")
-        if Path(fe_path).exists():
-            self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
-            print(f"Mounted static: {fe_path}")
+        # # serve FE
+        # fe_path = os.environ.get(
+        #     'STATIC_SERVE',
+        #     '/Users/himmelroman/projects/speechualizer/StreamDiffusion/demo/realtime-img2img/frontend/public')
+        # print(f"FE Path: {fe_path}")
+        # if Path(fe_path).exists():
+        #     self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
+        #     print(f"Mounted static: {fe_path}")
 
     @staticmethod
     def bytes_to_pil(image_bytes: bytes) -> Image.Image:
