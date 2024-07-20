@@ -1,12 +1,15 @@
 import os
 import time
 import random
+import numpy as np
+
+import cv2
+from PIL import Image
 
 import torch
-import numpy as np
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
 from huggingface_hub import hf_hub_download
-from streamdiffusion import StreamDiffusion
+from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
+
 
 from tmunan.common.log import get_logger
 from tmunan.common.utils import load_image
@@ -99,7 +102,7 @@ class ControlLCM:
             self.control_net_pipe.scheduler = scheduler_class.from_config(self.control_net_pipe.scheduler.config)
 
         # accelerate
-        self.control_net_pipe.enable_xformers_memory_efficient_attention()
+        # self.control_net_pipe.enable_xformers_memory_efficient_attention()
 
         # compile with pytorch
         # self.control_net_pipe.unet = torch.compile(
@@ -140,20 +143,34 @@ class ControlLCM:
             base_image = image
             self.logger.info(f"Image instance provided.")
 
+        # Prepare Canny Control Image
+        low_threshold = 100
+        high_threshold = 200
+        image = cv2.Canny(base_image, low_threshold, high_threshold)
+        image = image[:, :, None]
+        image = np.concatenate([image, image, image], axis=2)
+        control_image = Image.fromarray(image)
+
         # convert and resize
         # base_image = base_image.convert("RGB").resize((width, height))
+
+        self.logger.info(f"Generating img2img: {prompt=}, "
+                         f"{num_inference_steps=}, {guidance_scale=}, "
+                         f"{strength=}, {ip_adapter_weight=}, "
+                         f"{seed=}")
 
         # generate image
         t_start_stream = time.perf_counter()
         result_image = self.control_net_pipe(
             prompt=prompt,
-            image=base_image,
+            image=control_image,
             width=width, height=height,
             guidance_scale=guidance_scale,
             num_inference_steps=1,
             num_images_per_prompt=1,
             controlnet_conditioning_scale=control_net_scale,
             output_type="pil",
+            eta=1.0,
             seed=seed
         ).images
 
