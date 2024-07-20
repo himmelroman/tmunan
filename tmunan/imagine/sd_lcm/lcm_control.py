@@ -143,13 +143,13 @@ class ControlLCM:
             base_image = image
             self.logger.info(f"Image instance provided.")
 
-        # Prepare Canny Control Image
-        low_threshold = 100
-        high_threshold = 200
-        image = cv2.Canny(base_image, low_threshold, high_threshold)
-        image = image[:, :, None]
-        image = np.concatenate([image, image, image], axis=2)
-        control_image = Image.fromarray(image)
+        # # Prepare Canny Control Image
+        # low_threshold = 100
+        # high_threshold = 200
+        # image = cv2.Canny(base_image, low_threshold, high_threshold)
+        # image = image[:, :, None]
+        # image = np.concatenate([image, image, image], axis=2)
+        # control_image = Image.fromarray(image)
 
         # convert and resize
         # base_image = base_image.convert("RGB").resize((width, height))
@@ -163,7 +163,7 @@ class ControlLCM:
         t_start_stream = time.perf_counter()
         result_image = self.control_net_pipe(
             prompt=prompt,
-            image=control_image,
+            image=base_image,
             width=width, height=height,
             guidance_scale=guidance_scale,
             num_inference_steps=1,
