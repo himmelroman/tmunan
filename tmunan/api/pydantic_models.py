@@ -1,8 +1,7 @@
+import sys
 from typing import List
 
-from pydantic import BaseModel
-
-from tmunan.imagine.sd_lcm.lcm_bg_task import TaskType
+from pydantic import BaseModel, Field
 
 
 class Prompt(BaseModel):

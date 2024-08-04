@@ -24,7 +24,7 @@ class StreamLCM:
             'model': "SimianLuo/LCM_Dreamshaper_v7",
             'lcm_lora': "latent-consistency/lcm-lora-sdv1-5"
         },
-        'turbo': {
+        'sd-turbo': {
             'model': "stabilityai/sd-turbo"
         },
         'ssd-1b': {
@@ -38,10 +38,10 @@ class StreamLCM:
     }
 
     # constructor
-    def __init__(self, model_size=None, cache_dir=None):
+    def __init__(self, model_id=None, cache_dir=None):
 
         # model sizes
-        self.model_size = model_size
+        self.model_id = model_id
 
         # pipelines
         self.stream = None
@@ -77,9 +77,9 @@ class StreamLCM:
         self.logger.info(f"Loading models onto device: {self.device}")
 
         # text to image
-        self.logger.info(f"Loading img2img model: {self.model_map[self.model_size]['model']}")
+        self.logger.info(f"Loading img2img model: {self.model_map[self.model_id]['model']}")
         self.img2img_pipe = StableDiffusionPipeline.from_pretrained(
-            self.model_map[self.model_size]['model'],
+            self.model_map[self.model_id]['model'],
             torch_dtype=torch.float16,
             safety_checker=None,
             requires_safety_checker=False
@@ -97,11 +97,11 @@ class StreamLCM:
         self.stream.enable_similar_image_filter(threshold=0.99, max_skip_frame=3)
 
         # check for LCM lora
-        if self.model_map[self.model_size].get('lcm_lora'):
+        if self.model_map[self.model_id].get('lcm_lora'):
 
             # load and fuse sd_lcm lora
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_size]['lcm_lora']}")
-            self.stream.load_lcm_lora(self.model_map[self.model_size]['lcm_lora'])
+            self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_id]['lcm_lora']}")
+            self.stream.load_lcm_lora(self.model_map[self.model_id]['lcm_lora'])
             self.stream.fuse_lora()
 
         # Use Tiny VAE for further acceleration

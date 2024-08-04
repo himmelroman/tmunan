@@ -41,7 +41,7 @@ class SDGen:
                 'model': "SimianLuo/LCM_Dreamshaper_v7",
                 'lcm_lora': "latent-consistency/lcm-lora-sdv1-5"
             },
-            'turbo': {
+            'sd-turbo': {
                 'model': "stabilityai/sd-turbo"
             },
             'ssd-1b': {

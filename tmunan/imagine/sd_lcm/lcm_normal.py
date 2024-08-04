@@ -17,6 +17,13 @@ class NormalLCM:
     """
 
     model_map = {
+        'lightning': {
+            'model': "runwayml/stable-diffusion-v1-5",
+            'lora': {
+                "repo_id": "ByteDance/Hyper-SD",
+                "filename": "Hyper-SD15-1step-lora.safetensors"
+            }
+        },
         'hyper-sd': {
             'model': "runwayml/stable-diffusion-v1-5",
             'lora': {
@@ -77,24 +84,7 @@ class NormalLCM:
             self.img2img_pipe.fuse_lora()
 
         # update scheduler
-        TCDScheduler.from_config(self.img2img_pipe.scheduler.config)
-
-        # # accelerate with tensor-rt
-        # if self.device == 'cuda':
-        #
-        #     self.logger.info(f"Accelerating with TensorRT! {self.cache_dir=}")
-        #     from streamdiffusion.acceleration.tensorrt import accelerate_with_tensorrt
-        #     self.stream = accelerate_with_tensorrt(
-        #         stream=self.stream,
-        #         engine_dir=f'{self.cache_dir}/tensorrt',
-        #         max_batch_size=2,
-        #         engine_build_options={
-        #             'opt_image_height': 512,
-        #             'opt_image_width': 904,
-        #
-        #             # 'build_dynamic_shape': True
-        #         }
-        #     )
+        self.img2img_pipe.scheduler = TCDScheduler.from_config(self.img2img_pipe.scheduler.config)
 
         self.logger.info("Loading models finished.")
 
@@ -143,9 +133,9 @@ class NormalLCM:
             num_inference_steps=1,
             num_images_per_prompt=1,
             width=width, height=height,
-            guidance_scale=1.0,
-            strength=1.0,
-            eta=0.5,
+            guidance_scale=guidance_scale,
+            strength=strength,
+            # eta=0.5,
             output_type="pil",
             seed=seed
         ).images

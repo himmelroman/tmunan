@@ -1,89 +1,70 @@
-import io
 import os
-import sys
-import copy
 import uuid
-import asyncio
 import logging
 import mimetypes
+from contextlib import asynccontextmanager
+from multiprocessing import freeze_support
 
-from PIL import Image
-from types import SimpleNamespace
-
-from fastapi import Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, WebSocket, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 
-from tmunan.imagine.connection_manager import ConnectionManager, ServerFullException
-from tmunan.imagine.sd_lcm.lcm_control import ControlLCM
-from tmunan.imagine.sd_lcm.lcm_normal import NormalLCM
-from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
+from tmunan.imagine.stream_manager import StreamManager, ImageStream
+from tmunan.imagine.image_generator.image_generator import ImageGeneratorWorker
+from tmunan.imagine.common.pydantic_models import StreamInputParams
 
 # fix mime error on windows
 mimetypes.add_type("application/javascript", ".js")
 
 
-class StreamInputParams(BaseModel):
-    prompt: str = Field(
-        'Default prompt text - change in the code!',
-        title="Prompt",
-        field="textarea",
-        id="prompt",
-    )
-    strength: float = Field(
-        1.0, min=1.0, max=2.5, title="Strength", disabled=True, hide=True, id="strength"
-    )
-    guidance_scale: float = Field(
-        1.0, min=1.0, max=2.5, title="Guidance Scale", disabled=True, hide=True, id="guidance_scale"
-    )
-    seed: int = Field(
-        0, min=0, max=sys.maxsize, title="Seed", disabled=True, hide=True, id="seed"
-    )
-    # negative_prompt: str = Field(
-    #     default_negative_prompt,
-    #     title="Negative Prompt",
-    #     field="textarea",
-    #     id="negative_prompt",
-    # )
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
 
-    width: int = Field(
-        512, min=2, max=15, title="Width", disabled=True, hide=True, id="width"
-    )
-    height: int = Field(
-        512, min=2, max=15, title="Height", disabled=True, hide=True, id="height"
-    )
+    # determine imagine api address
+    # api_address = os.environ['API_ADDRESS']
+    # api_port = os.environ['API_PORT']
+
+    # start image generator worker
+    fastapi_app.image_generator.start()
+
+    # FastAPI app lifespan
+    yield
+
+    # Clean up and release resources
+    pass
 
 
 class App:
     def __init__(self):
 
+        # create fastapi app
+        self.app = FastAPI(lifespan=lifespan)
+        self.stream_manager = StreamManager()
+
         # load image generator
         mode = os.environ.get('TMUNAN_IMAGE_MODE', 'stream')
-        if mode == 'control':
-            self.image_generator = ControlLCM(model_id='hyper-sd')
-        elif mode == 'stream':
-            self.image_generator = StreamLCM(model_size='turbo')
-        elif mode == 'hyper':
-            self.image_generator = NormalLCM(model_id='hyper-sd')
+        if mode == 'stream':
+            self.image_generator = ImageGeneratorWorker(model_id='sd-turbo', diff_type=mode)
+        elif mode == 'control':
+            self.image_generator = ImageGeneratorWorker(model_id='hyper-sd', diff_type=mode)
 
-        # load server
-        self.app = FastAPI()
-        self.conn_manager = ConnectionManager()
+        # subscribe to events
+        self.image_generator.on_image_ready += self.handle_image_ready
+        # self.image_generator.on_startup = Event()
+        # self.image_generator.on_shutdown = Event()
+
+        self.stream_manager = StreamManager()
+
+        self.app.stream_manager = self.stream_manager
+        self.app.image_generator = self.image_generator
+
         self.init_app()
 
-        self.default_params = {
-            'prompt': 'Lions in the sky',
-            'strength': 1.0
-        }
-        self.param_cache = StreamInputParams(**self.default_params)
-        # self.param_cache = SimpleNamespace(**self.param_cache.model_dump())
+    def handle_image_ready(self, stream_id, image):
+        if stream := self.stream_manager.streams.get(stream_id):
+            stream.distribute_output(image)
 
     def init_app(self):
-
-        self.image_generator.load()
 
         self.app.add_middleware(
             CORSMiddleware,
@@ -93,122 +74,36 @@ class App:
             allow_headers=["*"],
         )
 
-        @self.app.websocket("/api/ws/{user_id}")
-        async def websocket_endpoint(user_id: uuid.UUID, websocket: WebSocket):
+        @self.app.websocket("/api/ws/{stream_id}")
+        async def websocket(stream_id: uuid.UUID, websocket: WebSocket):
 
+            # get stream
+            stream = self.stream_manager.get_stream(stream_id)
+
+            connection_id = uuid.uuid4()
             try:
-                await self.conn_manager.connect(
-                    user_id, websocket, 0   # self.args.max_queue_size
-                )
-                await handle_websocket_data(user_id)
-
-            except ServerFullException as e:
-                logging.error(f"Server Full: {e}")
+                await self.stream_manager.connect(stream_id, connection_id, websocket)
+                await self.stream_manager.handle_websocket(stream_id, connection_id)
 
             finally:
-                await self.conn_manager.disconnect(user_id)
-                logging.info(f"User disconnected: {user_id}")
+                await self.stream_manager.disconnect(stream_id, connection_id)
 
-        async def handle_websocket_data(user_id: uuid.UUID):
-            if not self.conn_manager.check_user(user_id):
-                return HTTPException(status_code=404, detail="User not found")
-            # last_time = time.time()
-            try:
-                while True:
+        @self.app.get("/api/stream/{stream_id}")
+        async def stream(stream_id: uuid.UUID):
 
-                    # if (
-                    #     self.args.timeout > 0
-                    #     and time.time() - last_time > self.args.timeout
-                    # ):
-                    #     await self.conn_manager.send_json(
-                    #         user_id,
-                    #         {
-                    #             "status": "timeout",
-                    #             "message": "Your session has ended",
-                    #         },
-                    #     )
-                    #     await self.conn_manager.disconnect(user_id)
-                    #     return
+            # get stream
+            stream = self.stream_manager.get_stream(stream_id)
 
-                    message = await self.conn_manager.receive(user_id)
-                    if message is None:
-                        await asyncio.sleep(0.01)
-                        continue
+            # consume stream
+            consumer_id = uuid.uuid4()
+            return StreamingResponse(
+                self.stream_manager.handle_consumer(stream_id, consumer_id),
+                media_type="multipart/x-mixed-replace;boundary=frame",
+                headers={"Cache-Control": "no-cache"},
+            )
 
-                    elif message['type'] == 'json':
-                        self.param_cache = StreamInputParams(**message['data'])
-                        # self.param_cache = SimpleNamespace(**self.param_cache.model_dump())
-
-                    elif message['type'] == 'bytes':
-
-                        if self.param_cache is None:
-                            logging.warning('Image arrived, but params not initialized')
-                            continue
-
-                        if message['data'] is None or len(message['data']) == 0:
-                            logging.warning('Got empty data blob')
-                            continue
-
-                        params = copy.deepcopy(self.param_cache)
-                        params = params.model_dump()
-                        params['image'] = self.bytes_to_pil(message['data'])
-                        await self.conn_manager.update_data(user_id, params)
-
-            except Exception as e:
-                logging.exception(f"Websocket Error: {e}, {user_id} ")
-                await self.conn_manager.disconnect(user_id)
-
-        @self.app.get("/api/queue")
-        async def get_queue_size():
-            queue_size = self.conn_manager.get_user_count()
-            return JSONResponse({"queue_size": queue_size})
-
-        @self.app.get("/api/stream/{user_id}")
-        async def stream(user_id: uuid.UUID, request: Request):
-            try:
-
-                async def generate():
-                    while True:
-
-                        # await self.conn_manager.send_json(
-                        #     user_id, {"status": "send_frame"}
-                        # )
-                        params = await self.conn_manager.get_latest_data(user_id)
-                        if params is None:
-                            await asyncio.sleep(0.01)
-                            continue
-
-                        print('Starting img2img')
-                        params = SimpleNamespace(**params)
-                        image = self.image_generator.img2img(
-                            prompt=params.prompt,
-                            image=params.image,
-                            guidance_scale=params.guidance_scale,
-                            strength=params.strength,
-                            control_net_scale=params.strength,
-                            seed=params.seed,
-                            height=params.height,
-                            width=params.width
-                        )[0]
-                        if image is None:
-                            continue
-                        frame = self.pil_to_frame(image)
-                        yield frame
-                        #if self.args.debug:
-                        #print(f"Time taken: {time.time() - last_time}")
-
-                return StreamingResponse(
-                    generate(),
-                    media_type="multipart/x-mixed-replace;boundary=frame",
-                    headers={"Cache-Control": "no-cache"},
-                )
-
-            except Exception as e:
-                logging.error(f"Streaming Error: {e}, {user_id} ")
-                return HTTPException(status_code=404, detail="User not found")
-
-        if not os.path.exists("public"):
-            os.makedirs("public")
+        # if not os.path.exists("public"):
+        #     os.makedirs("public")
 
         # # serve FE
         # fe_path = os.environ.get(
@@ -219,28 +114,12 @@ class App:
         #     self.app.mount("/", StaticFiles(directory=fe_path, html=True), name="public")
         #     print(f"Mounted static: {fe_path}")
 
-    @staticmethod
-    def bytes_to_pil(image_bytes: bytes) -> Image.Image:
-        image = Image.open(io.BytesIO(image_bytes))
-        return image
-
-    @staticmethod
-    def pil_to_frame(image: Image.Image) -> bytes:
-        frame_data = io.BytesIO()
-        image.save(frame_data, format="WEBP", quality=100, method=6)
-        frame_data = frame_data.getvalue()
-        return (
-                b"--frame\r\n"
-                + b"Content-Type: image/webp\r\n"
-                + f"Content-Length: {len(frame_data)}\r\n\r\n".encode()
-                + frame_data
-                + b"\r\n"
-        )
-
 
 app = App().app
 
 if __name__ == "__main__":
+    freeze_support()
+
     import uvicorn
 
     uvicorn.run(

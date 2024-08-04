@@ -5,10 +5,11 @@ import numpy as np
 
 import torch
 from huggingface_hub import hf_hub_download
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, TCDScheduler
+from diffusers import ControlNetModel, StableDiffusionControlNetImg2ImgPipeline, TCDScheduler
 
 from tmunan.common.log import get_logger
 from tmunan.common.utils import load_image
+from tmunan.imagine.common.canny import SobelOperator
 
 
 class ControlLCM:
@@ -18,7 +19,7 @@ class ControlLCM:
     """
 
     model_map = {
-        'xs': {
+        'sdxs': {
             'model': "IDKiro/sdxs-512-dreamshaper",
             'control_net': "IDKiro/sdxs-512-dreamshaper-sketch"
         },
@@ -36,15 +37,16 @@ class ControlLCM:
     # constructor
     def __init__(self, model_id=None, cache_dir=None):
 
-        # model sizes
+        # model
         self.model_id = model_id
-
-        # pipelines
-        self.control_net_model = None
-        self.control_net_pipe = None
 
         # comp device
         self.device = self.get_device()
+
+        # pipelines
+        self.im2img_pipe = None
+        self.control_net_model = None
+        # self.canny_sobel_operator = SobelOperator(self.device)
 
         # env
         self.logger = get_logger(self.__class__.__name__)
@@ -73,7 +75,7 @@ class ControlLCM:
 
         # load model
         self.logger.info(f"Loading model: {self.model_map[self.model_id]['model']}")
-        self.control_net_pipe = StableDiffusionControlNetPipeline.from_pretrained(
+        self.im2img_pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
             self.model_map[self.model_id]['model'],
             controlnet=self.control_net_model,
             torch_dtype=torch.float16,
@@ -81,21 +83,21 @@ class ControlLCM:
             requires_safety_checker=False
         ).to(self.device)
 
+        # update scheduler
+        if self.model_map[self.model_id].get('scheduler'):
+            scheduler_class = self.model_map[self.model_id].get('scheduler')
+            self.im2img_pipe.scheduler = scheduler_class.from_config(self.im2img_pipe.scheduler.config)
+
         # check for lora
         if self.model_map[self.model_id].get('lora'):
 
             # load and fuse sd_lcm lora
             self.logger.info(f"Loading Lora: {self.model_map[self.model_id]['lora']}")
-            self.control_net_pipe.load_lora_weights(hf_hub_download(
-                repo_id=self.model_map[self.model_id]['lora']["repo_id"],
-                filename=self.model_map[self.model_id]['lora']["filename"]
+            self.im2img_pipe.load_lora_weights(hf_hub_download(
+                repo_id=self.model_map[self.model_id]["lora"]["repo_id"],
+                filename=self.model_map[self.model_id]["lora"]["filename"]
             ))
-            self.control_net_pipe.fuse_lora()
-
-        # update scheduler
-        if self.model_map[self.model_id].get('scheduler'):
-            scheduler_class = self.model_map[self.model_id].get('scheduler')
-            self.control_net_pipe.scheduler = scheduler_class.from_config(self.control_net_pipe.scheduler.config)
+            self.im2img_pipe.fuse_lora()
 
         # accelerate
         # self.control_net_pipe.enable_xformers_memory_efficient_attention()
@@ -124,7 +126,7 @@ class ControlLCM:
                 randomize_seed: bool = False
                 ):
 
-        if not self.control_net_pipe:
+        if not self.im2img_pipe:
             raise Exception('Image to Image pipe not initialized!')
 
         # seed
@@ -139,13 +141,14 @@ class ControlLCM:
             base_image = image
             self.logger.info(f"Image instance provided.")
 
-        # # Prepare Canny Control Image
+        # Prepare Canny Control Image
         # low_threshold = 100
         # high_threshold = 200
-        # image = cv2.Canny(base_image, low_threshold, high_threshold)
+        # control_image = self.canny_sobel_operator(base_image, 0.31, 0.125)
+        # image = cv2.Canny(np.array(base_image), low_threshold, high_threshold)
         # image = image[:, :, None]
         # image = np.concatenate([image, image, image], axis=2)
-        # control_image = Image.fromarray(image)
+        # control_image = PIL.Image.fromarray(image)
 
         # convert and resize
         # base_image = base_image.convert("RGB").resize((width, height))
@@ -157,9 +160,10 @@ class ControlLCM:
 
         # generate image
         t_start_stream = time.perf_counter()
-        result_image = self.control_net_pipe(
+        result_image = self.im2img_pipe(
             prompt=prompt,
             image=base_image,
+            control_image=base_image,
             width=width, height=height,
             guidance_scale=guidance_scale,
             num_inference_steps=1,
