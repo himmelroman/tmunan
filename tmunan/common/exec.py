@@ -203,35 +203,39 @@ class BackgroundExecutor:
 
         # init logger
         logger = get_logger(f'{task_class.__name__}Executor')
+        try:
 
-        # initialize task
-        logger.info(f'Initializing Task of type: {task_class.__name__}')
-        task = task_class(*task_args, **task_kwargs)
-        task.setup()
+            # initialize task
+            logger.info(f'Initializing Task of type: {task_class.__name__}')
+            task = task_class(*task_args, **task_kwargs)
+            task.setup()
 
-        # signal ready
-        logger.info(f'Task is ready.')
-        out_q.put((None, None))
+            # signal ready
+            logger.info(f'Task is ready.')
+            out_q.put((None, None))
 
-        # run task loop
-        logger.info(f'about to start while loop {stop_event.is_set()}')
-        while not stop_event.is_set():
-            try:
-                item = in_q.get(timeout=1)
-                logger.info(f'got item from input queue')
-                if item is None:
-                    break
+            # run task loop
+            logger.info(f'about to start while loop {stop_event.is_set()}')
+            while not stop_event.is_set():
+                try:
+                    item = in_q.get(timeout=1)
+                    logger.info(f'got item from input queue')
+                    if item is None:
+                        break
 
-                logger.info(f'running exec')
-                result = task.exec(item)
-                out_q.put((True, result))
-            except Empty:
-                logger.info(f'empty queue')
-                continue
-            except Exception as e:
-                logger.exception('Error processing item!')
-                out_q.put((False, e))
+                    logger.info(f'running exec')
+                    result = task.exec(item)
+                    out_q.put((True, result))
+                except Empty:
+                    logger.info(f'empty queue')
+                    continue
+                except Exception as e:
+                    logger.exception('Error processing item!')
+                    out_q.put((False, e))
 
-        # release resources
-        logger.info(f'Cleaning up resources...')
-        task.cleanup()
+            # release resources
+            logger.info(f'Cleaning up resources...')
+            task.cleanup()
+
+        except Exception as e:
+            logger.exception('Error in run loop')
