@@ -191,10 +191,10 @@ class StreamLCM:
         # load image
         if type(image) is str:
             base_image = load_image(image)
-            # self.logger.info(f"Loaded image from: {image}")
+            self.logger.info(f"Loaded image from: {image}")
         else:
             base_image = image
-            # self.logger.info(f"Image instance provided.")
+            self.logger.info(f"Image instance provided.")
 
         # convert and resize
         # base_image = base_image.convert("RGB").resize((width, height))

@@ -25,6 +25,9 @@ class ImageGeneratorWorker:
             diff_type=diff_type
         )
 
+        # env
+        self.logger = get_logger('image_generator')
+
     def start(self):
 
         # subscribe to events
@@ -42,6 +45,7 @@ class ImageGeneratorWorker:
     def img2img(self, **kwargs):
 
         if self.bg_exec.input_queue.empty():
+            self.logger.info('queue not empty, putting')
             self.bg_exec.push_input(kwargs)
 
     # def txt2img(self, **kwargs):
@@ -83,6 +87,8 @@ class ImageGeneratorBGTask(BackgroundTask):
     def exec(self, img_gen_args):
 
         try:
+
+            self.logger.info('running exec in BGExecutor task')
 
             # run img2img
             images = self.lcm.img2img(**img_gen_args)
