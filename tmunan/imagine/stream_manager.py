@@ -8,6 +8,7 @@ from typing import Dict
 from json import JSONDecodeError
 
 from fastapi.websockets import WebSocket, WebSocketState, WebSocketDisconnect
+from websockets.exceptions import ConnectionClosedOK
 
 from tmunan.common.event import Event
 from tmunan.common.log import get_logger
@@ -46,7 +47,7 @@ class ImageStream:
         # consumers and connections
         self.consumers: Dict[UUID, StreamConsumer] = {}
         self.connections: Dict[UUID, WebSocketConnection] = {}
-        self.active_connection_id: UUID | None = None
+        self.active_connection_name: str | None = None
 
         # params cache
         self.parameters = StreamInputParams()
@@ -101,7 +102,7 @@ class StreamManager:
             "payload": {
                 "id": str(conn.id),
                 "info": conn.info,
-                "active": conn.id == self.stream.active_connection_id
+                "active": conn.info.get('name', '') == self.stream.active_connection_name
             }
         }
 
@@ -116,7 +117,7 @@ class StreamManager:
                             {
                                 "id": str(conn.id),
                                 "info": conn.info,
-                                "active": bool(conn.id == self.stream.active_connection_id),
+                                "active": conn.info.get('name', '') == self.stream.active_connection_name,
                             }
                             for conn in self.stream.connections.values()
                         ],
@@ -126,31 +127,32 @@ class StreamManager:
                             }
                             for cons in self.stream.consumers.values()
                         ],
-                        "active_connection_id": str(self.stream.active_connection_id),
+                        "active_connection_name": self.stream.active_connection_name,
                         "parameters": self.stream.parameters.model_dump()
                     }
                 }
 
         for conn in list(self.stream.connections.values()):
-            if conn.websocket.client_state == WebSocketState.CONNECTED:
+            try:
                 await conn.websocket.send_json(state)
-            else:
+
+            except (ConnectionClosedOK, WebSocketDisconnect):
                 self.stream.remove_connection(conn.id)
 
-    async def connect(self, connection_id: UUID, websocket: WebSocket):
+    async def connect(self, name: str, connection_id: UUID, websocket: WebSocket):
 
         # register new connection
         self.logger.info(f"WebSocket connected: {connection_id=}, host={websocket.client.host}")
         ws_conn = WebSocketConnection(
             id=connection_id,
-            info={'host': websocket.client.host},
+            info={'name': name, 'host': websocket.client.host},
             websocket=websocket
         )
         self.stream.add_connection(ws_conn)
 
         # check if this is the first connection
         if len(self.stream.connections) == 1:
-            self.stream.active_connection_id = connection_id
+            self.stream.active_connection_name = name
 
         await self.publish_welcome(ws_conn)
         await self.publish_state()
@@ -161,11 +163,8 @@ class StreamManager:
 
         # deregister connection
         if conn := self.stream.connections.get(connection_id, None):
-            self.logger.info(f'WebSocket disconnected: {connection_id=}, {conn.info}')
             self.stream.remove_connection(connection_id)
-
-        if connection_id == self.stream.active_connection_id:
-            self.stream.active_connection_id = next(iter(self.stream.connections.keys()), None)
+            self.logger.info(f'WebSocket disconnected: {connection_id=}, {conn.info}')
 
         await self.publish_state()
 
@@ -189,15 +188,16 @@ class StreamManager:
 
                 elif socket_message['type'] == 'bytes':
 
-                    if conn_id != self.stream.active_connection_id:
-                        self.logger.warning("Non active connection sent payload...")
-                        await self.send_json(conn_id, {
-                            "type": "error",
-                            "payload": {
-                                "code": "non_active_publish"
-                            }
-                        })
-                        continue
+                    if conn := self.stream.connections.get(conn_id, None):
+                        if conn.info['name'] != self.stream.active_connection_name:
+                            self.logger.warning("Non active connection sent payload...")
+                            await self.send_json(conn_id, {
+                                "type": "error",
+                                "payload": {
+                                    "code": "non_active_publish"
+                                }
+                            })
+                            continue
 
                     if socket_message['data'] is None or len(socket_message['data']) == 0:
                         self.logger.warning('Got empty data blob')
@@ -217,16 +217,16 @@ class StreamManager:
 
         # extract app message
         if app_msg['type'] == "set_parameters":
-
-            self.stream.parameters = self.stream.parameters.model_copy(update=app_msg['payload'])
-            await self.publish_state()
-            self.logger.info(f"Parameters set: {self.stream.parameters.model_dump()}")
+            if self.stream.parameters.prompt == '' or app_msg['payload'].get('override', False) is True:
+                self.stream.parameters = self.stream.parameters.model_copy(update=app_msg['payload'])
+                await self.publish_state()
+                self.logger.info(f"Parameters set: {self.stream.parameters.model_dump()}")
 
         elif app_msg['type'] == "set_active_connection":
-            if UUID(app_msg['payload']['connection_id']) in self.stream.connections:
-                self.stream.active_connection_id = UUID(app_msg['payload']['connection_id'])
-                await self.publish_state()
-                self.logger.info(f"Active connection set: {self.stream.active_connection_id}")
+
+            self.stream.active_connection_name = app_msg['payload']['name']
+            await self.publish_state()
+            self.logger.info(f"Active connection set: {self.stream.active_connection_name}")
 
         elif app_msg['type'] == "set_connection_info":
             if conn := self.stream.connections.get(UUID(app_msg['payload']['connection_id'])):

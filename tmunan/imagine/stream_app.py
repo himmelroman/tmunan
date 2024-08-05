@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 from http.client import HTTPException
 from multiprocessing import freeze_support
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from tmunan.imagine.stream_manager import StreamManager, ImageStream, ServerFullException
+from tmunan.imagine.stream_manager import StreamManager, ServerFullException
 from tmunan.imagine.image_generator.image_generator import ImageGeneratorWorker
 
 # fix mime error on windows
@@ -74,14 +74,14 @@ class App:
         )
 
         @self.app.websocket("/api/ws")
-        async def websocket(websocket: WebSocket):
+        async def websocket(name: str, websocket: WebSocket):
 
             # accept incoming ws connection
             await websocket.accept()
 
             connection_id = uuid.uuid4()
             try:
-                await self.stream_manager.connect(connection_id, websocket)
+                await self.stream_manager.connect(name=name, connection_id=connection_id, websocket=websocket)
                 await self.stream_manager.handle_websocket(connection_id)
 
             finally:
