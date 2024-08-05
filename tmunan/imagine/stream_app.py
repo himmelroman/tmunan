@@ -1,15 +1,15 @@
 import os
 import uuid
 import mimetypes
-from asyncio import QueueEmpty
 from contextlib import asynccontextmanager
+from http.client import HTTPException
 from multiprocessing import freeze_support
 
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from tmunan.imagine.stream_manager import StreamManager, ImageStream
+from tmunan.imagine.stream_manager import StreamManager, ImageStream, ServerFullException
 from tmunan.imagine.image_generator.image_generator import ImageGeneratorWorker
 
 # fix mime error on windows
@@ -52,26 +52,16 @@ class App:
         # self.image_generator.on_shutdown = Event()
 
         # stream management
-        self.stream_manager = StreamManager()
-        self.stream_manager.on_input_ready += self.process_stream_input
+        self.stream_manager = StreamManager(max_streams=1)
+        self.stream_manager.on_input_ready += lambda req: self.image_generator.img2img(**req)
 
         # init app
         self.app.stream_manager = self.stream_manager
         self.app.image_generator = self.image_generator
         self.init_app()
 
-    def process_stream_input(self, stream_id):
-        if stream := self.stream_manager.streams.get(stream_id):
-
-            try:
-                req = stream.input_queue.get_nowait()
-                self.image_generator.img2img(handle_id=stream_id, **req)
-            except QueueEmpty:
-                pass
-
-    def handle_image_ready(self, stream_id, image):
-        if stream := self.stream_manager.streams.get(stream_id):
-            stream.distribute_output(image)
+    def handle_image_ready(self, image):
+        self.stream_manager.stream.distribute_output(image)
 
     def init_app(self):
 
@@ -86,30 +76,28 @@ class App:
         @self.app.websocket("/api/ws/{stream_id}")
         async def websocket(stream_id: uuid.UUID, websocket: WebSocket):
 
-            # get stream
-            stream = self.stream_manager.get_stream(stream_id)
-
             connection_id = uuid.uuid4()
             try:
-                await self.stream_manager.connect(stream_id, connection_id, websocket)
-                await self.stream_manager.handle_websocket(stream_id, connection_id)
+                await self.stream_manager.connect(connection_id, websocket)
+                await self.stream_manager.handle_websocket(connection_id)
 
             finally:
-                await self.stream_manager.disconnect(stream_id, connection_id)
+                await self.stream_manager.disconnect(connection_id)
 
         @self.app.get("/api/stream/{stream_id}")
         async def stream(stream_id: uuid.UUID):
 
-            # get stream
-            stream = self.stream_manager.get_stream(stream_id)
+            try:
 
-            # consume stream
-            consumer_id = uuid.uuid4()
-            return StreamingResponse(
-                self.stream_manager.handle_consumer(stream_id, consumer_id),
-                media_type="multipart/x-mixed-replace;boundary=frame",
-                headers={"Cache-Control": "no-cache"},
-            )
+                # consume stream
+                consumer_id = uuid.uuid4()
+                return StreamingResponse(
+                    self.stream_manager.handle_consumer(consumer_id),
+                    media_type="multipart/x-mixed-replace;boundary=frame",
+                    headers={"Cache-Control": "no-cache"},
+                )
+            except ServerFullException as ex:
+                return HTTPException('Server is full')
 
         # if not os.path.exists("public"):
         #     os.makedirs("public")

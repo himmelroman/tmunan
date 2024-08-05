@@ -25,14 +25,10 @@ class ImageGeneratorWorker:
             diff_type=diff_type
         )
 
-    def propagate_output(self, res_tuple):
-        self.on_image_ready.notify(res_tuple[0], res_tuple[1])
-
     def start(self):
 
         # subscribe to events
-        # self.bg_exec.on_output_ready += lambda res_tuple: self.on_image_ready.notify(res_tuple[0], res_tuple[1])
-        self.bg_exec.on_output_ready += self.propagate_output
+        self.bg_exec.on_output_ready += lambda img: self.on_image_ready.notify(img)
         self.bg_exec.on_worker_ready += self.on_startup.notify
         self.bg_exec.on_exit += self.on_shutdown.notify
         self.bg_exec.on_error += lambda ex: logging.error(f'Error: {ex}')
@@ -43,10 +39,9 @@ class ImageGeneratorWorker:
     def stop(self):
         self.bg_exec.stop()
 
-    def img2img(self, handle_id, **kwargs):
+    def img2img(self, **kwargs):
 
         if self.bg_exec.input_queue.empty():
-            kwargs['handle_id'] = handle_id
             self.bg_exec.push_input(kwargs)
 
     # def txt2img(self, **kwargs):
@@ -89,12 +84,9 @@ class ImageGeneratorBGTask(BackgroundTask):
 
         try:
 
-            # handle id
-            handle_id = img_gen_args.pop('handle_id', None)
-
             # run img2img
             images = self.lcm.img2img(**img_gen_args)
-            return handle_id, images[0]
+            return images[0]
 
         except Exception as ex:
             self.logger.exception(f'Error in {self.__class__.__name__} exec!')

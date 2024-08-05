@@ -25,21 +25,19 @@ class ServerFullException(Exception):
 
 class WebSocketConnection:
 
-    def __init__(self, id: UUID, stream_id: UUID, websocket: WebSocket):
+    def __init__(self, id: UUID, websocket: WebSocket):
 
         # connection
         self.id: UUID = id
-        self.stream_id: UUID = stream_id
         self.websocket: WebSocket = websocket
 
 
 class StreamConsumer:
 
-    def __init__(self, id: UUID, stream_id: UUID):
+    def __init__(self, id: UUID):
 
         # connection
         self.id: UUID = id
-        self.stream_id: UUID = stream_id
 
         # io
         self.output_queue = asyncio.Queue()
@@ -48,9 +46,6 @@ class StreamConsumer:
 class ImageStream:
 
     def __init__(self):
-
-        # io
-        self.input_queue = AsyncFixedSizeQueue(maxsize=1)
 
         # consumers and connections
         self.consumers: Dict[UUID, StreamConsumer] = {}
@@ -98,7 +93,7 @@ class StreamManager:
 
         # streams
         self.max_streams = max_streams
-        self.streams: Dict[UUID, ImageStream] = {}
+        self.stream: ImageStream = ImageStream()
 
         # events
         self.on_input_ready = Event()
@@ -106,55 +101,34 @@ class StreamManager:
         # env
         self.logger = get_logger(self.__class__.__name__)
 
-    def get_stream(self, stream_id):
-
-        self.streams[stream_id] = self.streams.get(stream_id, ImageStream())
-        return self.streams[stream_id]
-
-    @property
-    def stream_count(self) -> int:
-        return len(self.streams)
-
-    async def connect(self, stream_id: UUID, connection_id: UUID, websocket: WebSocket):
+    async def connect(self, connection_id: UUID, websocket: WebSocket):
 
         # accept incoming ws connection
         self.logger.info(f"Incoming WS Connection!")
         await websocket.accept()
 
-        # check if this is a new stream
-        if stream_id not in self.streams:
-
-            # check max concurrent streams
-            if self.stream_count >= self.max_streams:
-
-                self.logger.info(f"Server is full! Dropping connection")
-                await websocket.send_json({"status": "error", "message": "Server is full"})
-                await websocket.close()
-                raise ServerFullException("Server is full")
-
         # register new connection
-        self.logger.info(f"New WebSocket Connection established to stream: {stream_id}")
-        ws_conn = WebSocketConnection(id=connection_id, stream_id=stream_id, websocket=websocket)
-        self.streams[stream_id].add_connection(ws_conn)
+        self.logger.info(f"New WebSocket Connection established to stream: {connection_id=}")
+        ws_conn = WebSocketConnection(id=connection_id, websocket=websocket)
+        self.stream.add_connection(ws_conn)
 
         # send connection ack
         await websocket.send_json({"status": "connected", "message": "Connected"})
 
         return ws_conn
 
-    async def disconnect(self, stream_id: UUID, connection_id: UUID):
-        if stream := self.streams.pop(stream_id, None):
-            if conn := stream.connections.get(connection_id, None):
-                await conn.websocket.close()
-            stream.remove_connection(connection_id)
+    async def disconnect(self, connection_id: UUID):
+        if conn := self.stream.connections.get(connection_id, None):
+            await conn.websocket.close()
+        self.stream.remove_connection(connection_id)
 
-    async def handle_websocket(self, stream_id: UUID, conn_id: UUID):
+    async def handle_websocket(self, conn_id: UUID):
 
         try:
 
             while True:
 
-                message = await self.receive(stream_id, conn_id)
+                message = await self.receive(conn_id)
                 # self.logger.info(f'WS message arrived: {message}')
                 if message is None:
                     await asyncio.sleep(0.01)
@@ -162,12 +136,12 @@ class StreamManager:
 
                 elif message['type'] == 'json':
 
-                    self.streams[stream_id].param_cache = StreamInputParams(**message['data'])
+                    self.stream.param_cache = StreamInputParams(**message['data'])
                     # self.logger.info(f'WS message arrived: {message}')
 
                 elif message['type'] == 'bytes':
 
-                    if self.streams[stream_id].param_cache is None:
+                    if self.stream.param_cache is None:
                         self.logger.warning('Image arrived, but params not initialized')
                         continue
 
@@ -175,95 +149,73 @@ class StreamManager:
                         self.logger.warning('Got empty data blob')
                         continue
 
-                    stream_request = copy.deepcopy(self.streams[stream_id].param_cache)
+                    stream_request = copy.deepcopy(self.stream.param_cache)
                     stream_request = stream_request.model_dump()
                     stream_request['image'] = bytes_to_pil(message['data'])
 
-                    # enqueue image on stream input queue
-                    if stream := self.streams[stream_id]:
-                        # self.logger.info(f'WS message, put on queue')
-                        await stream.input_queue.put(stream_request)
-
-                        # TODO: This is ugly, we notify here for someone else to take the item from the queue
-                        self.on_input_ready.notify(stream_id)
+                    # TODO: This is ugly, we notify here for someone else to take the item from the queue
+                    self.on_input_ready.notify(stream_request)
 
         except Exception as e:
-            self.logger.exception(f"Websocket Error on {stream_id=}, {conn_id=} - {e}")
-            await self.disconnect(stream_id, conn_id)
+            self.logger.exception(f"Websocket Error on {conn_id=}")
+            await self.disconnect(conn_id)
 
-    async def enqueue_request(self, stream_id: UUID, request_data):
+    async def handle_consumer(self, cons_id: UUID):
 
-        # enqueue new request on specified connection's queue
-        if stream := self.streams.get(stream_id):
-            await stream.input_queue.put(request_data)
-
-    async def dequeue_request(self, stream_id: UUID):
-
-        if stream := self.streams.get(stream_id):
-            try:
-                return await stream.input_queue.get()
-            except asyncio.QueueEmpty:
-                return None
-
-    async def handle_consumer(self, stream_id: UUID, cons_id: UUID):
-
-        # get relevant stream
-        if stream := self.streams.get(stream_id, None):
-            try:
-                # register consumer
-                cons = StreamConsumer(cons_id, stream_id)
-                stream.add_consumer(cons)
-                self.logger.info(f"Incoming Stream Consumer: {stream_id=}{cons_id=}")
-
-                while True:
-
-                    # read from output queue
-                    image = await cons.output_queue.get()
-                    if image is None:
-                        await asyncio.sleep(0.01)
-                        continue
-
-                    # convert image to multipart frame
-                    frame = bytes_to_frame(pil_to_bytes(image, format='WEBP'))
-                    yield frame
-
-            finally:
-                # de-register consumer
-                stream.remove_consumer(cons_id)
-                self.logger.info(f"Removed Stream Consumer: {stream_id=}{cons_id=}")
-
-    def get_websocket(self, stream_id: UUID, conn_id: UUID) -> WebSocket | None:
-        if stream := self.streams.get(stream_id):
-            if conn := stream.connections.get(conn_id, None):
-                if conn.websocket.client_state == WebSocketState.CONNECTED:
-                    return conn.websocket
-
-    async def send_json(self, stream_id: UUID, conn_id: UUID, data: Dict):
         try:
-            if websocket := self.get_websocket(stream_id, conn_id):
+            # register consumer
+            cons = StreamConsumer(cons_id)
+            self.stream.add_consumer(cons)
+            self.logger.info(f"Incoming Stream Consumer: {cons_id=}")
+
+            while True:
+
+                # read from output queue
+                image = await cons.output_queue.get()
+                if image is None:
+                    await asyncio.sleep(0.01)
+                    continue
+
+                # convert image to multipart frame
+                frame = bytes_to_frame(pil_to_bytes(image, format='WEBP'))
+                yield frame
+
+        finally:
+            # de-register consumer
+            self.stream.remove_consumer(cons_id)
+            self.logger.info(f"Removed Stream Consumer: {cons_id=}")
+
+    def get_websocket(self, conn_id: UUID) -> WebSocket | None:
+        if conn := self.stream.connections.get(conn_id, None):
+            if conn.websocket.client_state == WebSocketState.CONNECTED:
+                return conn.websocket
+
+    async def send_json(self, conn_id: UUID, data: Dict):
+        try:
+            if websocket := self.get_websocket(conn_id):
                 await websocket.send_json(data)
         except Exception as e:
-            self.logger.exception(f"Error sending json to {stream_id}-{conn_id}")
+            self.logger.exception(f"Error sending json to {conn_id}")
 
-    async def receive_json(self, stream_id: UUID, conn_id: UUID) -> Dict:
+    async def receive_json(self, conn_id: UUID) -> Dict:
         try:
-            if websocket := self.get_websocket(stream_id, conn_id):
+            if websocket := self.get_websocket(conn_id):
                 return await websocket.receive_json()
         except Exception as e:
-            self.logger.exception(f"Error receiving json from {stream_id}-{conn_id}")
+            self.logger.exception(f"Error receiving json from {conn_id}")
 
-    async def receive_bytes(self, stream_id: UUID, conn_id: UUID) -> bytes:
+    async def receive_bytes(self, conn_id: UUID) -> bytes:
         try:
-            if websocket := self.get_websocket(stream_id, conn_id):
+            if websocket := self.get_websocket(conn_id):
                 return await websocket.receive_bytes()
         except Exception as e:
-            self.logger.exception(f"Error receiving bytes from {stream_id}-{conn_id}")
+            self.logger.exception(f"Error receiving bytes from {conn_id}")
 
-    async def receive(self, stream_id: UUID, conn_id: UUID):
+    async def receive(self, conn_id: UUID):
 
         message = None
         try:
-            if websocket := self.get_websocket(stream_id, conn_id):
+            if websocket := self.get_websocket(conn_id):
 
                 # try to receive a message
                 message = await websocket.receive()
