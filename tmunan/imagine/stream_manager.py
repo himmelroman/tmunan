@@ -2,6 +2,7 @@ import copy
 import json
 import typing
 import asyncio
+from queue import Queue
 
 from uuid import UUID
 from typing import Dict
@@ -11,6 +12,7 @@ from fastapi.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from websockets.exceptions import ConnectionClosedOK
 
 from tmunan.common.event import Event
+from tmunan.common.fixed_size_queue import AsyncFixedSizeQueue, FixedSizeQueue
 from tmunan.common.log import get_logger
 from tmunan.imagine.common.image_utils import bytes_to_pil, bytes_to_frame, pil_to_bytes
 from tmunan.imagine.common.pydantic_models import StreamInputParams
@@ -89,8 +91,8 @@ class StreamManager:
         self.max_streams = max_streams
         self.stream: ImageStream = ImageStream()
 
-        # events
-        self.on_input_ready = Event()
+        # queue
+        self.input_queue: Queue = FixedSizeQueue()
 
         # env
         self.logger = get_logger(self.__class__.__name__)
@@ -242,8 +244,7 @@ class StreamManager:
         stream_request['image'] = bytes_to_pil(app_msg)
 
         # fire event with new imag generation request
-        self.logger.info('Stream request received, firing event')
-        self.on_input_ready.notify(stream_request)
+        self.input_queue.put_nowait(stream_request)
 
     async def handle_consumer(self, cons_id: UUID):
 

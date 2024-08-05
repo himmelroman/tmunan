@@ -1,4 +1,6 @@
 import os
+import queue
+import threading
 import uuid
 import mimetypes
 from contextlib import asynccontextmanager
@@ -9,8 +11,10 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from tmunan.common.log import get_logger
+from tmunan.imagine.sd_lcm.lcm_control import ControlLCM
+from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 from tmunan.imagine.stream_manager import StreamManager, ServerFullException
-from tmunan.imagine.image_generator.image_generator import ImageGeneratorWorker
 
 # fix mime error on windows
 mimetypes.add_type("application/javascript", ".js")
@@ -24,7 +28,7 @@ async def lifespan(fastapi_app: FastAPI):
     # api_port = os.environ['API_PORT']
 
     # start image generator worker
-    fastapi_app.image_generator.start()
+    fastapi_app.image_generator.load()
 
     # FastAPI app lifespan
     yield
@@ -36,29 +40,41 @@ async def lifespan(fastapi_app: FastAPI):
 class App:
     def __init__(self):
 
+        # env
+        self.logger = get_logger('App')
+
         # create fastapi app
         self.app = FastAPI(lifespan=lifespan)
 
         # load image generator
         mode = os.environ.get('TMUNAN_IMAGE_MODE', 'stream')
         if mode == 'stream':
-            self.image_generator = ImageGeneratorWorker(model_id='sd-turbo', diff_type=mode)
+            self.image_generator = StreamLCM(model_id='sd-turbo')
         elif mode == 'control':
-            self.image_generator = ImageGeneratorWorker(model_id='hyper-sd', diff_type=mode)
-
-        # subscribe to events
-        self.image_generator.on_image_ready += self.handle_image_ready
-        # self.image_generator.on_startup = Event()
-        # self.image_generator.on_shutdown = Event()
+            self.image_generator = ControlLCM(model_id='hyper-sd')
 
         # stream management
         self.stream_manager = StreamManager(max_streams=1)
-        self.stream_manager.on_input_ready += lambda req: self.image_generator.img2img(**req)
+
+        # generation thread
+        self._generation_thread = threading.Thread(target=self.img_gen_thread)
+        self._generation_thread.start()
 
         # init app
         self.app.stream_manager = self.stream_manager
         self.app.image_generator = self.image_generator
         self.init_app()
+
+    def img_gen_thread(self):
+
+        while True:
+            try:
+                req = self.stream_manager.input_queue.get(timeout=0.1)
+                if req:
+                    images = self.image_generator.img2img(**req)
+                    self.stream_manager.stream.distribute_output(images[0])
+            except queue.Empty:
+                pass
 
     def handle_image_ready(self, image):
         self.stream_manager.stream.distribute_output(image)
