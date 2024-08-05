@@ -211,7 +211,7 @@ class BackgroundExecutor:
             task.setup()
 
             # signal ready
-            logger.info(f'Task is ready')
+            logger.info(f'Task is ready and waiting')
             # out_q.put_nowait((None, None))
 
             # run task loop
