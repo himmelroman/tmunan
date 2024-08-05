@@ -1,6 +1,7 @@
 import os
 import queue
 import threading
+import time
 import uuid
 import mimetypes
 from contextlib import asynccontextmanager
@@ -69,15 +70,15 @@ class App:
 
         while True:
             try:
-                req = self.stream_manager.input_queue.get(timeout=0.1)
+                req = self.stream_manager.input_queue.get(timeout=0.01)
                 if req:
+                    req_time = req.pop('timestamp')
+                    self.logger.info(f'Processing request from: {req_time}, which arrived {time.time() - req_time} ago')
                     images = self.image_generator.img2img(**req)
+                    self.logger.info(f'Finished processing request at: {req_time}, which arrived {time.time() - req_time} ago')
                     self.stream_manager.stream.distribute_output(images[0])
             except queue.Empty:
                 pass
-
-    def handle_image_ready(self, image):
-        self.stream_manager.stream.distribute_output(image)
 
     def init_app(self):
 

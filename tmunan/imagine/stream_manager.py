@@ -1,5 +1,6 @@
 import copy
 import json
+import time
 import typing
 import asyncio
 from queue import Queue
@@ -242,6 +243,8 @@ class StreamManager:
         stream_request = copy.deepcopy(self.stream.parameters)
         stream_request = stream_request.model_dump()
         stream_request['image'] = bytes_to_pil(app_msg)
+        stream_request['timestamp'] = time.time()
+        self.logger.info(f"Enqueue request at: {stream_request['timestamp']}")
 
         # fire event with new imag generation request
         self.input_queue.put_nowait(stream_request)
