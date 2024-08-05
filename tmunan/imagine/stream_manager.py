@@ -261,13 +261,12 @@ class StreamManager:
             while True:
 
                 # read from output queue
-                req_time, image = await cons.output_queue.get()
-                if image is None:
-                    await asyncio.sleep(0.01)
-                    continue
+                req_time, frame = await cons.output_queue.get()
+                # if frame is None:
+                #     await asyncio.sleep(0.01)
+                #     continue
 
                 # convert image to multipart frame
-                frame = bytes_to_frame(pil_to_bytes(image, format='WEBP'))
                 self.logger.info(f'Sending to consumer {cons_id=}, image which was requested {time.time() - req_time} ago')
                 yield frame
 

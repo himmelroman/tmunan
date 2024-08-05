@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from tmunan.common.log import get_logger
+from tmunan.imagine.common.image_utils import bytes_to_frame, pil_to_bytes
 from tmunan.imagine.sd_lcm.lcm_control import ControlLCM
 from tmunan.imagine.sd_lcm.lcm_stream import StreamLCM
 from tmunan.imagine.stream_manager import StreamManager, ServerFullException
@@ -76,7 +77,9 @@ class App:
                     self.logger.info(f'Processing request from: {req_time}, which arrived {time.time() - req_time} ago')
                     images = self.image_generator.img2img(**req)
                     self.logger.info(f'Finished processing request at: {req_time}, which arrived {time.time() - req_time} ago')
-                    self.stream_manager.stream.distribute_output(req_time, images[0])
+
+                    frame = bytes_to_frame(pil_to_bytes(images[0], format='WEBP'))
+                    self.stream_manager.stream.distribute_output(req_time, frame)
             except queue.Empty:
                 pass
 
