@@ -242,6 +242,7 @@ class StreamManager:
         stream_request['image'] = bytes_to_pil(app_msg)
 
         # fire event with new imag generation request
+        self.logger.info('Stream request received, firing event')
         self.on_input_ready.notify(stream_request)
 
     async def handle_consumer(self, cons_id: UUID):
