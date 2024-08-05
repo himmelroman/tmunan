@@ -214,9 +214,10 @@ class BackgroundExecutor:
         out_q.put((None, None))
 
         # run task loop
+        logger.info(f'about to start while loop {stop_event.is_set()}')
         while not stop_event.is_set():
             try:
-                item = in_q.get(timeout=0.01)
+                item = in_q.get(timeout=0.1)
                 logger.info(f'got item from input queue')
                 if item is None:
                     break
@@ -225,7 +226,7 @@ class BackgroundExecutor:
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
-                # logger.exception('Sleeping...')
+                logger.info(f'empty queue')
                 continue
             except Exception as e:
                 logger.exception('Error processing item!')

@@ -20,7 +20,7 @@ class ImageGeneratorWorker:
         # executor
         self.bg_exec = BackgroundExecutor(
             task_class=ImageGeneratorBGTask,
-            proc_method=BackgroundExecutor.ProcessCreationMethod.Fork,
+            proc_method=BackgroundExecutor.ProcessCreationMethod.Spawn,
             model_id=model_id,
             diff_type=diff_type
         )
