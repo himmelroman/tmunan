@@ -215,8 +215,9 @@ class BackgroundExecutor:
             # out_q.put_nowait((None, None))
 
             # run task loop
-            logger.info(f'about to start while loop {stop_event.is_set()}')
+            logger.info(f'about to start while loop')
             while not stop_event.is_set():
+                logger.info(f'inside loop')
                 try:
                     item = in_q.get(timeout=1)
                     logger.info(f'got item from input queue')
