@@ -222,7 +222,7 @@ class StreamManager:
                 await self.publish_state()
                 self.logger.info(f"Parameters set: {self.stream.parameters.model_dump()}")
 
-        elif app_msg['type'] == "set_active_connection":
+        elif app_msg['type'] == "set_active_name":
 
             self.stream.active_connection_name = app_msg['payload']['name']
             await self.publish_state()

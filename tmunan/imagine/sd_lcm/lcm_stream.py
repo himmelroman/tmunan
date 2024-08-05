@@ -140,9 +140,9 @@ class StreamLCM:
             # prepare
             self.stream.prepare(
                 prompt=prompt,
-                guidance_scale=guidance_scale,
-                strength=strength,
-                seed=seed
+                guidance_scale=float(guidance_scale),
+                strength=float(strength),
+                seed=int(seed)
             )
             self.logger.info(
                 f"Stream configuration: "
