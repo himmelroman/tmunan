@@ -217,8 +217,11 @@ class BackgroundExecutor:
         while not stop_event.is_set():
             try:
                 item = in_q.get(timeout=0.01)
+                logger.info(f'got item from input queue')
                 if item is None:
                     break
+
+                logger.info(f'running exec')
                 result = task.exec(item)
                 out_q.put((True, result))
             except Empty:
