@@ -25,10 +25,14 @@ class ImageGeneratorWorker:
             diff_type=diff_type
         )
 
+    def propagate_output(self, res_tuple):
+        self.on_image_ready.notify(res_tuple[0], res_tuple[1])
+
     def start(self):
 
         # subscribe to events
-        self.bg_exec.on_output_ready += lambda res: self.on_image_ready.notify(res)
+        # self.bg_exec.on_output_ready += lambda res_tuple: self.on_image_ready.notify(res_tuple[0], res_tuple[1])
+        self.bg_exec.on_output_ready += self.propagate_output
         self.bg_exec.on_worker_ready += self.on_startup.notify
         self.bg_exec.on_exit += self.on_shutdown.notify
         self.bg_exec.on_error += lambda ex: logging.error(f'Error: {ex}')
@@ -40,8 +44,10 @@ class ImageGeneratorWorker:
         self.bg_exec.stop()
 
     def img2img(self, handle_id, **kwargs):
-        kwargs['handle_id'] = handle_id
-        self.bg_exec.push_input(kwargs)
+
+        if self.bg_exec.input_queue.empty():
+            kwargs['handle_id'] = handle_id
+            self.bg_exec.push_input(kwargs)
 
     # def txt2img(self, **kwargs):
     #     kwargs['task'] = TaskType.Text2Image.value

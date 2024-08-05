@@ -1,17 +1,16 @@
 import os
 import uuid
-import logging
 import mimetypes
+from asyncio import QueueEmpty
 from contextlib import asynccontextmanager
 from multiprocessing import freeze_support
 
-from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from tmunan.imagine.stream_manager import StreamManager, ImageStream
 from tmunan.imagine.image_generator.image_generator import ImageGeneratorWorker
-from tmunan.imagine.common.pydantic_models import StreamInputParams
 
 # fix mime error on windows
 mimetypes.add_type("application/javascript", ".js")
@@ -39,7 +38,6 @@ class App:
 
         # create fastapi app
         self.app = FastAPI(lifespan=lifespan)
-        self.stream_manager = StreamManager()
 
         # load image generator
         mode = os.environ.get('TMUNAN_IMAGE_MODE', 'stream')
@@ -53,12 +51,23 @@ class App:
         # self.image_generator.on_startup = Event()
         # self.image_generator.on_shutdown = Event()
 
+        # stream management
         self.stream_manager = StreamManager()
+        self.stream_manager.on_input_ready += self.process_stream_input
 
+        # init app
         self.app.stream_manager = self.stream_manager
         self.app.image_generator = self.image_generator
-
         self.init_app()
+
+    def process_stream_input(self, stream_id):
+        if stream := self.stream_manager.streams.get(stream_id):
+
+            try:
+                req = stream.input_queue.get_nowait()
+                self.image_generator.img2img(handle_id=stream_id, **req)
+            except QueueEmpty:
+                pass
 
     def handle_image_ready(self, stream_id, image):
         if stream := self.stream_manager.streams.get(stream_id):

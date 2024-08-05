@@ -170,7 +170,7 @@ class ControlLCM:
             num_images_per_prompt=1,
             controlnet_conditioning_scale=control_net_scale,
             output_type="pil",
-            eta=1.0,
+            eta=0.8,
             seed=seed
         ).images
 

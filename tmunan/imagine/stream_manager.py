@@ -11,8 +11,9 @@ from json import JSONDecodeError
 
 from fastapi.websockets import WebSocket, WebSocketState
 
+from tmunan.common.event import Event
 from tmunan.common.log import get_logger
-from tmunan.imagine.common.fixed_size_queue import AsyncFixedSizeQueue
+from tmunan.common.fixed_size_queue import AsyncFixedSizeQueue
 from tmunan.imagine.common.image_utils import bytes_to_pil, bytes_to_frame, pil_to_bytes
 from tmunan.imagine.common.pydantic_models import StreamInputParams
 
@@ -95,8 +96,12 @@ class StreamManager:
 
     def __init__(self, max_streams=1):
 
+        # streams
         self.max_streams = max_streams
         self.streams: Dict[UUID, ImageStream] = {}
+
+        # events
+        self.on_input_ready = Event()
 
         # env
         self.logger = get_logger(self.__class__.__name__)
@@ -150,7 +155,7 @@ class StreamManager:
             while True:
 
                 message = await self.receive(stream_id, conn_id)
-                self.logger.info(f'WS message arrived: {message}')
+                # self.logger.info(f'WS message arrived: {message}')
                 if message is None:
                     await asyncio.sleep(0.01)
                     continue
@@ -158,7 +163,7 @@ class StreamManager:
                 elif message['type'] == 'json':
 
                     self.streams[stream_id].param_cache = StreamInputParams(**message['data'])
-                    self.logger.info(f'WS message arrived: {message}')
+                    # self.logger.info(f'WS message arrived: {message}')
 
                 elif message['type'] == 'bytes':
 
@@ -176,8 +181,11 @@ class StreamManager:
 
                     # enqueue image on stream input queue
                     if stream := self.streams[stream_id]:
-                        self.logger.info(f'WS message, put on queue')
+                        # self.logger.info(f'WS message, put on queue')
                         await stream.input_queue.put(stream_request)
+
+                        # TODO: This is ugly, we notify here for someone else to take the item from the queue
+                        self.on_input_ready.notify(stream_id)
 
         except Exception as e:
             self.logger.exception(f"Websocket Error on {stream_id=}, {conn_id=} - {e}")
@@ -205,6 +213,7 @@ class StreamManager:
                 # register consumer
                 cons = StreamConsumer(cons_id, stream_id)
                 stream.add_consumer(cons)
+                self.logger.info(f"Incoming Stream Consumer: {stream_id=}{cons_id=}")
 
                 while True:
 
@@ -221,11 +230,12 @@ class StreamManager:
             finally:
                 # de-register consumer
                 stream.remove_consumer(cons_id)
+                self.logger.info(f"Removed Stream Consumer: {stream_id=}{cons_id=}")
 
     def get_websocket(self, stream_id: UUID, conn_id: UUID) -> WebSocket | None:
         if stream := self.streams.get(stream_id):
             if conn := stream.connections.get(conn_id, None):
-                if conn.websocket == WebSocketState.CONNECTED:
+                if conn.websocket.client_state == WebSocketState.CONNECTED:
                     return conn.websocket
 
     async def send_json(self, stream_id: UUID, conn_id: UUID, data: Dict):

@@ -1,5 +1,6 @@
 import enum
 import atexit
+import queue
 import threading
 import multiprocessing
 
@@ -145,7 +146,13 @@ class BackgroundExecutor:
     def process(self):
         return self._proc
 
-    def push_input(self, item):
+    @property
+    def input_queue(self):
+        return self._input_queue
+
+    def push_input(self, item, max_size=None):
+
+        # put new item
         self._input_queue.put(item)
 
     def stop(self, force=False):
