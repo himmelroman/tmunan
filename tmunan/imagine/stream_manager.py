@@ -2,8 +2,6 @@ import copy
 import json
 import typing
 import asyncio
-import logging
-import uuid
 
 from uuid import UUID
 from typing import Dict
@@ -13,7 +11,6 @@ from fastapi.websockets import WebSocket, WebSocketState
 
 from tmunan.common.event import Event
 from tmunan.common.log import get_logger
-from tmunan.common.fixed_size_queue import AsyncFixedSizeQueue
 from tmunan.imagine.common.image_utils import bytes_to_pil, bytes_to_frame, pil_to_bytes
 from tmunan.imagine.common.pydantic_models import StreamInputParams
 
@@ -52,11 +49,7 @@ class ImageStream:
         self.active_connection_id: UUID | None = None
 
         # params cache
-        default_params = {
-            'prompt': 'Lions in the sky',
-            'strength': 1.0
-        }
-        self.param_cache = StreamInputParams(**default_params)
+        self.parameters = StreamInputParams()
 
     @property
     def has_consumers(self) -> bool:
@@ -134,7 +127,7 @@ class StreamManager:
                             for cons in self.stream.consumers.values()
                         ],
                         "active_connection_id": str(self.stream.active_connection_id),
-                        "parameters": self.stream.param_cache.model_dump()
+                        "parameters": self.stream.parameters.model_dump()
                     }
                 }
 
@@ -225,9 +218,9 @@ class StreamManager:
         # extract app message
         if app_msg['type'] == "set_parameters":
 
-            self.stream.param_cache = StreamInputParams(**app_msg['payload'])
+            self.stream.parameters = self.stream.parameters.model_copy(update=app_msg['payload'])
             await self.publish_state()
-            self.logger.info(f"Parameters set: {self.stream.param_cache.model_dump()}")
+            self.logger.info(f"Parameters set: {self.stream.parameters.model_dump()}")
 
         elif app_msg['type'] == "set_active_connection":
             if UUID(app_msg['payload']['connection_id']) in self.stream.connections:
@@ -244,7 +237,7 @@ class StreamManager:
     async def handle_bytes_message(self, app_msg):
 
         # process incoming payload
-        stream_request = copy.deepcopy(self.stream.param_cache)
+        stream_request = copy.deepcopy(self.stream.parameters)
         stream_request = stream_request.model_dump()
         stream_request['image'] = bytes_to_pil(app_msg)
 

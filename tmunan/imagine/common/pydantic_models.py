@@ -5,10 +5,7 @@ from pydantic import BaseModel, Field
 
 class StreamInputParams(BaseModel):
     prompt: str = Field(
-        'Default prompt text - change in the code!',
-        title="Prompt",
-        field="textarea",
-        id="prompt",
+        '', title="Prompt", field="textarea", id="prompt"
     )
     strength: float = Field(
         1.0, min=1.0, max=2.5, title="Strength", disabled=True, hide=True, id="strength"
