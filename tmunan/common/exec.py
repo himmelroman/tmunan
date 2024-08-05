@@ -217,7 +217,7 @@ class BackgroundExecutor:
         logger.info(f'about to start while loop {stop_event.is_set()}')
         while not stop_event.is_set():
             try:
-                item = in_q.get(timeout=0.1)
+                item = in_q.get(timeout=1)
                 logger.info(f'got item from input queue')
                 if item is None:
                     break
