@@ -94,7 +94,7 @@ class StreamLCM:
             height=512,
             # cfg_type='self'
         )
-        self.stream.enable_similar_image_filter(threshold=0.99, max_skip_frame=3)
+        # self.stream.enable_similar_image_filter(threshold=0.99, max_skip_frame=3)
 
         # check for LCM lora
         if self.model_map[self.model_id].get('lcm_lora'):
