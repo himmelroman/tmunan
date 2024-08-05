@@ -216,6 +216,7 @@ class BackgroundExecutor:
 
             # run task loop
             logger.info(f'about to start while loop')
+            logger.info(f'stop event: {stop_event.is_set()}')
             while not stop_event.is_set():
                 logger.info(f'inside loop')
                 try:
