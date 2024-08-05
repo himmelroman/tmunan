@@ -76,7 +76,7 @@ class App:
                     self.logger.info(f'Processing request from: {req_time}, which arrived {time.time() - req_time} ago')
                     images = self.image_generator.img2img(**req)
                     self.logger.info(f'Finished processing request at: {req_time}, which arrived {time.time() - req_time} ago')
-                    self.stream_manager.stream.distribute_output(images[0])
+                    self.stream_manager.stream.distribute_output(req_time, images[0])
             except queue.Empty:
                 pass
 

@@ -75,13 +75,13 @@ class ImageStream:
     def remove_connection(self, conn_id: UUID):
         self.connections.pop(conn_id, None)
 
-    def distribute_output(self, data):
+    def distribute_output(self, req_time, data):
 
         # iterate all connection registered to this stream
         for cons_id, cons in list(self.consumers.items()):
 
             # enqueue output
-            cons.output_queue.put_nowait(data)
+            cons.output_queue.put_nowait((req_time, data))
 
 
 class StreamManager:
@@ -261,13 +261,14 @@ class StreamManager:
             while True:
 
                 # read from output queue
-                image = await cons.output_queue.get()
+                req_time, image = await cons.output_queue.get()
                 if image is None:
                     await asyncio.sleep(0.01)
                     continue
 
                 # convert image to multipart frame
                 frame = bytes_to_frame(pil_to_bytes(image, format='WEBP'))
+                self.logger.info(f'Sending to consumer {cons_id=}, image which was requested {time.time() - req_time} ago')
                 yield frame
 
         finally:
