@@ -93,7 +93,7 @@ class StreamManager:
         self.stream: ImageStream = ImageStream()
 
         # queue
-        self.input_queue: Queue = FixedSizeQueue()
+        self.input_queue: Queue = FixedSizeQueue(max_size=2)
 
         # env
         self.logger = get_logger(self.__class__.__name__)
@@ -247,7 +247,7 @@ class StreamManager:
         self.logger.info(f"Enqueue request at: {stream_request['timestamp']}")
 
         # fire event with new imag generation request
-        self.input_queue.put_nowait(stream_request)
+        self.input_queue.put(stream_request)
 
     async def handle_consumer(self, cons_id: UUID):
 
