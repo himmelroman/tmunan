@@ -73,8 +73,8 @@ class App:
             allow_headers=["*"],
         )
 
-        @self.app.websocket("/api/ws/{stream_id}")
-        async def websocket(stream_id: uuid.UUID, websocket: WebSocket):
+        @self.app.websocket("/api/ws")
+        async def websocket(websocket: WebSocket):
 
             connection_id = uuid.uuid4()
             try:
@@ -84,8 +84,8 @@ class App:
             finally:
                 await self.stream_manager.disconnect(connection_id)
 
-        @self.app.get("/api/stream/{stream_id}")
-        async def stream(stream_id: uuid.UUID):
+        @self.app.get("/api/stream")
+        async def stream():
 
             try:
 

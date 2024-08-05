@@ -27,16 +27,15 @@ class WebSocketConnection:
 
     def __init__(self, id: UUID, websocket: WebSocket):
 
-        # connection
         self.id: UUID = id
         self.websocket: WebSocket = websocket
+        self.info = None
 
 
 class StreamConsumer:
 
     def __init__(self, id: UUID):
 
-        # connection
         self.id: UUID = id
 
         # io
@@ -50,7 +49,7 @@ class ImageStream:
         # consumers and connections
         self.consumers: Dict[UUID, StreamConsumer] = {}
         self.connections: Dict[UUID, WebSocketConnection] = {}
-        self.active_connection: UUID | None = None
+        self.active_connection_id: UUID | None = None
 
         # params cache
         default_params = {
@@ -102,15 +101,29 @@ class StreamManager:
         # env
         self.logger = get_logger(self.__class__.__name__)
 
+    async def publish_welcome(self, conn: WebSocketConnection):
+
+        welcome = {
+            "type": "connected",
+            "payload": {
+                "id": str(conn.id),
+                "info": conn.info,
+                "active": conn.id == self.stream.active_connection_id
+            }
+        }
+
+        await conn.websocket.send_json(welcome)
+
     async def publish_state(self):
 
         state = {
                     "type": "state",
-                    "stream": {
+                    "payload": {
                         "connections": [
                             {
                                 "id": str(conn.id),
-                                "active": bool(conn.id == self.stream.active_connection),
+                                "info": conn.info,
+                                "active": bool(conn.id == self.stream.active_connection_id),
                             }
                             for conn in self.stream.connections.values()
                         ],
@@ -120,7 +133,7 @@ class StreamManager:
                             }
                             for cons in self.stream.consumers.values()
                         ],
-                        "active_connection": str(self.stream.active_connection),
+                        "active_connection_id": str(self.stream.active_connection_id),
                         "parameters": self.stream.param_cache.model_dump()
                     }
                 }
@@ -134,28 +147,36 @@ class StreamManager:
     async def connect(self, connection_id: UUID, websocket: WebSocket):
 
         # accept incoming ws connection
-        self.logger.info(f"Incoming WS Connection!")
         await websocket.accept()
 
         # register new connection
-        self.logger.info(f"New WebSocket Connection established to stream: {connection_id=}")
+        self.logger.info(f"WebSocket connected: {connection_id=}")
         ws_conn = WebSocketConnection(id=connection_id, websocket=websocket)
         self.stream.add_connection(ws_conn)
 
         # check if this is the first connection
         if len(self.stream.connections) == 1:
-            self.stream.active_connection = connection_id
+            self.stream.active_connection_id = connection_id
 
+        await self.publish_welcome(ws_conn)
         await self.publish_state()
 
         return ws_conn
 
     async def disconnect(self, connection_id: UUID):
+
+        # close websocket
         if conn := self.stream.connections.get(connection_id, None):
             await conn.websocket.close()
+
+        # deregister connection
+        if connection_id == self.stream.active_connection_id:
+            self.stream.active_connection_id = None
         self.stream.remove_connection(connection_id)
 
         await self.publish_state()
+
+        self.logger.warning(f'WebSocket disconnected: {connection_id=}')
 
     async def handle_websocket(self, conn_id: UUID):
 
@@ -163,52 +184,72 @@ class StreamManager:
 
             while True:
 
-                message = await self.receive(conn_id)
-                # self.logger.info(f'WS message arrived: {message}')
-                if message is None:
+                socket_message = await self.receive(conn_id)
+                if socket_message is None:
                     await asyncio.sleep(0.01)
                     continue
 
-                elif message['type'] == 'json':
+                # check for JSON messages
+                elif socket_message['type'] == 'json':
 
-                    app_msg = dict(message['data'])
-                    if app_msg['type'] == "parameters":
-                        self.stream.param_cache = StreamInputParams(**message['data'])
-                        await self.publish_state()
+                    # parse and handle message
+                    app_msg = dict(socket_message['data'])
+                    await self.handle_json_message(app_msg)
 
-                    elif app_msg['type'] == "set_active":
-                        if app_msg['connection_id'] in self.stream.connections.get(app_msg['connection_id']):
-                            self.stream.active_connection = app_msg['connection_id']
+                elif socket_message['type'] == 'bytes':
 
-                elif message['type'] == 'bytes':
-
-                    if conn_id != self.stream.active_connection:
+                    if conn_id != self.stream.active_connection_id:
                         self.logger.warning("Non active connection sent payload...")
                         await self.send_json(conn_id, {
                             "type": "error",
-                            "code": "non_active_publish"
+                            "payload": {
+                                "code": "non_active_publish"
+                            }
                         })
                         continue
 
-                    if self.stream.param_cache is None:
-                        self.logger.warning('Image arrived, but params not initialized')
-                        continue
-
-                    if message['data'] is None or len(message['data']) == 0:
+                    if socket_message['data'] is None or len(socket_message['data']) == 0:
                         self.logger.warning('Got empty data blob')
                         continue
 
-                    # process incoming payload
-                    stream_request = copy.deepcopy(self.stream.param_cache)
-                    stream_request = stream_request.model_dump()
-                    stream_request['image'] = bytes_to_pil(message['data'])
-
-                    # fire event with new imag generation request
-                    self.on_input_ready.notify(stream_request)
+                    # parse and handle message
+                    app_msg = socket_message['data']
+                    await self.handle_bytes_message(app_msg)
 
         except Exception as e:
             self.logger.exception(f"Websocket Error on {conn_id=}")
             await self.disconnect(conn_id)
+
+    async def handle_json_message(self, app_msg):
+
+        # extract app message
+        if app_msg['type'] == "set_parameters":
+
+            self.stream.param_cache = StreamInputParams(**app_msg['payload'])
+            await self.publish_state()
+            self.logger.info(f"Parameters set: {self.stream.param_cache.model_dump()}")
+
+        elif app_msg['type'] == "set_active_connection":
+            if UUID(app_msg['payload']['connection_id']) in self.stream.connections:
+                self.stream.active_connection_id = UUID(app_msg['payload']['connection_id'])
+                await self.publish_state()
+                self.logger.info(f"Active connection set: {self.stream.active_connection_id}")
+
+        elif app_msg['type'] == "set_connection_info":
+            if conn := self.stream.connections.get(UUID(app_msg['payload']['connection_id'])):
+                conn.info = app_msg['payload']['info']
+                await self.publish_state()
+                self.logger.info(f"Connection info updated: {conn.id=} - {conn.info}")
+
+    async def handle_bytes_message(self, app_msg):
+
+        # process incoming payload
+        stream_request = copy.deepcopy(self.stream.param_cache)
+        stream_request = stream_request.model_dump()
+        stream_request['image'] = bytes_to_pil(app_msg)
+
+        # fire event with new imag generation request
+        self.on_input_ready.notify(stream_request)
 
     async def handle_consumer(self, cons_id: UUID):
 
