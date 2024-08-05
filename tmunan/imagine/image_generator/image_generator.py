@@ -20,7 +20,7 @@ class ImageGeneratorWorker:
         # executor
         self.bg_exec = BackgroundExecutor(
             task_class=ImageGeneratorBGTask,
-            proc_method=BackgroundExecutor.ProcessCreationMethod.Spawn,
+            proc_method=BackgroundExecutor.ProcessCreationMethod.Fork,
             model_id=model_id,
             diff_type=diff_type
         )
@@ -45,7 +45,7 @@ class ImageGeneratorWorker:
     def img2img(self, **kwargs):
 
         if self.bg_exec.input_queue.empty():
-            self.logger.info('queue not empty, putting')
+            self.logger.info('queue empty, putting')
             self.bg_exec.push_input(kwargs)
 
     # def txt2img(self, **kwargs):
