@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from http.client import HTTPException
 from multiprocessing import freeze_support
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -75,6 +75,9 @@ class App:
 
         @self.app.websocket("/api/ws")
         async def websocket(websocket: WebSocket):
+
+            # accept incoming ws connection
+            await websocket.accept()
 
             connection_id = uuid.uuid4()
             try:

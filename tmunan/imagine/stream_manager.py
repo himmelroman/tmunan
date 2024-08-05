@@ -7,7 +7,7 @@ from uuid import UUID
 from typing import Dict
 from json import JSONDecodeError
 
-from fastapi.websockets import WebSocket, WebSocketState
+from fastapi.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from tmunan.common.event import Event
 from tmunan.common.log import get_logger
@@ -22,11 +22,11 @@ class ServerFullException(Exception):
 
 class WebSocketConnection:
 
-    def __init__(self, id: UUID, websocket: WebSocket):
+    def __init__(self, id: UUID, websocket: WebSocket, info: dict = None):
 
         self.id: UUID = id
+        self.info = info
         self.websocket: WebSocket = websocket
-        self.info = None
 
 
 class StreamConsumer:
@@ -139,12 +139,13 @@ class StreamManager:
 
     async def connect(self, connection_id: UUID, websocket: WebSocket):
 
-        # accept incoming ws connection
-        await websocket.accept()
-
         # register new connection
-        self.logger.info(f"WebSocket connected: {connection_id=}")
-        ws_conn = WebSocketConnection(id=connection_id, websocket=websocket)
+        self.logger.info(f"WebSocket connected: {connection_id=}, host={websocket.client.host}")
+        ws_conn = WebSocketConnection(
+            id=connection_id,
+            info={'host': websocket.client.host},
+            websocket=websocket
+        )
         self.stream.add_connection(ws_conn)
 
         # check if this is the first connection
@@ -158,18 +159,15 @@ class StreamManager:
 
     async def disconnect(self, connection_id: UUID):
 
-        # close websocket
-        if conn := self.stream.connections.get(connection_id, None):
-            await conn.websocket.close()
-
         # deregister connection
+        if conn := self.stream.connections.get(connection_id, None):
+            self.logger.info(f'WebSocket disconnected: {connection_id=}, {conn.info}')
+            self.stream.remove_connection(connection_id)
+
         if connection_id == self.stream.active_connection_id:
-            self.stream.active_connection_id = None
-        self.stream.remove_connection(connection_id)
+            self.stream.active_connection_id = next(iter(self.stream.connections.keys()), None)
 
         await self.publish_state()
-
-        self.logger.warning(f'WebSocket disconnected: {connection_id=}')
 
     async def handle_websocket(self, conn_id: UUID):
 
@@ -209,9 +207,11 @@ class StreamManager:
                     app_msg = socket_message['data']
                     await self.handle_bytes_message(app_msg)
 
+        except WebSocketDisconnect as disconnect_ex:
+            pass
+
         except Exception as e:
             self.logger.exception(f"Websocket Error on {conn_id=}")
-            await self.disconnect(conn_id)
 
     async def handle_json_message(self, app_msg):
 
@@ -230,7 +230,7 @@ class StreamManager:
 
         elif app_msg['type'] == "set_connection_info":
             if conn := self.stream.connections.get(UUID(app_msg['payload']['connection_id'])):
-                conn.info = app_msg['payload']['info']
+                conn.info.update(app_msg['payload']['info'])
                 await self.publish_state()
                 self.logger.info(f"Connection info updated: {conn.id=} - {conn.info}")
 
@@ -299,31 +299,29 @@ class StreamManager:
 
     async def receive(self, conn_id: UUID):
 
-        message = None
-        try:
-            if websocket := self.get_websocket(conn_id):
+        if websocket := self.get_websocket(conn_id):
 
-                # try to receive a message
-                message = await websocket.receive()
-                if message is None:
-                    return
+            # try to receive a message
+            message = await websocket.receive()
+            if message is None:
+                return
 
-                # check if received message is text
-                if message.get('text', None) is not None:
-                    try:
-                        return {
-                            'type': 'json',
-                            'data': json.loads(message["text"])
-                        }
-                    except JSONDecodeError as not_json:
-                        pass
+            if message["type"] == "websocket.disconnect":
+                raise WebSocketDisconnect(message["code"], message.get("reason"))
 
-                # check if received message is bytes
-                elif message.get('bytes', None) is not None:
+            # check if received message is text
+            if message.get('text', None) is not None:
+                try:
                     return {
-                        'type': 'bytes',
-                        'data': typing.cast(bytes, message["bytes"])
+                        'type': 'json',
+                        'data': json.loads(message["text"])
                     }
+                except JSONDecodeError as not_json:
+                    pass
 
-        except Exception as e:
-            self.logger.exception(f"Error in Receive! {message=}")
+            # check if received message is bytes
+            elif message.get('bytes', None) is not None:
+                return {
+                    'type': 'bytes',
+                    'data': typing.cast(bytes, message["bytes"])
+                }
