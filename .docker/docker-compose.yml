@@ -30,6 +30,13 @@ services:
     environment:
       - IMAGINE_HOST=imagine
       - IMAGINE_PORT=8090
+    ports:
+      - "8080:8080"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "1"
+        max-size: "100k"
 
   nginx:
     image: nginx
