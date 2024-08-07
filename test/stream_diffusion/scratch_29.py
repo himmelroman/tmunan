@@ -12,10 +12,13 @@ def streamdiffusion_strength_test():
 
     # You can load any models using diffuser's StableDiffusionPipeline
     # pipe = StableDiffusionPipeline.from_pretrained("KBlueLeaf/kohaku-v2.1").to(
-    pipe = StableDiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").to(
-        device=torch.device("mps"),
+    # pipe = StableDiffusionPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7").to(
+    pipe = StableDiffusionPipeline.from_pretrained("stabilityai/sd-turbo").to(
+        # device=torch.device("mps"),
         dtype=torch.float16,
-    )
+        safety_checker=None,
+        requires_safety_checker=False
+    ).to("mps")
 
     # Wrap the pipeline in StreamDiffusion
     stream = StreamDiffusion(
@@ -25,8 +28,8 @@ def streamdiffusion_strength_test():
     )
 
     # If the loaded model is not LCM, merge LCM
-    stream.load_lcm_lora("latent-consistency/lcm-lora-sdv1-5")
-    stream.fuse_lora()
+    # stream.load_lcm_lora("latent-consistency/lcm-lora-sdv1-5")
+    # stream.fuse_lora()
 
     # Use Tiny VAE for further acceleration
     stream.vae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to(device=pipe.device, dtype=pipe.dtype)
@@ -36,16 +39,21 @@ def streamdiffusion_strength_test():
 
     # prepare input
     prompt = "black dog, flying on fire wings"
-    init_image = load_image("/Users/himmelroman/projects/speechualizer/StreamDiffusion/assets/img2img_example.png").resize((512, 512))
+    # init_image = load_image("/Users/himmelroman/projects/speechualizer/StreamDiffusion/assets/img2img_example.png").resize((512, 512))
+    init_image = load_image("/Users/himmelroman/Desktop/House/373408370_6478098395560526_1428679915222833350_n.jpg").resize((512, 512))
 
-    for strength in [2.2, 2.4, 2.6]:   #[1.0, 1.2, 1.4, 1.6, 1.8, 2.0]:
+    for strength in [2.4]:
 
         # Prepare the stream
         t_start = perf_counter()
-        stream.prepare(prompt, strength=strength)
+        stream.prepare(
+            prompt=prompt,
+            guidance_scale=float(1.2),
+            strength=float(1.6),
+            seed=int(12345)
+        )
         print(f'Prepare time: {perf_counter() - t_start}')
 
-        # Warmup >= len(t_index_list) x frame_buffer_size
         print('Warming up')
         for _ in range(2):
             t_start = perf_counter()

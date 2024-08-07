@@ -1,6 +1,6 @@
+import time
 import copy
 import json
-import time
 import typing
 import asyncio
 from queue import Queue
@@ -9,14 +9,14 @@ from uuid import UUID
 from typing import Dict
 from json import JSONDecodeError
 
-from fastapi.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from websockets.exceptions import ConnectionClosedOK
+from fastapi.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from tmunan.common.event import Event
-from tmunan.common.fixed_size_queue import AsyncFixedSizeQueue, FixedSizeQueue
 from tmunan.common.log import get_logger
-from tmunan.imagine.common.image_utils import bytes_to_pil, bytes_to_frame, pil_to_bytes
-from tmunan.imagine.common.pydantic_models import StreamInputParams
+from tmunan.common.fixed_size_queue import FixedSizeQueue
+from tmunan.imagine.common.models import ImageParameters
+from tmunan.imagine.common.image_utils import bytes_to_pil
+from tmunan.imagine.image_gen_app.client import ImagineClient
 
 
 class ServerFullException(Exception):
@@ -53,7 +53,7 @@ class ImageStream:
         self.active_connection_name: str | None = None
 
         # params cache
-        self.parameters = StreamInputParams()
+        self.parameters = ImageParameters()
 
     @property
     def has_consumers(self) -> bool:
@@ -92,8 +92,10 @@ class StreamManager:
         self.max_streams = max_streams
         self.stream: ImageStream = ImageStream()
 
-        # queue
+        # img generation
         self.input_queue: Queue = FixedSizeQueue(max_size=2)
+        self.img_client = ImagineClient(host='localhost', port=8090, secure=False)
+        self.img_client.on_image_ready += self.stream.distribute_output
 
         # env
         self.logger = get_logger(self.__class__.__name__)
@@ -244,9 +246,9 @@ class StreamManager:
         stream_request = stream_request.model_dump()
         stream_request['image'] = bytes_to_pil(app_msg)
         stream_request['timestamp'] = time.time()
-        self.logger.info(f"Enqueue request at: {stream_request['timestamp']}")
 
         # fire event with new imag generation request
+        self.logger.info(f"Enqueue request at: {stream_request['timestamp']}")
         self.input_queue.put(stream_request)
 
     async def handle_consumer(self, cons_id: UUID):

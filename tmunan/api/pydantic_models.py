@@ -20,9 +20,9 @@ class ImageInstructions(BaseModel):
     seed: int | None = None
     height: int | None = 768
     width: int | None = 768
-    key_frame_period: int = 3
-    key_frame_repeat: int = 2
-    output_fps: int = 12
+    # key_frame_period: int = 3
+    # key_frame_repeat: int = 2
+    # output_fps: int = 12
 
 
 class ReadTextPrompt(BaseModel):

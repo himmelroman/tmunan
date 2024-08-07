@@ -4,6 +4,7 @@ import random
 
 import torch
 import numpy as np
+from PIL.Image import Image
 from diffusers import StableDiffusionPipeline, AutoencoderTiny
 
 from streamdiffusion import StreamDiffusion
@@ -160,7 +161,7 @@ class StreamLCM:
 
     def img2img(self,
                 prompt: str,
-                image: str,
+                image: str | Image,
                 height: int = 512,
                 width: int = 512,
                 num_inference_steps: int = 4,
@@ -175,6 +176,12 @@ class StreamLCM:
         if not self.img2img_pipe:
             raise Exception('Image to Image pipe not initialized!')
 
+        # load image
+        if type(image) is str:
+            base_image = load_image(image)
+        else:
+            base_image = image
+
         # seed
         if seed == 0 or randomize_seed:
             seed = self.get_random_seed()
@@ -188,19 +195,11 @@ class StreamLCM:
             seed=seed
         )
 
-        # load image
-        if type(image) is str:
-            base_image = load_image(image)
-            self.logger.info(f"Loaded image from: {image}")
-        else:
-            base_image = image
-            self.logger.info(f"Image instance provided.")
-
         # convert and resize
         # base_image = base_image.convert("RGB").resize((width, height))
 
         # pre-process image
-        self.logger.info(f"Preproceesing Image: {height=}, {width=}")
+        self.logger.info(f"Preprocessing Image: {height=}, {width=}")
         t_start_pre = time.perf_counter()
         input_latent = self.stream.image_processor.preprocess(base_image, height, width).to(
             device=self.device,
@@ -229,8 +228,8 @@ class StreamLCM:
         return image_latent
 
     def post_process_image(self, image_latent):
-        image = postprocess_image(image_latent, output_type="pil")
-        return image
+        images = postprocess_image(image_latent, output_type="pil")
+        return images
 
     @classmethod
     def get_random_seed(cls):
