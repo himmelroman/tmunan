@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from scipy.io import wavfile
 
-from tmunan.common.exec import BackgroundExecutor
+from tmunan.utils.exec import BackgroundExecutor
 from tmunan.listen.distil_whisper.whisper_bg_task import WhisperBackgroundTask
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ import websocket
 import requests
 from requests_toolbelt.multipart import decoder
 
-from tmunan.common.utils import load_image
+from tmunan.utils.image import load_image
 
 
 class TmunanStreamTester:

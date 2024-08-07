@@ -3,7 +3,7 @@ import time
 import torch
 from diffusers import StableDiffusionPipeline, AutoencoderKL, AutoPipelineForText2Image, AutoPipelineForImage2Image
 
-from tmunan.common.utils import load_image
+from tmunan.utils.image import load_image
 
 
 def gen_image(base_image):

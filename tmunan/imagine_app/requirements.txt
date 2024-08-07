@@ -1,0 +1,27 @@
+# fastapi
+uvicorn
+fastapi
+python-multipart
+pydantic-settings
+websockets
+requests
+
+# utils
+fire==0.6.0
+
+# ml
+# torch~=2.3
+torchvision  # >=0.18.0
+compel>=2.0.0
+transformers # >=4.41.0
+xformers
+diffusers>=0.29.0
+peft         #>=0.11.0
+onnxruntime~=1.18.0
+onnx_graphsurgeon
+colored
+polygraphy~=0.47.0
+
+# media
+Pillow
+ffmpeg-python>=0.2.0

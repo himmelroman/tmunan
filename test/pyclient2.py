@@ -11,15 +11,15 @@ from PIL import Image
 from pathlib import Path
 from json import JSONDecodeError
 
-from tmunan.common.utils import load_image
+from tmunan.utils.image import load_image
 
 
 class TmunanStreamTester:
 
     def __init__(self, host, port, secure, input_mode, input_source, output_dir):
 
-        # client id
-        self.client_id = str(uuid.uuid4())
+        # client name
+        self.client_name = 'tester'
 
         # i/o
         self.input_mode = input_mode
@@ -41,7 +41,7 @@ class TmunanStreamTester:
         print(f"Received message: {message}")
         try:
             message = json.loads(message)
-            if message.get('status') == 'connected':
+            if message.get('type') == 'connected':
                 self.connected = True
 
         except JSONDecodeError as not_json:
@@ -87,12 +87,47 @@ class TmunanStreamTester:
         except websockets.ConnectionClosedError as ex:
             logging.exception('Connection closed')
 
+    async def send_parameters(self, websocket):
+
+        try:
+            params = {
+                    "type": "set_parameters",
+                    "payload": {
+                        "prompt": "big white dogs",
+                        "guidance_scale": 1.0,
+                        "strength": 1.5,
+                        "override": True
+                    }
+                }
+            await websocket.send(json.dumps(params))
+
+        except websockets.ConnectionClosedError as ex:
+            logging.exception('Connection closed')
+
+    async def send_active(self, websocket):
+
+        try:
+            params = {
+                    "type": "set_active_connection",
+                    "payload": {
+                        "name": "tester"
+                    }
+                }
+            await websocket.send(json.dumps(params))
+
+        except websockets.ConnectionClosedError as ex:
+            logging.exception('Connection closed')
+
+
     async def websocket_main_func(self):
 
         # Use websockets for asynchronous connection
         scheme = 'wss' if self.secure else 'ws'
-        async with websockets.connect(f"{scheme}://{self.host}:{self.port}/api/ws/{self.client_id}") as websocket:
+        async with websockets.connect(f"{scheme}://{self.host}:{self.port}/api/ws?name={self.client_name}") as websocket:
             self.websocket = websocket
+
+            await self.send_parameters(websocket)
+            await self.send_active(websocket)
 
             # Run message handling and frame sending concurrently
             await asyncio.gather(
@@ -114,7 +149,7 @@ class TmunanStreamTester:
 
         async with aiohttp.ClientSession() as session:
             scheme = 'https' if self.secure else 'http'
-            async with session.get(url=f"{scheme}://{self.host}:{self.port}/api/stream/{self.client_id}") as response:
+            async with session.get(url=f"{scheme}://{self.host}:{self.port}/api/stream") as response:
                 if response.status == 200:
                     reader = aiohttp.MultipartReader.from_response(response)
                     while True:
@@ -141,20 +176,21 @@ class TmunanStreamTester:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Stream Tmunan Tester")
-    parser.add_argument("--host", default="www.tmunan.icu", help="Host for Tmunan server")
-    parser.add_argument("--port", type=int, default=443, help="Port for Tmunan server")
+    parser.add_argument("--host", default="localhost", help="Host for Tmunan server")
+    parser.add_argument("--port", type=int, default=8080, help="Port for Tmunan server")
     parser.add_argument("--secure", default=False, action="store_true", help="Use secure http schemes")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--input_image", '-i', type=Path,
-                       default='/Users/himmelroman/Desktop/Bialik/me_canny.png',
+                       default='/Users/himmelroman/Desktop/Bialik/me.png',
                        help="Input image path")
     group.add_argument("--input_video", '-v', type=Path, help="Input video path")
 
-    parser.add_argument('--output_dir', '-o', type=Path, help="Output directory")
+    parser.add_argument('--output_dir', '-o', default='/tmp/tmunan/tester/', type=Path, help="Output directory")
     args = parser.parse_args()
 
     # create tester
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     tester = TmunanStreamTester(args.host, args.port, args.secure,
                                 input_source=args.input_image, input_mode='image',
                                 output_dir=args.output_dir)
