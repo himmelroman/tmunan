@@ -49,6 +49,7 @@ class ImagineClient:
 
                     # post image
                     input_image = item.pop('image')
+                    self.logger.info(f'Sending request with params: {item}')
                     new_image = self.post_image(input_image, item)
                     self.logger.info(f'Finished processing request at: {req_time}, which arrived {time.time() - req_time} ago')
 

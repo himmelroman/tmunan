@@ -61,6 +61,7 @@ async def img2img(req: Request, image: UploadFile, data: ImageParameters = Depen
         img = Image.open(io.BytesIO(file_content))
 
         # generate image
+        logging.info(f'Executing request with params: {data.model_dump()}')
         images = req.state.img_gen.img2img(
             image=img,
             prompt=data.prompt,
