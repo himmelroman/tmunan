@@ -9,4 +9,4 @@ RUN pip install -r /root/app/requirements.txt
 
 COPY . /root/app/tmunan
 
-CMD ["uvicorn",  "tmunan.stream_app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn",  "tmunan.stream_app.stream:app", "--host", "0.0.0.0", "--port", "8080"]
