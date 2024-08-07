@@ -13,4 +13,4 @@ RUN pip install -r /root/app/requirements.txt
 COPY . /root/app/tmunan
 
 ENV HF_HOME=/app/models
-CMD ["uvicorn",  "tmunan.imagine_app.imagine:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn",  "tmunan.imagine_app.imagine:app", "--host", "0.0.0.0", "--port", "8090"]
