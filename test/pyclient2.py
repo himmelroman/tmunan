@@ -94,8 +94,8 @@ class TmunanStreamTester:
                     "type": "set_parameters",
                     "payload": {
                         "prompt": "big white dogs",
-                        "guidance_scale": 1.0,
-                        "strength": 1.5,
+                        "guidance_scale": 0.7777,
+                        "strength": 1.7777,
                         "override": True
                     }
                 }
@@ -117,7 +117,6 @@ class TmunanStreamTester:
 
         except websockets.ConnectionClosedError as ex:
             logging.exception('Connection closed')
-
 
     async def websocket_main_func(self):
 

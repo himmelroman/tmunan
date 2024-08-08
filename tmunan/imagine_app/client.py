@@ -72,7 +72,7 @@ class ImagineClient:
         response = requests.post(
             url=self.service_url,
             files=files,
-            data=params
+            params=params
         )
         response.raise_for_status()
 
