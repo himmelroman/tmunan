@@ -128,6 +128,9 @@ class StreamLCM:
                 }
             )
 
+        # warmup
+
+
         self.logger.info("Loading models finished.")
 
     def update_stream_preparation(self, prompt, guidance_scale, strength, seed):

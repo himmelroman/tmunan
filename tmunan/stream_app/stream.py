@@ -25,7 +25,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
     yield AppState(stream_manager=stream_mgr)
 
     # cleanup
-    pass
+    stream_mgr.img_client.stop()
 
 
 # middleware

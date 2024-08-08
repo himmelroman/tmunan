@@ -5,6 +5,7 @@ import threading
 
 import requests
 from PIL import Image
+from requests.exceptions import Timeout, HTTPError, RequestException
 
 from tmunan.utils.event import Event
 from tmunan.utils.log import get_logger
@@ -25,7 +26,8 @@ class ImagineClient:
         self.on_image_ready = Event()
 
         # worker thread
-        self._worker_thread = threading.Thread(target=self._thread_func)
+        self._worker_thread = threading.Thread(target=self._thread_func, daemon=True)
+        self._stop_requested = False
 
         # env
         self.logger = get_logger(self.__class__.__name__)
@@ -36,9 +38,13 @@ class ImagineClient:
         self.input_queue = input_queue
         self._worker_thread.start()
 
+    def stop(self):
+        self._stop_requested = True
+        self._worker_thread.join()
+
     def _thread_func(self):
 
-        while True:
+        while not self._stop_requested:
             try:
                 item = self.input_queue.get(timeout=0.01)
                 if item:
@@ -60,7 +66,8 @@ class ImagineClient:
             except queue.Empty:
                 pass
 
-            except requests.exceptions.ConnectionError:
+            except (ConnectionError, Timeout, HTTPError, RequestException) as ex:
+                self.logger.exception('Request error')
                 pass
 
     def post_image(self, image: Image, params: ImageParameters) -> Image:
