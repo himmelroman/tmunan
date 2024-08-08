@@ -1,8 +1,7 @@
 import io
-import logging
 
 from PIL import Image
-from fastapi import Request, Response, Form, APIRouter, UploadFile, HTTPException, Depends
+from fastapi import Request, Response, APIRouter, UploadFile, HTTPException, Depends
 
 from tmunan.utils.image import pil_to_bytes
 from tmunan.common.models import ImageParameters
@@ -11,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("/api/txt2img")
-async def img2img(req: Request, data: ImageParameters = Form(...)):
+async def img2img(req: Request, data: ImageParameters = Depends()):
 
     # check busy state
     if req.state.in_progress:
@@ -41,7 +40,7 @@ async def img2img(req: Request, data: ImageParameters = Form(...)):
         return Response(content=image_bytes, media_type=f"image/{image_format}")
 
     except Exception as ex:
-        logging.exception('Error in txt2img')
+        req.state.logger.exception('Error in txt2img')
         raise HTTPException(status_code=500, detail="Image generation failed")
 
 
@@ -61,7 +60,7 @@ async def img2img(req: Request, image: UploadFile, data: ImageParameters = Depen
         img = Image.open(io.BytesIO(file_content))
 
         # generate image
-        logging.info(f'Executing request with params: {data.model_dump()}')
+        req.state.logger.info(f'Executing request with params: {data.model_dump()}')
         images = req.state.img_gen.img2img(
             image=img,
             prompt=data.prompt,
@@ -83,5 +82,5 @@ async def img2img(req: Request, image: UploadFile, data: ImageParameters = Depen
         return Response(content=image_bytes, media_type=f"image/{image_format}")
 
     except Exception as ex:
-        logging.exception('Error in img2img')
+        req.state.logger.exception('Error in img2img')
         raise HTTPException(status_code=500, detail="Image generation failed")

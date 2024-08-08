@@ -1,4 +1,5 @@
 import os
+import logging
 
 from typing import TypedDict, AsyncIterator
 from contextlib import asynccontextmanager
@@ -9,11 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from tmunan.imagine_app.api.endpoints import router
 from tmunan.imagine_app.sd.lcm_stream import StreamLCM
+from tmunan.utils.log import get_logger
 
 
 class AppState(TypedDict):
     img_gen: StreamLCM
     in_progress: bool
+    logger: logging.Logger
 
 
 @asynccontextmanager
@@ -25,7 +28,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
     img_gen.load()
 
     # yield fastapi state
-    yield AppState(img_gen=img_gen, in_progress=False)
+    yield AppState(img_gen=img_gen, in_progress=False, logger=get_logger('ImagineApp'))
 
     # cleanup
     pass
