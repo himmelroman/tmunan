@@ -60,6 +60,9 @@ class ImagineClient:
             except queue.Empty:
                 pass
 
+            except requests.exceptions.ConnectionError:
+                self.logger.exception(f'Error connecting to server at {self.service_url}')
+
     def post_image(self, image: Image, params: ImageParameters) -> Image:
 
         # prepare post
