@@ -40,7 +40,7 @@
     </select>
 </div>
 <div class="option">
-    <input id="use-audio" checked="checked" type="checkbox"/>
+    <input id="use-audio" type="checkbox"/>
     <label for="use-audio">Use audio</label>
     <select id="audio-input">
         <option value="" selected>Default device</option>
@@ -53,7 +53,7 @@
     </select>
 </div>
 <div class="option">
-    <input id="use-video" type="checkbox"/>
+    <input id="use-video" checked="checked"  type="checkbox"/>
     <label for="use-video">Use video</label>
     <select id="video-input">
         <option value="" selected>Default device</option>
@@ -66,9 +66,9 @@
         <option value="1280x720">1280x720</option>
     </select>
     <select id="video-transform">
-        <option value="none" selected>No transform</option>
+        <option value="none">No transform</option>
+        <option value="cartoon" selected>Cartoon effect</option>
         <option value="edges">Edge detection</option>
-        <option value="cartoon">Cartoon effect</option>
         <option value="rotate">Rotate</option>
     </select>
     <select id="video-codec">

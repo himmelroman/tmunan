@@ -139,7 +139,7 @@ function negotiate() {
         }
 
         document.getElementById('offer-sdp').textContent = offer.sdp;
-        return fetch('/offer', {
+        return fetch('http://localhost:8080/offer', {
             body: JSON.stringify({
                 sdp: offer.sdp,
                 type: offer.type,
@@ -221,7 +221,7 @@ function start() {
 
     if (document.getElementById('use-video').checked) {
         const videoConstraints = {
-            frameRate: { max: 5 }
+            frameRate: { max: 24 }
         };
 
         const device = document.getElementById('video-input').value;
@@ -246,6 +246,9 @@ function start() {
         }
         navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
             stream.getTracks().forEach((track) => {
+                if ("contentHint" in track) {
+                    track.contentHint = 'detail';
+                }
                 pc.addTrack(track, stream);
             });
             return negotiate();

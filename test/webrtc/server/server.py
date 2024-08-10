@@ -4,22 +4,24 @@ import json
 import logging
 import os
 import ssl
+import time
 import uuid
-from pathlib import Path
+from typing import Optional
+from asyncer import asyncify
 
 import cv2
-import torch
 from aiohttp import web
+from av import VideoFrame
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
-from av import VideoFrame
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline
 
-# from tmunan.imagine.sd_lcm.lcm import LCM
+from tmunan.utils.log import get_logger
+from tmunan.common.models import ImageParameters
+from tmunan.imagine_app.client import ImagineClient
 
 ROOT = os.path.dirname(__file__)
 
-logger = logging.getLogger("pc")
+logger = get_logger('WebRTC Server')
 pcs = set()
 relay = MediaRelay()
 
@@ -31,101 +33,131 @@ class VideoTransformTrack(MediaStreamTrack):
 
     kind = "video"
 
-    def __init__(self, track, transform):
-        super().__init__()  # don't forget this!
-        self.track = track
-        self.transform = transform
+    def __init__(self, input_track, transform):
+        super().__init__()
 
-        # img2img
-        self.in_progress = False
-        self.last_frame = None
-        self.frame_index = 0
-        self.work_dir = Path('/tmp/img2img')
-        self.work_dir.mkdir(exist_ok=True, parents=True)
+        self.transform = transform
+        self.input_track = input_track
+
+        # imagine client
+        self.img_client = ImagineClient(host='localhost', port=8090, secure=False)
+
+        # I/O
+        self.input_frame_queue = asyncio.Queue(maxsize=1)
+        self.output_frame_queue = asyncio.Queue(maxsize=100)
+        self._task_input = None
+        self._task_output = None
+
+        # synchronization flag
+        self.is_running = True
+
+    async def start(self):
+        self.is_running = True
+        self._task_input = asyncio.create_task(self._task_consume_input())
+        self._task_output = asyncio.create_task(self._task_produce_output())
+
+    async def stop(self):
+        self.is_running = False
+
+    async def enqueue_input_frame(self, frame: VideoFrame):
+
+        # try to add the frame to the queue, dropping the oldest if full
+        if self.input_frame_queue.full():
+            try:
+                self.input_frame_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+
+        # put on queue
+        await self.input_frame_queue.put(frame)
+
+    async def _task_consume_input(self):
+
+        logger.info('INPUT - Starting _task_consume_input')
+        while self.is_running:
+
+            try:
+
+                # get frame from source track
+                frame = await asyncio.wait_for(self.input_track.recv(), timeout=0.1)
+
+                # enqueue on image generation queue
+                await self.enqueue_input_frame(frame)
+                logger.info(f'INPUT - Put frame on queue, qsize={self.input_frame_queue.qsize()}')
+
+            except asyncio.TimeoutError:
+                continue
+
+            except Exception as e:
+                logging.exception(f"Error in _task_consume_input")
+
+    async def _task_produce_output(self):
+
+        logger.info('OUTPUT - Starting _task_produce_output')
+        while self.is_running:
+
+            try:
+
+                # get input frame
+                frame = await asyncio.wait_for(self.input_frame_queue.get(), timeout=0.1)
+
+                # run transform
+                transformed_frame = await self.transform_frame(frame)
+
+                # put on output queue
+                await self.output_frame_queue.put(transformed_frame)
+                logger.info(f'OUTPUT - Put frame on queue, qsize={self.output_frame_queue.qsize()}')
+
+            except asyncio.TimeoutError:
+                pass
+
+            except Exception as e:
+                logging.exception(f"Error in _task_produce_output")
 
     async def recv(self):
-        frame = await self.track.recv()
+
+        logger.info('RECV - Running recv')
+        if self._task_input is None and self._task_output is None:
+            await self.start()
+
+        # get transformed frame from output queue
+        frame = await self.output_frame_queue.get()
+
+        logger.info('RECV - Output frame!')
+        return frame
+
+    def test(self, frame):
+
+        image = frame.to_image()
+        new_image = self.img_client.post_image(
+            image=image,
+            params=ImageParameters(
+                prompt='evil nina simone',
+                guidance_scale=1.0,
+                strength=1.5,
+                height=640,
+                width=480,
+                seed=123
+        ))
+        new_frame = VideoFrame.from_image(new_image)
+        return new_frame
+
+    async def transform_frame(self, frame):
 
         if self.transform == "cartoon":
 
-            if self.in_progress:
-                new_frame = self.last_frame
-                new_frame.pts = frame.pts
-                new_frame.time_base = frame.time_base
-                print(f'Recycling previous frame: {frame.pts=}, {frame.time_base=}')
-                return new_frame
-            else:
-                # print('Generating new frame')
-                self.in_progress = True
-
-            # dump frame to image
-            image_path = self.work_dir.with_name(f'img_{self.frame_index}.png')
-            frame.to_image().save(str(image_path))
-            self.frame_index += 1
-
             # gen image
-            # res_images = lcm.img2img(
-            #     prompt='cartoon',
-            #     image_url=str(image_path),
-            #     num_inference_steps=1,
-            #     guidance_scale=0.6,
-            #     strength=0.3,
-            #     height=640, width=480
-            # )
-            res = pipe(
-                prompt='frida kahlo, self portrait',
-                image=frame.to_image(),
-                width=512,
-                height=512,
-                guidance_scale=0.5,
-                num_inference_steps=1,
-                num_images_per_prompt=1,
-                output_type="pil",
-                controlnet_conditioning_scale=1.2
-            )
-            res_image = res.images[0]   # .resize(640, 480)
+            logger.info('TRANS - Sending frame to img2img')
+            new_frame = await asyncify(self.test)(frame)
 
-            # pack resulting frame
-            print(f'Outputing new frame: {frame.pts=}, {frame.time_base=}')
-            new_frame = VideoFrame.from_image(res_image)
+            # assign timestamps
             new_frame.pts = frame.pts
             new_frame.time_base = frame.time_base
 
-            # return
-            self.last_frame = new_frame
-            self.in_progress = False
             return new_frame
 
-            # img = frame.to_ndarray(format="bgr24")
-            #
-            # # prepare color
-            # img_color = cv2.pyrDown(cv2.pyrDown(img))
-            # for _ in range(6):
-            #     img_color = cv2.bilateralFilter(img_color, 9, 9, 7)
-            # img_color = cv2.pyrUp(cv2.pyrUp(img_color))
-            #
-            # # prepare edges
-            # img_edges = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            # img_edges = cv2.adaptiveThreshold(
-            #     cv2.medianBlur(img_edges, 7),
-            #     255,
-            #     cv2.ADAPTIVE_THRESH_MEAN_C,
-            #     cv2.THRESH_BINARY,
-            #     9,
-            #     2,
-            # )
-            # img_edges = cv2.cvtColor(img_edges, cv2.COLOR_GRAY2RGB)
-            #
-            # # combine color and edges
-            # img = cv2.bitwise_and(img_color, img_edges)
-            #
-            # rebuild a VideoFrame, preserving timing information
-            # new_frame = VideoFrame.from_ndarray(img, format="bgr24")
-            # new_frame.pts = frame.pts
-            # new_frame.time_base = frame.time_base
-            # return new_frame
+        if self.transform == "edges":
 
-        elif self.transform == "edges":
             # perform edge detection
             img = frame.to_ndarray(format="bgr24")
             img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
@@ -135,7 +167,9 @@ class VideoTransformTrack(MediaStreamTrack):
             new_frame.pts = frame.pts
             new_frame.time_base = frame.time_base
             return new_frame
+
         elif self.transform == "rotate":
+
             # rotate image
             img = frame.to_ndarray(format="bgr24")
             rows, cols, _ = img.shape
@@ -147,6 +181,7 @@ class VideoTransformTrack(MediaStreamTrack):
             new_frame.pts = frame.pts
             new_frame.time_base = frame.time_base
             return new_frame
+
         else:
             return frame
 
@@ -165,21 +200,23 @@ async def offer(request):
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    pc = RTCPeerConnection(
-        configuration=RTCConfiguration([
-            RTCIceServer("stun:stun.relay.metered.ca:80"),
-            RTCIceServer(
-                urls=[
-                    "turn:global.relay.metered.ca:80",
-                    "turn:global.relay.metered.ca:80?transport=tcp",
-                    "turn:global.relay.metered.ca:443",
-                    "turns:global.relay.metered.ca:443?transport=tcp"
-                ],
-                username="f78886871923839a14bf4731",
-                credential="9ZUQ3gDC/0/kvKJ8"
-            )
-        ])
-    )
+    pc = RTCPeerConnection()
+
+    # pc = RTCPeerConnection(
+    #     configuration=RTCConfiguration([
+    #         RTCIceServer("stun:stun.relay.metered.ca:80"),
+    #         RTCIceServer(
+    #             urls=[
+    #                 "turn:global.relay.metered.ca:80",
+    #                 "turn:global.relay.metered.ca:80?transport=tcp",
+    #                 "turn:global.relay.metered.ca:443",
+    #                 "turns:global.relay.metered.ca:443?transport=tcp"
+    #             ],
+    #             username="f78886871923839a14bf4731",
+    #             credential="9ZUQ3gDC/0/kvKJ8"
+    #         )
+    #     ])
+    # )
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     pcs.add(pc)
 
@@ -188,12 +225,10 @@ async def offer(request):
 
     log_info("Created for %s", request.remote)
 
-    # prepare local media
-    player = MediaPlayer(os.path.join(ROOT, "demo-instruct.wav"))
-    if args.record_to:
-        recorder = MediaRecorder(args.record_to)
-    else:
-        recorder = MediaBlackhole()
+    # @pc.on('stats')
+    # def on_stats(stats):
+    #     print(f"Frame rate: {stats.framerateMean}")
+    #     print(f"Packets lost: {stats.packetsLost}")
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -211,28 +246,28 @@ async def offer(request):
 
     @pc.on("track")
     def on_track(track):
-        log_info("Track %s received", track.kind)
+        logger.info(f"Track {track.kind} received")
 
-        if track.kind == "audio":
-            pc.addTrack(player.audio)
-            recorder.addTrack(track)
-        elif track.kind == "video":
-            pc.addTrack(
-                VideoTransformTrack(
-                    relay.subscribe(track), transform=params["video_transform"]
-                )
-            )
-            if args.record_to:
-                recorder.addTrack(relay.subscribe(track))
+        if track.kind == "video":
+            video_transform_track = VideoTransformTrack(track, transform=params["video_transform"])
+            # video_transform_track.start()
+            pc.addTrack(video_transform_track)
+
+            logger.info(f"Added track to pc")
+            # pc.addTrack(
+            #     VideoTransformTrack(
+            #         relay.subscribe(track), transform=params["video_transform"]
+            #     )
+            # )
 
         @track.on("ended")
         async def on_ended():
-            log_info("Track %s ended", track.kind)
-            await recorder.stop()
+            logger.info("Track %s ended", track.kind)
+            if track.kind == "video":
+                await video_transform_track.stop()
 
     # handle offer
     await pc.setRemoteDescription(offer)
-    await recorder.start()
 
     # send answer
     answer = await pc.createAnswer()
@@ -246,9 +281,19 @@ async def offer(request):
     )
 
 
+async def on_startup(app):
+    # asyncio.create_task(ip.processing_task())
+    pass
+
+
 async def on_shutdown(app):
-    # close peer connections
+
+    # close peer connections and stop video processing
     coros = [pc.close() for pc in pcs]
+    for pc in pcs:
+        for sender in pc.getSenders():
+            if sender.track and isinstance(sender.track, VideoTransformTrack):
+                coros.append(sender.track.stop())
     await asyncio.gather(*coros)
     pcs.clear()
 
@@ -265,7 +310,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", type=int, default=8080, help="Port for HTTP server (default: 8080)"
     )
-    parser.add_argument("--record-to", help="Write received media to a file.")
     parser.add_argument("--verbose", "-v", action="count")
     args = parser.parse_args()
 
@@ -280,21 +324,15 @@ if __name__ == "__main__":
     else:
         ssl_context = None
 
-    # load LCM
-    # lcm = LCM(model_size='small')
+    # # load LCM
+    # lcm = StreamLCM(model_id='sd-turbo')
     # lcm.load()
-    device = "cuda"
-    weight_type = torch.float16
 
-    controlnet = ControlNetModel.from_pretrained(
-        "IDKiro/sdxs-512-dreamshaper-sketch", torch_dtype=weight_type
-    ).to(device)
-    pipe = StableDiffusionControlNetPipeline.from_pretrained(
-        "IDKiro/sdxs-512-dreamshaper", controlnet=controlnet, torch_dtype=weight_type
-    )
-    pipe.to(device)
+    # image processor
+    # ip = ImageProcessor()
 
     app = web.Application()
+    app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
