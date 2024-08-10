@@ -13,7 +13,7 @@ import benchmark.candidates.lcm as latent_consistency
 
 def run_inference(pipe, **pipe_args):
 
-    optimize_pipe(pipe)
+    # optimize_pipe(pipe)
 
     perf_list = []
     image_list = []
@@ -175,7 +175,7 @@ def benchmark_sd_turbo(device, prompt, height, width):
     images, perf = run_inference(pipe,
                                  prompt=prompt,
                                  num_inference_steps=1,
-                                 guidance_scale=0.0,
+                                 guidance_scale=0.5,
                                  height=height,
                                  width=width)
 
@@ -230,21 +230,20 @@ if __name__ == '__main__':
     # SD 1.5 models
     height = 512
     width = 512
-    # perf_results['sdxs'] = benchmark_sdxs(device, prompt, height, width)
-    # perf_results['sd_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
-    # perf_results['latent_consistency_sd15'] = benchmark_latent_consistency_sd15(device, prompt, height, width)
+    perf_results['latent_consistency_sd15'] = benchmark_latent_consistency_sd15(device, prompt, height, width)
     perf_results['hyper_sd_sd15'] = benchmark_hyper_sd_sd15(device, prompt, height, width)
-    print(f"Mean for hyper_sd_sd15: {np.mean(perf_results['hyper_sd_sd15'][1:])}")
+    perf_results['sd_turbo'] = benchmark_sd_turbo(device, prompt, height, width)
+    # perf_results['sdxs'] = benchmark_sdxs(device, prompt, height, width)
 
     # SDXL models
     height = 512
     width = 512
     # perf_results['sdxl_turbo'] = benchmark_sdxl_turbo(device, prompt, height, width)
     # perf_results['latent_consistency_sdxl'] = benchmark_latent_consistency_sdxl(device, prompt, height, width)
-    perf_results['hyper_sd_sdxl_1step'] = benchmark_hyper_sd_sdxl_1step(device, prompt, height, width)
+    # perf_results['hyper_sd_sdxl_1step'] = benchmark_hyper_sd_sdxl_1step(device, prompt, height, width)
     # perf_results['hyper_sd_sdxl_2step'] = benchmark_hyper_sd_sdxl_2step(device, prompt, height, width)
     # DOESN'T WORK: perf_results['hyper_sd_sdxl_unet'] = benchmark_hyper_sd_sdxl_unet(device, prompt, height, width)
-    print(f"Mean for hyper_sd_sdxl_1step: {np.mean(perf_results['hyper_sd_sdxl_1step'][1:])}")
+    # print(f"Mean for hyper_sd_sdxl_1step: {np.mean(perf_results['hyper_sd_sdxl_1step'][1:])}")
 
     for p in perf_results:
         print(f'Mean for {p}: {np.mean(perf_results[p][1:])}')

@@ -43,7 +43,7 @@ class ControlLCM:
         self.device = self.get_device()
 
         # pipelines
-        self.im2img_pipe = None
+        self.img2img_pipe = None
         self.control_net_model = None
         # self.canny_sobel_operator = SobelOperator(self.device)
 
@@ -74,7 +74,7 @@ class ControlLCM:
 
         # load model
         self.logger.info(f"Loading model: {self.model_map[self.model_id]['model']}")
-        self.im2img_pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
+        self.img2img_pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
             self.model_map[self.model_id]['model'],
             controlnet=self.control_net_model,
             torch_dtype=torch.float16,
@@ -85,18 +85,18 @@ class ControlLCM:
         # update scheduler
         if self.model_map[self.model_id].get('scheduler'):
             scheduler_class = self.model_map[self.model_id].get('scheduler')
-            self.im2img_pipe.scheduler = scheduler_class.from_config(self.im2img_pipe.scheduler.config)
+            self.img2img_pipe.scheduler = scheduler_class.from_config(self.img2img_pipe.scheduler.config)
 
         # check for lora
         if self.model_map[self.model_id].get('lora'):
 
             # load and fuse sd_lcm lora
             self.logger.info(f"Loading Lora: {self.model_map[self.model_id]['lora']}")
-            self.im2img_pipe.load_lora_weights(hf_hub_download(
+            self.img2img_pipe.load_lora_weights(hf_hub_download(
                 repo_id=self.model_map[self.model_id]["lora"]["repo_id"],
                 filename=self.model_map[self.model_id]["lora"]["filename"]
             ))
-            self.im2img_pipe.fuse_lora()
+            self.img2img_pipe.fuse_lora()
 
         # accelerate
         # self.control_net_pipe.enable_xformers_memory_efficient_attention()
@@ -125,7 +125,7 @@ class ControlLCM:
                 randomize_seed: bool = False
                 ):
 
-        if not self.im2img_pipe:
+        if not self.img2img_pipe:
             raise Exception('Image to Image pipe not initialized!')
 
         # seed
@@ -159,7 +159,7 @@ class ControlLCM:
 
         # generate image
         t_start_stream = time.perf_counter()
-        result_image = self.im2img_pipe(
+        result_image = self.img2img_pipe(
             prompt=prompt,
             image=base_image,
             control_image=base_image,

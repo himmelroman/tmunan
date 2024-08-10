@@ -17,6 +17,7 @@ def create_sd15_pipe(device):
 
     # Use TCD scheduler to achieve better image quality
     pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config)
+    # pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
 
     # load to device
     pipe.to(device)
@@ -60,20 +61,21 @@ def create_sdxl_pipe_2step(device):
     return pipe
 
 
-def create_sdxl_unet_pipe(device):
-
-    base_model_id = "stabilityai/stable-diffusion-xl-base-1.0"
-    repo_name = "ByteDance/Hyper-SD"
-    ckpt_name = "Hyper-SDXL-1step-Unet.safetensors"
-
-    # Load model.
-    unet = UNet2DConditionModel.from_config(base_model_id, subfolder="unet").to(device, torch.float16)
-    unet.load_state_dict(load_file(hf_hub_download(repo_name, ckpt_name), device=device))
-    pipe = DiffusionPipeline.from_pretrained(base_model_id, unet=unet, torch_dtype=torch.float16, variant="fp16").to(device)
-
-    # Use LCM scheduler instead of ddim scheduler to support specific timestep number inputs
-    pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
-
-    # Set start timesteps to 800 in the one-step inference to get better results
-    # prompt = "a photo of a cat"
-    # image = pipe(prompt=prompt, num_inference_steps=1, guidance_scale=0, timesteps=[800]).images[0]
+# def create_sdxl_unet_pipe(device):
+#
+#     base_model_id = "stabilityai/stable-diffusion-xl-base-1.0"
+#     repo_name = "ByteDance/Hyper-SD"
+#     ckpt_name = "Hyper-SDXL-1step-Unet.safetensors"
+#
+#     # Load model.
+#     unet = UNet2DConditionModel.from_config(base_model_id, subfolder="unet").to(device, torch.float16)
+#     unet.load_state_dict(load_file(hf_hub_download(repo_name, ckpt_name), device=device))
+#     pipe = DiffusionPipeline.from_pretrained(base_model_id, unet=unet, torch_dtype=torch.float16, variant="fp16").to(device)
+#
+#     # Use LCM scheduler instead of ddim scheduler to support specific timestep number inputs
+#     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
+#
+#     # Set start timesteps to 800 in the one-step inference to get better results
+#     prompt = "a photo of a cat"
+#     image = pipe(prompt=prompt, num_inference_steps=1, guidance_scale=0, timesteps=[800]).images[0]
+#     image.show()

@@ -6,6 +6,7 @@ import torch
 import numpy as np
 from PIL.Image import Image
 from diffusers import StableDiffusionPipeline, AutoencoderTiny
+from huggingface_hub import hf_hub_download
 
 from streamdiffusion import StreamDiffusion
 from streamdiffusion.image_utils import postprocess_image
@@ -23,18 +24,31 @@ class StreamLCM:
     model_map = {
         'lcm1.5': {
             'model': "SimianLuo/LCM_Dreamshaper_v7",
-            'lcm_lora': "latent-consistency/lcm-lora-sdv1-5"
+            'lora': {
+                "repo": "latent-consistency/lcm-lora-sdv1-5"
+            }
+        },
+        'hyper-sd': {
+            'model': "SimianLuo/LCM_Dreamshaper_v7",
+            'lora': {
+                "repo_id": "ByteDance/Hyper-SD",
+                "filename": "Hyper-SD15-1step-lora.safetensors"
+            }
         },
         'sd-turbo': {
             'model': "stabilityai/sd-turbo"
         },
         'ssd-1b': {
             'model': "segmind/SSD-1B",
-            'lcm_lora': "latent-consistency/lcm-lora-ssd-1b"
+            'lora': {
+                "repo": "latent-consistency/lcm-lora-ssd-1b"
+            }
         },
         'sdxl': {
             'model': "stabilityai/stable-diffusion-xl-base-1.0",
-            'lcm_lora': "latent-consistency/lcm-lora-sdxl"
+            'lora': {
+                "repo": "latent-consistency/lcm-lora-sdxl"
+            }
         }
     }
 
@@ -89,7 +103,8 @@ class StreamLCM:
         # StreamDiffusion
         self.stream = StreamDiffusion(
             self.img2img_pipe,
-            t_index_list=[32, 45],
+            # t_index_list=[32, 45],
+            t_index_list=[33],
             torch_dtype=torch.float16,
             width=904,
             height=512,
@@ -98,12 +113,18 @@ class StreamLCM:
         # self.stream.enable_similar_image_filter(threshold=0.99, max_skip_frame=3)
 
         # check for LCM lora
-        if self.model_map[self.model_id].get('lcm_lora'):
+        if self.model_map[self.model_id].get('lora'):
 
             # load and fuse sd_lcm lora
-            self.logger.info(f"Loading LCM Lora: {self.model_map[self.model_id]['lcm_lora']}")
-            self.stream.load_lcm_lora(self.model_map[self.model_id]['lcm_lora'])
-            self.stream.fuse_lora()
+            self.logger.info(f"Loading Lora: {self.model_map[self.model_id]['lora']}")
+            if 'filename' in self.model_map[self.model_id]['lora']:
+                self.img2img_pipe.load_lora_weights(hf_hub_download(
+                    repo_id=self.model_map[self.model_id]["lora"]["repo_id"],
+                    filename=self.model_map[self.model_id]["lora"]["filename"]
+                ))
+            else:
+                self.img2img_pipe.load_lora_weights(self.model_map[self.model_id]['repo'])
+            self.img2img_pipe.fuse_lora()
 
         # Use Tiny VAE for further acceleration
         self.stream.vae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to(
