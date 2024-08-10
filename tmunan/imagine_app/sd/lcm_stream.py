@@ -75,7 +75,7 @@ class StreamLCM:
 
         # env
         self.logger = get_logger(self.__class__.__name__)
-        self.cache_dir = cache_dir or os.environ.get("HF_HOME")
+        self.tensorrt_dir = cache_dir or os.environ.get("TENSORRT_DIR")
 
     @classmethod
     def get_device(cls):
@@ -135,11 +135,11 @@ class StreamLCM:
         # accelerate with tensor-rt
         if self.device == 'cuda':
 
-            self.logger.info(f"Accelerating with TensorRT! {self.cache_dir=}")
+            self.logger.info(f"Accelerating with TensorRT! {self.tensorrt_dir=}")
             from streamdiffusion.acceleration.tensorrt import accelerate_with_tensorrt
             self.stream = accelerate_with_tensorrt(
                 stream=self.stream,
-                engine_dir=f'{self.cache_dir}/tensorrt',
+                engine_dir=f'{self.tensorrt_dir}',
                 max_batch_size=2,
                 engine_build_options={
                     'opt_image_height': 512,
