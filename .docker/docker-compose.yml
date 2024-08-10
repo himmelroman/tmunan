@@ -1,5 +1,3 @@
-version: '3.3'
-
 services:
   imagine:
     image: ${IMAGINE_IMAGE-himmelroman/tmunan_imagine:latest}
