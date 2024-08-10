@@ -60,7 +60,7 @@ class ImagineClient:
                     self.logger.info(f"ReqTrace - Response from Imagine: {req_id} at {time.time()}, delay: {time.time() - req_time}")
 
                     # output
-                    frame = pil_to_frame(new_image, format='webp')
+                    frame = pil_to_frame(new_image, format='jpeg', quality=95)
                     self.logger.info(f"ReqTrace - Frame ready: {req_id} at {time.time()}, delay: {time.time() - req_time}")
                     self.on_image_ready.notify(req_id, req_time, frame)
 
@@ -75,7 +75,7 @@ class ImagineClient:
 
         # prepare post
         files = {
-            'image': pil_to_bytes(image)
+            'image': pil_to_bytes(image, format='jpeg', quality=95)
         }
         # params = params.model_dump()
 

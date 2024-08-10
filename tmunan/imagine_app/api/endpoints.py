@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("/api/txt2img")
-async def img2img(req: Request, data: ImageParameters = Depends()):
+async def txt2img(req: Request, data: ImageParameters = Depends()):
 
     # check busy state
     if req.state.in_progress:
@@ -33,8 +33,9 @@ async def img2img(req: Request, data: ImageParameters = Depends()):
         )
 
         # convert image to bytes
-        image_format = "webp"
-        image_bytes = pil_to_bytes(images[0], format=image_format)
+        image_format = "jpeg"
+        image_quality = 95
+        image_bytes = pil_to_bytes(images[0], format=image_format, quality=image_quality)
 
         # respond
         return Response(content=image_bytes, media_type=f"image/{image_format}")
@@ -76,8 +77,9 @@ async def img2img(req: Request, image: UploadFile, data: ImageParameters = Depen
         req.state.in_progress = False
 
         # convert image to bytes
-        image_format = "webp"
-        image_bytes = pil_to_bytes(images[0], format=image_format)
+        image_format = "jpeg"
+        image_quality = 95
+        image_bytes = pil_to_bytes(images[0], format=image_format, quality=image_quality)
 
         # respond
         return Response(content=image_bytes, media_type=f"image/{image_format}")
