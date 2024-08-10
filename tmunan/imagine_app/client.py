@@ -50,18 +50,19 @@ class ImagineClient:
                 if item:
 
                     # take time
+                    req_id = item.pop('req_id', None)
                     req_time = item.pop('timestamp', None)
-                    self.logger.info(f'Processing request from: {req_time}, which arrived {time.time() - req_time} ago')
+                    self.logger.info(f"ReqTrace - Sending to Imagine: {req_id} at {time.time()}, delay: {time.time() - req_time}")
 
                     # post image
                     input_image = item.pop('image')
-                    self.logger.info(f'Sending request with params: {item}')
                     new_image = self.post_image(input_image, item)
-                    self.logger.info(f'Finished processing request at: {req_time}, which arrived {time.time() - req_time} ago')
+                    self.logger.info(f"ReqTrace - Response from Imagine: {req_id} at {time.time()}, delay: {time.time() - req_time}")
 
                     # output
                     frame = pil_to_frame(new_image, format='webp')
-                    self.on_image_ready.notify(req_time, frame)
+                    self.logger.info(f"ReqTrace - Frame ready: {req_id} at {time.time()}, delay: {time.time() - req_time}")
+                    self.on_image_ready.notify(req_id, req_time, frame)
 
             except queue.Empty:
                 pass

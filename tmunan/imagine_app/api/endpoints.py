@@ -49,6 +49,7 @@ async def img2img(req: Request, image: UploadFile, data: ImageParameters = Depen
 
     # check busy state
     if req.state.in_progress:
+        req.state.logger.info(f'Imagine Server is busy! Rejecting request')
         raise HTTPException(status_code=503, detail="Server busy, image generation is in progress")
 
     # flag in progress

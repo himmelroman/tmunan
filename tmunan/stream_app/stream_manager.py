@@ -76,13 +76,13 @@ class ImageStream:
     def remove_connection(self, conn_id: UUID):
         self.connections.pop(conn_id, None)
 
-    def distribute_output(self, req_time, data):
+    def distribute_output(self, req_id, req_time, data):
 
         # iterate all connection registered to this stream
         for cons_id, cons in list(self.consumers.items()):
 
             # enqueue output
-            cons.output_queue.put_nowait((req_time, data))
+            cons.output_queue.put_nowait((req_id, req_time, data))
 
 
 class StreamManager:
@@ -251,9 +251,10 @@ class StreamManager:
         stream_request = stream_request.model_dump()
         stream_request['image'] = bytes_to_pil(app_msg)
         stream_request['timestamp'] = time.time()
+        stream_request['req_id'] = time.time()
 
         # fire event with new imag generation request
-        self.logger.info(f"Enqueue request at: {stream_request['timestamp']}")
+        self.logger.info(f"ReqTrace - Received: {stream_request['req_id']} at {stream_request['timestamp']}")
         self.input_queue.put(stream_request)
 
     async def handle_consumer(self, cons_id: UUID):
@@ -268,13 +269,10 @@ class StreamManager:
             while True:
 
                 # read from output queue
-                req_time, frame = await cons.output_queue.get()
-                # if frame is None:
-                #     await asyncio.sleep(0.01)
-                #     continue
+                req_id, req_time, frame = await cons.output_queue.get()
 
                 # convert image to multipart frame
-                self.logger.info(f'Sending to consumer {cons_id=}, image which was requested {time.time() - req_time} ago')
+                self.logger.info(f"ReqTrace - Consumed by {cons_id=}: {req_id} at {time.time()}, delay: {time.time() - req_time}")
                 yield frame
 
         finally:

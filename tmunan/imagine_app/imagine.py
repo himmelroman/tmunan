@@ -1,10 +1,11 @@
 import os
+import time
 import logging
 
 from typing import TypedDict, AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -52,6 +53,14 @@ middleware = [
 # app instance
 app = FastAPI(middleware=middleware, lifespan=lifespan)
 app.include_router(router)
+
+
+@app.middleware("http")
+async def log_request_time(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    request.state.logger.info(f"ReqTrace - Imagine Request exec time: {time.time() - start_time}")
+    return response
 
 
 if __name__ == "__main__":
