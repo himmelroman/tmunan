@@ -4,8 +4,10 @@ services:
     restart: unless-stopped
     volumes:
       - ~/.cache/huggingface:/root/app/models
+      - ~/.cache/tmunan/tensorrt:/root/app/tensorrt
     environment:
       - HF_HOME=/root/app/models
+      - TENSORRT_DIR=/root/app/tensorrt
       - TMUNAN_IMAGE_MODE=${TMUNAN_IMAGE_MODE:-stream}
     ports:
       - "8090:8090"

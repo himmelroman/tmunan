@@ -139,7 +139,7 @@ class StreamLCM:
             from streamdiffusion.acceleration.tensorrt import accelerate_with_tensorrt
             self.stream = accelerate_with_tensorrt(
                 stream=self.stream,
-                engine_dir=f'{self.tensorrt_dir}',
+                engine_dir=f'{self.tensorrt_dir}/{self.model_id}',
                 max_batch_size=2,
                 engine_build_options={
                     'opt_image_height': 512,
