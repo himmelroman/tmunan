@@ -246,10 +246,16 @@ class StreamManager:
 
     async def handle_bytes_message(self, app_msg):
 
+        # read from bytes
+        image = bytes_to_pil(app_msg)
+        await self.enqueue_image(image)
+
+    async def enqueue_image(self, image):
+
         # process incoming payload
         stream_request = copy.deepcopy(self.stream.parameters)
         stream_request = stream_request.model_dump()
-        stream_request['image'] = bytes_to_pil(app_msg)
+        stream_request['image'] = image
         stream_request['timestamp'] = time.time()
         stream_request['req_id'] = time.time()
 

@@ -32,6 +32,7 @@ services:
       - IMAGINE_PORT=8090
     ports:
       - "8080:8080"
+      - "10000-20000:10000-20000/udp"
     depends_on:
       - imagine
     logging:

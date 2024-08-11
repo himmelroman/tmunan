@@ -7,25 +7,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from tmunan.stream_app.api.endpoints import router
-from tmunan.stream_app.stream_manager import StreamManager
+# from tmunan.stream_app.stream_manager import StreamManager
+from tmunan.stream_app.webrtc_stream_manager import WebRTCStreamManager
 
 
 class AppState(TypedDict):
-    stream_manager: StreamManager
+    stream_manager: WebRTCStreamManager
 
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
 
     # initialize
-    pass
+    stream_manager = WebRTCStreamManager()
 
     # yield fastapi state
-    stream_mgr = StreamManager(max_streams=1)
-    yield AppState(stream_manager=stream_mgr)
+    yield AppState(stream_manager=stream_manager)
 
     # cleanup
-    stream_mgr.img_client.stop()
+    await stream_manager.cleanup()
 
 
 # middleware

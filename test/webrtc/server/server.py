@@ -7,6 +7,8 @@ import ssl
 import time
 import uuid
 from typing import Optional
+
+import aiohttp_cors
 from asyncer import asyncify
 
 import cv2
@@ -249,7 +251,7 @@ async def offer(request):
         logger.info(f"Track {track.kind} received")
 
         if track.kind == "video":
-            video_transform_track = VideoTransformTrack(track, transform=params["video_transform"])
+            video_transform_track = VideoTransformTrack(track, transform='cartoon')
             # video_transform_track.start()
             pc.addTrack(video_transform_track)
 
@@ -332,11 +334,29 @@ if __name__ == "__main__":
     # ip = ImageProcessor()
 
     app = web.Application()
+
+    # `aiohttp_cors.setup` returns `aiohttp_cors.CorsConfig` instance.
+    # The `cors` instance will store CORS configuration for the
+    # application.
+
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
     app.router.add_post("/offer", offer)
+
+    # Configure default CORS settings.
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
+    # Configure CORS on all routes.
+    for route in list(app.router.routes()):
+        cors.add(route)
+
     web.run_app(
         app, access_log=None, host=args.host, port=args.port, ssl_context=ssl_context
     )

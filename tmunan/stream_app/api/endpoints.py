@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import Request, WebSocket, APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 
 from tmunan.stream_app.stream_manager import ServerFullException
 
@@ -37,3 +37,33 @@ async def stream(req: Request):
         )
     except ServerFullException as ex:
         return HTTPException(503)
+
+
+@router.post("/api/offer")
+async def offer(name: str, output: bool, req: Request):
+
+    try:
+
+        # get offer
+        offer_params = await req.json()
+
+        # assign id
+        peer_id = uuid.uuid4()
+
+        # handle offer
+        answer_params = await req.state.stream_manager.handle_offer(
+            id=peer_id,
+            name=name,
+            output=output,
+            sdp=offer_params["sdp"],
+            type=offer_params["type"]
+        )
+
+        return JSONResponse(
+            {"sdp": answer_params["sdp"], "type": answer_params["type"]},
+        )
+
+    except ServerFullException as ex:
+        return HTTPException(503)
+
+

@@ -8,3 +8,7 @@ requests
 
 # image
 Pillow
+
+# webrtc
+aiortc
+asyncify
