@@ -1,7 +1,7 @@
 services:
   imagine:
     image: ${IMAGINE_IMAGE-himmelroman/tmunan_imagine:latest}
-    restart: unless-stopped
+    #    restart: unless-stopped
     volumes:
       - ~/.cache/huggingface:/root/app/models
       - ~/.cache/tmunan/tensorrt:/root/app/tensorrt
@@ -26,7 +26,7 @@ services:
 
   stream:
     image: ${STREAM_IMAGE-himmelroman/tmunan_stream:latest}
-    restart: unless-stopped
+    #    restart: unless-stopped
     environment:
       - IMAGINE_HOST=imagine
       - IMAGINE_PORT=8090
@@ -43,7 +43,7 @@ services:
 
   nginx:
     image: nginx
-    restart: unless-stopped
+    #    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
