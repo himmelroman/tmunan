@@ -154,10 +154,12 @@ class StreamLCM:
 
         self.logger.info("Loading models finished.")
 
-    def update_stream_preparation(self, prompt, guidance_scale, strength, seed):
+    def update_stream_preparation(self, prompt, negative_prompt, guidance_scale, strength, seed):
 
         # determine if "prepare" is needed
-        if (self.stream_cache['prompt'] != prompt or
+        if (
+                self.stream_cache['prompt'] != prompt or
+                self.stream_cache['negative_prompt'] != negative_prompt or
                 self.stream_cache['guidance_scale'] != guidance_scale or
                 self.stream_cache['strength'] != strength or
                 self.stream_cache['seed'] != seed):
@@ -165,6 +167,7 @@ class StreamLCM:
             # prepare
             self.stream.prepare(
                 prompt=prompt,
+                negative_prompt=negative_prompt,
                 guidance_scale=float(guidance_scale),
                 strength=float(strength),
                 seed=int(seed)
@@ -179,12 +182,14 @@ class StreamLCM:
 
             # update cache
             self.stream_cache['prompt'] = prompt
+            self.stream_cache['negative_prompt'] = negative_prompt
             self.stream_cache['guidance_scale'] = guidance_scale
             self.stream_cache['strength'] = strength
             self.stream_cache['seed'] = seed
 
     def img2img(self,
                 prompt: str,
+                negative_prompt: str,
                 image: str | Image,
                 height: int = 512,
                 width: int = 512,
@@ -214,6 +219,7 @@ class StreamLCM:
         # if none of the arguments changed since last time, this will do nothing (fast)
         self.update_stream_preparation(
             prompt=prompt,
+            negative_prompt=negative_prompt,
             guidance_scale=guidance_scale,
             strength=strength,
             seed=seed

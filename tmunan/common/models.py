@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class ImageParameters(BaseModel):
     prompt: str = Form(default='')
+    negative_prompt: str = Form(default='')
     guidance_scale: float = Form(default=1.0, ge=0.0, le=2.0)
     strength: float = Form(default=1.5, ge=0.0, le=3.0)
     height: int = Form(default=512, ge=0)

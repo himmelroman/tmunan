@@ -178,14 +178,14 @@ class WebRTCStreamManager:
     async def cleanup(self):
 
         # collection stop() coroutines all peer connections
-        peer_close_list = [spc.pc.close() for spc in list(self.peer_connections.values())]
+        task_list = [spc.pc.close() for spc in list(self.peer_connections.values())]
 
         # add video transform track to close() list
         if self.video_transform_track:
-            peer_close_list.append(self.video_transform_track.stop())
+            task_list.append(self.video_transform_track.stop())
 
         # join all peer close coroutines
-        await asyncio.gather(*peer_close_list)
+        await asyncio.gather(*task_list)
 
         # clear peer dict
         self.peer_connections.clear()

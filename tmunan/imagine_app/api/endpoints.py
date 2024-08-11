@@ -66,10 +66,12 @@ async def img2img(req: Request, image: UploadFile, data: ImageParameters = Depen
         images = req.state.img_gen.img2img(
             image=img,
             prompt=data.prompt,
+            negative_prompt=data.negative_prompt,
             # num_inference_steps=data.num_inference_steps,
             guidance_scale=data.guidance_scale,
             strength=data.strength,
-            height=data.height, width=data.width,
+            height=data.height,
+            width=data.width,
             seed=data.seed,
             randomize_seed=bool(data.seed == 0)
         )

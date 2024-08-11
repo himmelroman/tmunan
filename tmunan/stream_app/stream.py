@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from tmunan.stream_app.api.endpoints import router
-# from tmunan.stream_app.stream_manager import StreamManager
 from tmunan.stream_app.webrtc_stream_manager import WebRTCStreamManager
 
 
