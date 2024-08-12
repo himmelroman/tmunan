@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from typing import TypedDict, AsyncIterator
 
@@ -18,7 +19,10 @@ class AppState(TypedDict):
 async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
 
     # initialize
-    stream_manager = WebRTCStreamManager()
+    imagine_host = os.environ.get("IMAGINE_HOST", "localhost")
+    imagine_port = os.environ.get("IMAGINE_PORT", "8090")
+    imagine_secure = bool(os.environ.get("IMAGINE_SECURE", False))
+    stream_manager = WebRTCStreamManager(imagine_host, imagine_port, imagine_secure)
 
     # yield fastapi state
     yield AppState(stream_manager=stream_manager)

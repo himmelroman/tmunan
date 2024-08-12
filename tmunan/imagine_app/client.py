@@ -31,7 +31,6 @@ class ImagineClient:
 
         # env
         self.logger = get_logger(self.__class__.__name__)
-        self.logger.info(f'Initialized ImagineClient! {self.service_url=}')
 
     def watch_queue(self, input_queue):
 

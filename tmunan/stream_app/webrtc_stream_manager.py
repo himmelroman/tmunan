@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 import asyncio
@@ -138,7 +137,10 @@ class FrameTransformTrack(MediaStreamTrack):
 
 class WebRTCStreamManager:
 
-    def __init__(self):
+    def __init__(self, imagine_host, imagine_port, imagine_secure):
+
+        # env
+        self.logger = get_logger(self.__class__.__name__)
 
         # peer registry
         self.media_relay = MediaRelay()
@@ -147,14 +149,13 @@ class WebRTCStreamManager:
         self.active_connection_name = None
 
         # img generation
-        host = os.environ.get("IMAGINE_HOST", "localhost")
-        port = os.environ.get("IMAGINE_PORT", "8090")
-        secure = bool(os.environ.get("IMAGINE_SECURE", False))
-        self.img_client = ImagineClient(host=host, port=port, secure=secure)
         self.parameters = ImageParameters()
-
-        # env
-        self.logger = get_logger(self.__class__.__name__)
+        self.img_client = None
+        if imagine_host and imagine_port:
+            self.img_client = ImagineClient(host=imagine_host, port=imagine_port, secure=imagine_secure)
+            self.logger.info(f"ImagineClient initialized: URL={self.img_client.service_url}")
+        else:
+            self.logger.warning(f"ImagineClient not initialized! WebRTCStreamManager in frame loopback mode.")
 
     async def add_peer_connection(self, spc):
 
@@ -354,12 +355,24 @@ class WebRTCStreamManager:
     def request_img2img(self, frame):
 
         try:
+
+            # loopback mode - return input frame if ImagineClient is not initialized
+            if not self.img_client:
+                return frame
+
+            # convert frame to PIL
             image = frame.to_image()
+
+            # post to image generation
             new_image = self.img_client.post_image(
                 image=image,
                 params=self.parameters
             )
+
+            # convert PIL back to frame
             new_frame = VideoFrame.from_image(new_image)
+
+            # return processed frame
             return new_frame
 
         except Exception as ex:
