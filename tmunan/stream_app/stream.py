@@ -19,9 +19,15 @@ class AppState(TypedDict):
 async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
 
     # initialize
-    imagine_host = os.environ.get("IMAGINE_HOST", "localhost")
-    imagine_port = os.environ.get("IMAGINE_PORT", "8090")
-    imagine_secure = bool(os.environ.get("IMAGINE_SECURE", False))
+    imagine_host = None
+    imagine_port = None
+    imagine_secure = False
+    if 'IMAGINE_LOOPBACK' not in os.environ:
+        imagine_host = os.environ.get("IMAGINE_HOST", "localhost")
+        imagine_port = os.environ.get("IMAGINE_PORT", "8090")
+        imagine_secure = bool(os.environ.get("IMAGINE_SECURE", False))
+
+    # ceate stream manager
     stream_manager = WebRTCStreamManager(imagine_host, imagine_port, imagine_secure)
 
     # yield fastapi state
