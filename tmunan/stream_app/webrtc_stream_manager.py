@@ -310,7 +310,7 @@ class WebRTCStreamManager:
                 self.logger.debug(f"Unhandled connection state: {sc.pc.connectionState}")
 
         @sc.pc.on("track")
-        def on_track(track):
+        async def on_track(track):
             self.logger.info(f"MediaTrack - Received Track: {track.kind=}, {sc.id=}, {sc.name=}")
 
             # handle video track
@@ -318,7 +318,7 @@ class WebRTCStreamManager:
 
                 # check if no active peer yet
                 if not self.active_connection_name:
-                    self.set_active_peer_connection(sc.name)
+                    await self.set_active_peer_connection(sc.name)
 
                 # check if this is the active peer - take its track as input
                 if self.active_connection_name == sc.name:
