@@ -1,9 +1,10 @@
 # fastapi
 uvicorn==0.25.0
 fastapi==0.109.1
+websockets~=11.0.3
 python-multipart==0.0.7
 pydantic-settings
-websockets~=11.0.3
+python-dotenv
 requests
 
 # image

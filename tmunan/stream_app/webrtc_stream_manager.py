@@ -318,7 +318,11 @@ class WebRTCStreamManager:
                 self.publish_state()
 
             elif sc.pc.connectionState == "connected":
-                pass
+
+                # check if video feed requested
+                if output:
+                    sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
+                    self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
 
             else:
                 self.logger.debug(f"Unhandled connection state: {sc.pc.connectionState}")
@@ -341,11 +345,6 @@ class WebRTCStreamManager:
                         f"MediaTrack - Received Track: StreamClient matches active connection name: "
                         f"{self.active_connection_name=}, {sc.id=}, {sc.name=}")
                     self.video_transform_track.input_track = track
-
-                # check if video feed requested
-                if output:
-                    sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
-                    self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
 
             @track.on("ended")
             async def on_ended():
