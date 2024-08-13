@@ -49,6 +49,8 @@ class VideoTransformTrack(MediaStreamTrack):
 
         # env
         self.logger = get_logger(self.__class__.__name__)
+        self._log_output_frame = False
+        self._log_input_frame = False
 
     async def start(self):
         self.is_running = True
@@ -87,7 +89,9 @@ class VideoTransformTrack(MediaStreamTrack):
 
                 # enqueue on image generation queue
                 await self.enqueue_input_frame(frame)
-                self.logger.debug(f'Input - Put frame on input queue, qsize={self.input_frame_queue.qsize()}')
+                if not self._log_input_frame:
+                    self.logger.debug(f'Input - Put frame on input queue, qsize={self.input_frame_queue.qsize()}')
+                    self._log_input_frame = True
 
             except asyncio.TimeoutError:
                 continue
@@ -116,7 +120,9 @@ class VideoTransformTrack(MediaStreamTrack):
 
                 # put on output queue
                 await self.output_frame_queue.put(transformed_frame)
-                self.logger.debug(f'Output - Put frame on output queue, qsize={self.output_frame_queue.qsize()}')
+                if not self._log_output_frame:
+                    self.logger.debug(f'Output - Put frame on output queue, qsize={self.output_frame_queue.qsize()}')
+                    self._log_output_frame = True
 
             except asyncio.TimeoutError:
                 pass
@@ -128,14 +134,14 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
 
-        self.logger.debug('Track - Executing recv() from input track')
+        # self.logger.debug('Track - Executing recv() from input track')
         if self._task_input is None and self._task_output is None:
             await self.start()
 
         # get transformed frame from output queue
         frame = await self.output_frame_queue.get()
 
-        self.logger.debug('Track - Outputting frame from output queue to track')
+        # self.logger.debug('Track - Outputting frame from output queue to track')
         return frame
 
 
