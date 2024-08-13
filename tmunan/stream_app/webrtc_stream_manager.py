@@ -52,12 +52,13 @@ class VideoTransformTrack(MediaStreamTrack):
         self._log_output_frame = False
         self._log_input_frame = False
 
-    async def start(self):
-        self.is_running = True
-        self._task_input = asyncio.create_task(self._task_consume_input())
-        self._task_output = asyncio.create_task(self._task_produce_output())
+    async def start_tasks(self):
+        if not self.is_running:
+            self.is_running = True
+            self._task_input = asyncio.create_task(self._task_consume_input())
+            self._task_output = asyncio.create_task(self._task_produce_output())
 
-    async def stop(self):
+    async def stop_tasks(self):
         self.is_running = False
 
     async def enqueue_input_frame(self, frame: VideoFrame):
@@ -134,9 +135,9 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
 
-        # self.logger.debug('Track - Executing recv() from input track')
-        # if self._task_input is None and self._task_output is None:
-        #     await self.start()
+        self.logger.debug('Track - Executing recv() from input track')
+        if self._task_input is None and self._task_output is None:
+            await self.start_tasks()
 
         # get transformed frame from output queue
         frame = await self.output_frame_queue.get()
@@ -202,9 +203,9 @@ class WebRTCStreamManager:
         # collection stop() coroutines all peer connections
         task_list = [spc.pc.close() for spc in list(self.peer_connections.values())]
 
-        # add video transform track to close() list
+        # add video transform track to stop_tasks() list
         if self.video_transform_track:
-            task_list.append(self.video_transform_track.stop())
+            task_list.append(self.video_transform_track.stop_tasks())
 
         # join all peer close coroutines
         await asyncio.gather(*task_list)
@@ -310,15 +311,15 @@ class WebRTCStreamManager:
                 self.logger.debug(f"Unhandled connection state: {sc.pc.connectionState}")
 
         @sc.pc.on("track")
-        async def on_track(track):
+        def on_track(track):
             self.logger.info(f"MediaTrack - Received Track: {track.kind=}, {sc.id=}, {sc.name=}")
 
             # handle video track
             if track.kind == "video":
 
-                # check if no active peer yet
-                if not self.active_connection_name:
-                    await self.set_active_peer_connection(sc.name)
+                # # check if no active peer yet
+                # if not self.active_connection_name:
+                #     await self.set_active_peer_connection(sc.name)
 
                 # check if this is the active peer - take its track as input
                 if self.active_connection_name == sc.name:
@@ -330,7 +331,7 @@ class WebRTCStreamManager:
 
                 # check if video feed requested
                 if output:
-                    await self.video_transform_track.start()
+                    # await self.video_transform_track.start_tasks()
                     sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
                     self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
 
