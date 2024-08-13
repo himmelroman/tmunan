@@ -1,5 +1,4 @@
 import json
-import logging
 import asyncio
 from typing import Dict
 from uuid import UUID
@@ -16,7 +15,7 @@ from tmunan.common.models import ImageParameters
 from tmunan.imagine_app.client import ImagineClient
 
 
-class StreamPeerConnection:
+class StreamClient:
 
     def __init__(self, id: UUID, name: str, pc: RTCPeerConnection, data_channel: RTCDataChannel = None):
 
@@ -26,7 +25,7 @@ class StreamPeerConnection:
         self.data_channel: RTCDataChannel = data_channel
 
 
-class FrameTransformTrack(MediaStreamTrack):
+class VideoTransformTrack(MediaStreamTrack):
 
     kind = "video"
 
@@ -73,7 +72,7 @@ class FrameTransformTrack(MediaStreamTrack):
 
     async def _task_consume_input(self):
 
-        self.logger.info('INPUT - Starting _task_consume_input')
+        self.logger.debug('Input - Starting _task_consume_input')
         while self.is_running:
 
             try:
@@ -88,20 +87,23 @@ class FrameTransformTrack(MediaStreamTrack):
 
                 # enqueue on image generation queue
                 await self.enqueue_input_frame(frame)
-                # self.logger.info(f'INPUT - Put frame on queue, qsize={self.input_frame_queue.qsize()}')
-
-            except aiortc.mediastreams.MediaStreamError:
-                continue
+                self.logger.debug(f'Input - Put frame on input queue, qsize={self.input_frame_queue.qsize()}')
 
             except asyncio.TimeoutError:
                 continue
 
-            except Exception as e:
-                logging.exception(f"Error in _task_consume_input")
+            except aiortc.mediastreams.MediaStreamError:
+                self.logger.exception(f"Input - MediaStreamError in _task_consume_input")
+                continue
+
+            except Exception:
+                self.logger.exception(f"Input - Error in _task_consume_input")
+
+        self.logger.debug('Input - Exiting _task_consume_input')
 
     async def _task_produce_output(self):
 
-        self.logger.info('OUTPUT - Starting _task_produce_output')
+        self.logger.info('Output - Starting _task_produce_output')
         while self.is_running:
 
             try:
@@ -114,24 +116,26 @@ class FrameTransformTrack(MediaStreamTrack):
 
                 # put on output queue
                 await self.output_frame_queue.put(transformed_frame)
-                # self.logger.info(f'OUTPUT - Put frame on queue, qsize={self.output_frame_queue.qsize()}')
+                self.logger.debug(f'Output - Put frame on output queue, qsize={self.output_frame_queue.qsize()}')
 
             except asyncio.TimeoutError:
                 pass
 
-            except Exception as e:
-                logging.exception(f"Error in _task_produce_output")
+            except Exception:
+                self.logger.exception(f"Output - Error in _task_produce_output")
+
+        self.logger.debug('Output - Exiting _task_produce_output')
 
     async def recv(self):
 
-        # self.logger.info('RECV - Running recv')
+        self.logger.debug('Track - Executing recv() from input track')
         if self._task_input is None and self._task_output is None:
             await self.start()
 
         # get transformed frame from output queue
         frame = await self.output_frame_queue.get()
 
-        # self.logger.info('RECV - Output frame!')
+        self.logger.debug('Track - Outputting frame from output queue to track')
         return frame
 
 
@@ -142,10 +146,13 @@ class WebRTCStreamManager:
         # env
         self.logger = get_logger(self.__class__.__name__)
 
-        # peer registry
+        # tracks and media
         self.media_relay = MediaRelay()
-        self.video_transform_track = FrameTransformTrack()
-        self.peer_connections: Dict[str, StreamPeerConnection] = dict()
+        self.video_transform_track = VideoTransformTrack()
+        self.video_transform_track.on_image_ready_callback = self.transform_frame
+
+        # peer connections
+        self.peer_connections: Dict[str, StreamClient] = dict()
         self.active_connection_name = None
 
         # img generation
@@ -157,21 +164,29 @@ class WebRTCStreamManager:
         else:
             self.logger.warning(f"ImagineClient not initialized! WebRTCStreamManager in frame loopback mode.")
 
-    async def add_peer_connection(self, spc):
+    async def add_peer_connection(self, sc: StreamClient):
 
         # close existing
-        if spc.name in self.peer_connections:
-            await self.peer_connections[spc.name].pc.close()
-            self.peer_connections.pop(spc.name, None)
+        if sc.name in self.peer_connections:
+            await self.peer_connections[sc.name].pc.close()
+            self.peer_connections.pop(sc.name, None)
 
         # add to registry
-        self.peer_connections[spc.name] = spc
+        self.peer_connections[sc.name] = sc
+        self.logger.info(f"StreamClient added to peer registry: {sc.id=}, {sc.name}")
 
     async def set_active_peer_connection(self, name):
 
-        # update connection
+        # update active
         self.active_connection_name = name
-        self.logger.info(f"Active connection set: {self.active_connection_name}")
+
+        # log
+        self.logger.info(f"Active StreamClient set: {self.active_connection_name}")
+        sc = self.peer_connections.get(name, None)
+        if sc:
+            self.logger.info(f"Active client found in registry: {sc.id=}, {sc.name}")
+        else:
+            self.logger.warning(f"Active client not found in registry!")
 
         # publish state
         await self.publish_state()
@@ -190,6 +205,7 @@ class WebRTCStreamManager:
 
         # clear peer dict
         self.peer_connections.clear()
+        self.logger.info(f"StreamClient registry cleanup complete")
 
     async def publish_state(self):
 
@@ -209,40 +225,48 @@ class WebRTCStreamManager:
                 }
 
         # iterate all stream peer connections
-        for spc in list(self.peer_connections.values()):
+        for sc in list(self.peer_connections.values()):
             try:
 
                 # check if data channel is connected
-                if spc.data_channel:
+                if sc.data_channel:
 
                     # send state
-                    spc.data_channel.send(json.dumps(state))
+                    sc.data_channel.send(json.dumps(state))
+
+                    # log
+                    self.logger.debug(f"Published state to StreamClient: {sc.id=}, {sc.name}")
+                else:
+
+                    # log
+                    self.logger.warning(f"Could not publish state to StreamClient because DataChannel is not initialized: {sc.id=}, {sc.name}")
 
             except Exception as ex:
-                self.logger.exception(f'Error in publish state!')
-                #self.peer_connections.pop(conn.name)
+                self.logger.exception(f'Error while publishing state to StreamClient: {sc.id=}, {sc.name}')
 
     async def handle_offer(self, id: UUID, name: str, output: bool, sdp, type):
+
+        self.logger.info(f"HandleOffer - Handling new offer: {id=}, {name=}, {output=}")
 
         # parse incoming offer
         offer = RTCSessionDescription(sdp=sdp, type=type)
 
-        # create peer connection
-        pc = RTCPeerConnection()
-        spc = StreamPeerConnection(id=id, name=name, pc=pc)
+        # create stream client
+        sc = StreamClient(id=id, name=name, pc=RTCPeerConnection())
 
         # add to registry
-        await self.add_peer_connection(spc)
+        await self.add_peer_connection(sc)
 
-        @pc.on("datachannel")
+        @sc.pc.on("datachannel")
         async def on_datachannel(channel):
 
             # save data channel
-            spc.data_channel = channel
+            sc.data_channel = channel
+            self.logger.info(f"DataChannel - Established for StreamClient: {sc.id=}, {sc.name}")
 
             # check if there is no active peer
             if not self.active_connection_name:
-                await self.set_active_peer_connection(spc.name)
+                await self.set_active_peer_connection(sc.name)
 
             # publish change
             await self.publish_state()
@@ -250,85 +274,103 @@ class WebRTCStreamManager:
             @channel.on("message")
             async def on_message(message):
 
-                self.logger.info(f'Message from {name}: {message}')
+                self.logger.debug(f'DataChannel - Message from {sc.id=}, {sc.name}: {message=}')
                 if isinstance(message, str) and message.startswith("ping"):
                     channel.send("pong" + message[4:])
                 else:
                     await self.handle_control_message(message)
 
-        @pc.on("connectionstatechange")
+        @sc.pc.on("connectionstatechange")
         async def on_connectionstatechange():
-            self.logger.info(f"Connection state is {pc.connectionState}")
+            self.logger.info(f"ConnectionState - State changed: {sc.pc.connectionState=}, {sc.id=}, {sc.name=}")
 
             # handle failed connection
-            if pc.connectionState == "failed":
+            if sc.pc.connectionState == "failed":
 
                 # close connection
-                await pc.close()
+                await sc.pc.close()
 
                 # pop from registry
-                self.peer_connections.pop(spc.name)
+                self.peer_connections.pop(sc.name)
+                self.logger.info(f"ConnectionState - StreamClient removed from registry: {sc.id=}, {sc.name=}")
 
-            elif pc.connectionState == "connected":
+                # publish state update
+                await self.publish_state()
+
+            elif sc.pc.connectionState == "connected":
                 pass
 
             else:
-                self.logger.warning(f"Unhandled connection state: {pc.connectionState}")
+                self.logger.debug(f"Unhandled connection state: {sc.pc.connectionState}")
 
-        @pc.on("track")
+        @sc.pc.on("track")
         def on_track(track):
-            self.logger.info(f"Track received: {track.kind}")
+            self.logger.info(f"MediaTrack - Received Track: {track.kind=}, {sc.id=}, {sc.name=}")
 
             # handle video track
             if track.kind == "video":
 
                 # check if connecting peer is active
-                if self.active_connection_name == spc.name:
-                    # syncify(self.set_active_peer_connection)(spc.name)
-                    self.video_transform_track.input_track = track
+                if self.active_connection_name == sc.name:
 
-                self.video_transform_track.on_image_ready_callback = self.transform_frame
-                self.logger.info(f"Added {track.kind} track to pc")
+                    self.logger.info(
+                        f"MediaTrack - Received Track: StreamClient matches active connection name: "
+                        f"{self.active_connection_name=}, {sc.id=}, {sc.name=}")
+                    self.video_transform_track.input_track = track
 
                 # check if video feed requested
                 if output:
-                    pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
+                    sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
+                    self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
 
             @track.on("ended")
             async def on_ended():
-                self.logger.info(f"Track {track.kind} ended")
+                self.logger.info(f"MediaTrack - Track ended: {track.kind=}, {sc.id=}, {sc.name=}")
 
-                if track.kind == "video":
-                    await self.video_transform_track.stop()
+                # if track.kind == "video":
+                #     await self.video_transform_track.stop()
 
         # handle offer
-        await pc.setRemoteDescription(offer)
+        await sc.pc.setRemoteDescription(offer)
+        self.logger.info(f"HandleOffer -Remote description created: {sc.id=}, {sc.name=}")
 
         # create answer
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
+        answer = await sc.pc.createAnswer()
+        await sc.pc.setLocalDescription(answer)
+        self.logger.info(f"HandleOffer - Answer created: {sc.id=}, {sc.name=}")
 
         return {
-            'sdp': pc.localDescription.sdp,
-            'type': pc.localDescription.type
+            'sdp': sc.pc.localDescription.sdp,
+            'type': sc.pc.localDescription.type
         }
 
     async def handle_control_message(self, app_msg):
 
         # parse json
         app_msg = json.loads(app_msg)
-        self.logger.info(f"Incoming message: {app_msg}")
+        self.logger.info(f"DataChannel - Incoming message: {app_msg}")
 
         # extract app message
         if app_msg['type'] == "set_parameters":
+            self.logger.info(f"DataChannel - Handling {app_msg['type']} control message")
+
+            # check if parameters should be updated
             if self.parameters.prompt == '' or app_msg['payload'].get('override', False) is True:
+
+                # update params
                 self.parameters = self.parameters.model_copy(update=app_msg['payload'])
-                await self.publish_state()
                 self.logger.info(f"Parameters set: {self.parameters.model_dump()}")
 
-        elif app_msg['type'] == "set_active_name":
+                # publish state update
+                await self.publish_state()
 
+        elif app_msg['type'] == "set_active_name":
+            self.logger.info(f"DataChannel - Handling {app_msg['type']} control message")
+
+            # update active
             await self.set_active_peer_connection(app_msg['payload']['name'])
+
+            # publish state update
             await self.publish_state()
 
         # elif app_msg['type'] == "set_connection_info":
@@ -360,8 +402,9 @@ class WebRTCStreamManager:
             if not self.img_client:
                 return frame
 
-            # convert frame to PIL
+            # serialize frame
             image = frame.to_image()
+            # image = frame.to_ndarray(format='rgb24')
 
             # post to image generation
             new_image = self.img_client.post_image(
@@ -371,6 +414,7 @@ class WebRTCStreamManager:
 
             # convert PIL back to frame
             new_frame = VideoFrame.from_image(new_image)
+            # new_frame = VideoFrame.from_ndarray(new_image, format='rgb24')
 
             # return processed frame
             return new_frame
