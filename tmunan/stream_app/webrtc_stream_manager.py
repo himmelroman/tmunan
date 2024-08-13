@@ -182,7 +182,7 @@ class WebRTCStreamManager:
         self.peer_connections[sc.name] = sc
         self.logger.info(f"StreamClient added to peer registry: {sc.id=}, {sc.name}")
 
-    async def set_active_peer_connection(self, name):
+    def set_active_peer_connection(self, name):
 
         # update active
         self.active_connection_name = name
@@ -196,7 +196,7 @@ class WebRTCStreamManager:
             self.logger.warning(f"Active client not found in registry!")
 
         # publish state
-        await self.publish_state()
+        self.publish_state()
 
     async def cleanup(self):
 
@@ -214,7 +214,7 @@ class WebRTCStreamManager:
         self.peer_connections.clear()
         self.logger.info(f"StreamClient registry cleanup complete")
 
-    async def publish_state(self):
+    def publish_state(self):
 
         state = {
                     "type": "state",
@@ -273,10 +273,10 @@ class WebRTCStreamManager:
 
             # check if there is no active peer
             if not self.active_connection_name:
-                await self.set_active_peer_connection(sc.name)
+                self.set_active_peer_connection(sc.name)
 
             # publish change
-            await self.publish_state()
+            self.publish_state()
 
             @channel.on("message")
             async def on_message(message):
@@ -302,7 +302,7 @@ class WebRTCStreamManager:
                 self.logger.info(f"ConnectionState - StreamClient removed from registry: {sc.id=}, {sc.name=}")
 
                 # publish state update
-                await self.publish_state()
+                self.publish_state()
 
             elif sc.pc.connectionState == "connected":
                 pass
@@ -318,8 +318,8 @@ class WebRTCStreamManager:
             if track.kind == "video":
 
                 # # check if no active peer yet
-                # if not self.active_connection_name:
-                #     await self.set_active_peer_connection(sc.name)
+                if not self.active_connection_name:
+                    self.set_active_peer_connection(sc.name)
 
                 # check if this is the active peer - take its track as input
                 if self.active_connection_name == sc.name:
@@ -331,7 +331,6 @@ class WebRTCStreamManager:
 
                 # check if video feed requested
                 if output:
-                    # await self.video_transform_track.start_tasks()
                     sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
                     self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
 
@@ -374,16 +373,16 @@ class WebRTCStreamManager:
                 self.logger.info(f"Parameters set: {self.parameters.model_dump()}")
 
                 # publish state update
-                await self.publish_state()
+                self.publish_state()
 
         elif app_msg['type'] == "set_active_name":
             self.logger.info(f"DataChannel - Handling {app_msg['type']} control message")
 
             # update active
-            await self.set_active_peer_connection(app_msg['payload']['name'])
+            self.set_active_peer_connection(app_msg['payload']['name'])
 
             # publish state update
-            await self.publish_state()
+            self.publish_state()
 
         # elif app_msg['type'] == "set_connection_info":
         #     if conn := self.connections.get(UUID(app_msg['payload']['connection_id'])):
