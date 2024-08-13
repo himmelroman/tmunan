@@ -222,7 +222,7 @@ class WebRTCStreamManager:
                         "connections": [
                             {
                                 "id": str(spc.id),
-                                # "info": conn.info
+                                "name": spc.name
                             }
                             for spc in self.peer_connections.values()
                         ],
