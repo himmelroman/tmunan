@@ -34,7 +34,6 @@ class VideoTransformTrack(MediaStreamTrack):
 
         # input track
         self.input_track = input_track
-        self.start()
 
         # I/O
         self.input_frame_queue = asyncio.Queue(maxsize=1)
@@ -331,6 +330,7 @@ class WebRTCStreamManager:
 
                 # check if video feed requested
                 if output:
+                    await self.video_transform_track.start()
                     sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
                     self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
 
