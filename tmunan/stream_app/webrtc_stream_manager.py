@@ -1,7 +1,7 @@
 import json
 import asyncio
-from typing import Dict
 from uuid import UUID
+from typing import Dict
 
 import aiortc
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel, RTCConfiguration, RTCIceServer
@@ -45,7 +45,7 @@ class VideoTransformTrack(MediaStreamTrack):
         self.on_image_ready_callback = None
 
         # synchronization flag
-        self.is_running = True
+        self.is_running = False
 
         # env
         self.logger = get_logger(self.__class__.__name__)
