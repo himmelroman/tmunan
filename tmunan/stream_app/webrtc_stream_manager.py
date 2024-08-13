@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import Dict
 
 import aiortc
-from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel, RTCConfiguration, RTCIceServer
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 from aiortc.contrib.media import MediaRelay
 
 from av import VideoFrame
@@ -49,8 +49,9 @@ class VideoTransformTrack(MediaStreamTrack):
 
         # env
         self.logger = get_logger(self.__class__.__name__)
-        self._log_output_frame = False
         self._log_input_frame = False
+        self._log_output_frame = False
+        self._log_output_recv = False
 
     async def start_tasks(self):
         if not self.is_running:
@@ -82,11 +83,10 @@ class VideoTransformTrack(MediaStreamTrack):
 
                 # wait if input track is not initialized
                 if not self.input_track:
-                    await asyncio.sleep(0.1)
-                    continue
+                    raise ValueError
 
                 # get frame from source track
-                frame = await asyncio.wait_for(self.input_track.recv(), timeout=0.01)
+                frame = await asyncio.wait_for(self.input_track.recv(), timeout=0.1)
 
                 # enqueue on image generation queue
                 await self.enqueue_input_frame(frame)
@@ -94,11 +94,18 @@ class VideoTransformTrack(MediaStreamTrack):
                     self.logger.debug(f'Input - Put frame on input queue, qsize={self.input_frame_queue.qsize()}')
                     self._log_input_frame = True
 
+            # timeout waiting for input track's recv()
             except asyncio.TimeoutError:
                 continue
 
+            # input track not initialized
+            except ValueError:
+                await asyncio.sleep(0.1)
+                continue
+
+            # error reading from input track's recv()
             except aiortc.mediastreams.MediaStreamError:
-                self.logger.exception(f"Input - MediaStreamError in _task_consume_input")
+                await asyncio.sleep(0.1)
                 continue
 
             except Exception:
@@ -125,6 +132,7 @@ class VideoTransformTrack(MediaStreamTrack):
                     self.logger.debug(f'Output - Put frame on output queue, qsize={self.output_frame_queue.qsize()}')
                     self._log_output_frame = True
 
+            # timeout waiting for input queue's get()
             except asyncio.TimeoutError:
                 pass
 
@@ -135,14 +143,19 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
 
-        self.logger.debug('Track - Executing recv() from input track')
+        self.logger.debug('Track - Executing recv()')
+
+        # start background tasks if they are not initialized yet
         if self._task_input is None and self._task_output is None:
             await self.start_tasks()
 
         # get transformed frame from output queue
         frame = await self.output_frame_queue.get()
 
-        # self.logger.debug('Track - Outputting frame from output queue to track')
+        if not self._log_output_recv:
+            self._log_output_recv = True
+            self.logger.debug(f"Track - Returning output frame to track consumer")
+
         return frame
 
 
