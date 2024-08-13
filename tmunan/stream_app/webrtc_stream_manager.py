@@ -34,6 +34,7 @@ class VideoTransformTrack(MediaStreamTrack):
 
         # input track
         self.input_track = input_track
+        self.start()
 
         # I/O
         self.input_frame_queue = asyncio.Queue(maxsize=1)
@@ -135,8 +136,8 @@ class VideoTransformTrack(MediaStreamTrack):
     async def recv(self):
 
         # self.logger.debug('Track - Executing recv() from input track')
-        if self._task_input is None and self._task_output is None:
-            await self.start()
+        # if self._task_input is None and self._task_output is None:
+        #     await self.start()
 
         # get transformed frame from output queue
         frame = await self.output_frame_queue.get()
