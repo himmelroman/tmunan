@@ -316,7 +316,11 @@ class WebRTCStreamManager:
             # handle video track
             if track.kind == "video":
 
-                # check if connecting peer is active
+                # check if no active peer yet
+                if not self.active_connection_name:
+                    self.set_active_peer_connection(sc.name)
+
+                # check if this is the active peer - take its track as input
                 if self.active_connection_name == sc.name:
 
                     self.logger.info(
