@@ -318,11 +318,7 @@ class WebRTCStreamManager:
                 self.publish_state()
 
             elif sc.pc.connectionState == "connected":
-
-                # check if video feed requested
-                if output:
-                    sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
-                    self.logger.info(f"MediaTrack - Received Track: Output track requested and added. {sc.id=}, {sc.name=}")
+                pass
 
             else:
                 self.logger.debug(f"Unhandled connection state: {sc.pc.connectionState}")
@@ -352,6 +348,11 @@ class WebRTCStreamManager:
 
                 # if track.kind == "video":
                 #     await self.video_transform_track.stop()
+
+        # check if video feed requested
+        if output:
+            sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
+            self.logger.info(f"HandleOffer - Output track requested and added. {sc.id=}, {sc.name=}")
 
         # handle offer
         await sc.pc.setRemoteDescription(offer)
