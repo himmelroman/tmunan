@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM ubuntu/python:3.10-22.04_stable
 
 USER root
 WORKDIR /root/app
