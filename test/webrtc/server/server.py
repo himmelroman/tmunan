@@ -180,6 +180,15 @@ async def offer(request):
 
     pc = RTCPeerConnection()
 
+    pc = RTCPeerConnection(
+        configuration=RTCConfiguration(
+            [
+                # RTCIceServer("stun:stun.relay.metered.ca:80")
+                RTCIceServer("stun:stun.l.google:19302"),
+            ]
+        )
+    )
+
     # pc = RTCPeerConnection(
     #     configuration=RTCConfiguration([
     #         RTCIceServer("stun:stun.relay.metered.ca:80"),
@@ -245,11 +254,18 @@ async def offer(request):
     logger.info(f"Added video output to pc")
 
     # handle offer
+    t_remote = time.time()
     await pc.setRemoteDescription(offer)
+    logger.info(f"setRemoteDescription took: {time.time() - t_remote}")
 
     # send answer
+    t_answer = time.time()
     answer = await pc.createAnswer()
+    logger.info(f"createAnswer took: {time.time() - t_answer}")
+
+    t_local = time.time()
     await pc.setLocalDescription(answer)
+    logger.info(f"setLocalDescription took: {time.time() - t_local}")
 
     return web.Response(
         content_type="application/json",
