@@ -199,10 +199,19 @@ class WebRTCStreamManager:
 
         # update active
         self.active_connection_name = name
+        self.logger.info(f"Active StreamClient set: {self.active_connection_name}")
+
+        # consumer track
+        self.consume_active_peer_track()
+
+        # publish state
+        self.publish_state()
+
+    def consume_active_peer_track(self):
 
         # log
-        self.logger.info(f"Active StreamClient set: {self.active_connection_name}")
-        sc = self.peer_connections.get(name, None)
+        sc = self.peer_connections.get(self.active_connection_name, None)
+
         if sc:
             # get incoming video track
             video_track = next((recv.track for recv in sc.pc.getReceivers() if recv.track.kind == 'video'), None)
@@ -213,9 +222,6 @@ class WebRTCStreamManager:
                 self.logger.warning(f"Cannot find video track in PeerConnection for client: {sc.id=}, {sc.name}")
         else:
             self.logger.warning(f"Active client not found in registry!")
-
-        # publish state
-        self.publish_state()
 
     async def cleanup(self):
 
@@ -336,9 +342,13 @@ class WebRTCStreamManager:
             # handle video track
             if track.kind == "video":
 
-                # # check if no active peer yet
+                # no active peer, this is the first connection
                 if not self.active_connection_name:
                     self.set_active_peer_connection(sc.name)
+
+                # new connection from already active peer
+                elif self.active_connection_name == sc.name:
+                    self.consume_active_peer_track()
 
             @track.on("ended")
             async def on_ended():
