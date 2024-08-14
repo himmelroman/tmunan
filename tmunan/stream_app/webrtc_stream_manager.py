@@ -349,14 +349,14 @@ class WebRTCStreamManager:
                 # if track.kind == "video":
                 #     await self.video_transform_track.stop()
 
-        # handle offer
-        await sc.pc.setRemoteDescription(offer)
-        self.logger.info(f"HandleOffer -Remote description created: {sc.id=}, {sc.name=}")
-
         # check if video feed requested
         if output:
             sc.pc.addTrack(self.media_relay.subscribe(self.video_transform_track, buffered=False))
             self.logger.info(f"HandleOffer - Output track requested and added. {sc.id=}, {sc.name=}")
+
+        # handle offer
+        await sc.pc.setRemoteDescription(offer)
+        self.logger.info(f"HandleOffer - Remote description created: {sc.id=}, {sc.name=}")
 
         # create answer
         answer = await sc.pc.createAnswer()

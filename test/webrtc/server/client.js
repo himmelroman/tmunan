@@ -240,24 +240,29 @@ function start() {
     }
 
     // Acquire media and start negotiation.
-    if (constraints.audio || constraints.video) {
-        if (constraints.video) {
-            document.getElementById('media').style.display = 'block';
-        }
-        navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
-            stream.getTracks().forEach((track) => {
-                if ("contentHint" in track) {
-                    track.contentHint = 'detail';
-                }
-                pc.addTrack(track, stream);
-            });
-            return negotiate();
-        }, (err) => {
-            alert('Could not acquire media: ' + err);
-        });
-    } else {
-        negotiate();
-    }
+    // if (constraints.audio || constraints.video) {
+    //     if (constraints.video) {
+    //         document.getElementById('media').style.display = 'block';
+    //     }
+    //     navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+    //         stream.getTracks().forEach((track) => {
+    //             if ("contentHint" in track) {
+    //                 track.contentHint = 'detail';
+    //             }
+    //             pc.addTrack(track, stream);
+    //         });
+    //         return negotiate();
+    //     }, (err) => {
+    //         alert('Could not acquire media: ' + err);
+    //     });
+    // } else {
+    //     negotiate();
+    // }
+    document.getElementById('media').style.display = 'block';
+    pc.addTransceiver('video');
+    // this step seems to be optional:
+    // pc.getTransceivers().forEach(t => t.direction = 'recvonly');
+    negotiate();
 
     document.getElementById('stop').style.display = 'inline-block';
 }
@@ -280,8 +285,14 @@ function stop() {
     }
 
     // close local audio / video
-    pc.getSenders().forEach((sender) => {
-        sender.track.stop();
+    // pc.getSenders().forEach((sender) => {
+    //     sender.track.stop();
+    // });
+    pc.getSenders().forEach(function(sender) {
+        // with our one way setup, seems like sender.track can be null - makes sense
+        if (sender.track) {
+            sender.track.stop();
+        }
     });
 
     // close peer connection

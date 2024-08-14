@@ -8,12 +8,14 @@ import time
 import uuid
 from typing import Optional
 
+
 import aiohttp_cors
 from asyncer import asyncify
 
-import cv2
 from aiohttp import web
 from av import VideoFrame
+
+import aiortc
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRecorder, MediaRelay
 
@@ -29,20 +31,14 @@ relay = MediaRelay()
 
 
 class VideoTransformTrack(MediaStreamTrack):
-    """
-    A video stream track that transforms frames from an another track.
-    """
 
     kind = "video"
 
-    def __init__(self, input_track, transform):
+    def __init__(self, input_track=None):
         super().__init__()
 
-        self.transform = transform
+        # input track
         self.input_track = input_track
-
-        # imagine client
-        self.img_client = ImagineClient(host='localhost', port=8090, secure=False)
 
         # I/O
         self.input_frame_queue = asyncio.Queue(maxsize=1)
@@ -50,15 +46,25 @@ class VideoTransformTrack(MediaStreamTrack):
         self._task_input = None
         self._task_output = None
 
+        # events
+        self.on_image_ready_callback = None
+
         # synchronization flag
-        self.is_running = True
+        self.is_running = False
 
-    async def start(self):
-        self.is_running = True
-        self._task_input = asyncio.create_task(self._task_consume_input())
-        self._task_output = asyncio.create_task(self._task_produce_output())
+        # env
+        self.logger = get_logger(self.__class__.__name__)
+        self._log_input_frame = False
+        self._log_output_frame = False
+        self._log_output_recv = False
 
-    async def stop(self):
+    async def start_tasks(self):
+        if not self.is_running:
+            self.is_running = True
+            self._task_input = asyncio.create_task(self._task_consume_input())
+            self._task_output = asyncio.create_task(self._task_produce_output())
+
+    async def stop_tasks(self):
         self.is_running = False
 
     async def enqueue_input_frame(self, frame: VideoFrame):
@@ -75,27 +81,46 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def _task_consume_input(self):
 
-        logger.info('INPUT - Starting _task_consume_input')
+        self.logger.debug('Input - Starting _task_consume_input')
         while self.is_running:
 
             try:
+
+                # wait if input track is not initialized
+                if not self.input_track:
+                    raise ValueError
 
                 # get frame from source track
                 frame = await asyncio.wait_for(self.input_track.recv(), timeout=0.1)
 
                 # enqueue on image generation queue
                 await self.enqueue_input_frame(frame)
-                logger.info(f'INPUT - Put frame on queue, qsize={self.input_frame_queue.qsize()}')
+                if not self._log_input_frame:
+                    self.logger.debug(f'Input - Put frame on input queue, qsize={self.input_frame_queue.qsize()}')
+                    self._log_input_frame = True
 
+            # timeout waiting for input track's recv()
             except asyncio.TimeoutError:
                 continue
 
-            except Exception as e:
-                logging.exception(f"Error in _task_consume_input")
+            # input track not initialized
+            except ValueError:
+                await asyncio.sleep(0.1)
+                continue
+
+            # error reading from input track's recv()
+            except aiortc.mediastreams.MediaStreamError:
+                await asyncio.sleep(0.1)
+                continue
+
+            except Exception:
+                self.logger.exception(f"Input - Error in _task_consume_input")
+
+        self.logger.debug('Input - Exiting _task_consume_input')
 
     async def _task_produce_output(self):
 
-        logger.info('OUTPUT - Starting _task_produce_output')
+        self.logger.info('Output - Starting _task_produce_output')
         while self.is_running:
 
             try:
@@ -104,88 +129,39 @@ class VideoTransformTrack(MediaStreamTrack):
                 frame = await asyncio.wait_for(self.input_frame_queue.get(), timeout=0.1)
 
                 # run transform
-                transformed_frame = await self.transform_frame(frame)
+                transformed_frame = await self.on_image_ready_callback(frame)
 
                 # put on output queue
                 await self.output_frame_queue.put(transformed_frame)
-                logger.info(f'OUTPUT - Put frame on queue, qsize={self.output_frame_queue.qsize()}')
+                if not self._log_output_frame:
+                    self.logger.debug(f'Output - Put frame on output queue, qsize={self.output_frame_queue.qsize()}')
+                    self._log_output_frame = True
 
+            # timeout waiting for input queue's get()
             except asyncio.TimeoutError:
                 pass
 
-            except Exception as e:
-                logging.exception(f"Error in _task_produce_output")
+            except Exception:
+                self.logger.exception(f"Output - Error in _task_produce_output")
+
+        self.logger.debug('Output - Exiting _task_produce_output')
 
     async def recv(self):
 
-        logger.info('RECV - Running recv')
+        # self.logger.debug('Track - Executing recv()')
+
+        # start background tasks if they are not initialized yet
         if self._task_input is None and self._task_output is None:
-            await self.start()
+            await self.start_tasks()
 
         # get transformed frame from output queue
         frame = await self.output_frame_queue.get()
 
-        logger.info('RECV - Output frame!')
+        if not self._log_output_recv:
+            self._log_output_recv = True
+            self.logger.debug(f"Track - Returning output frame to track consumer")
+
         return frame
-
-    def test(self, frame):
-
-        image = frame.to_image()
-        new_image = self.img_client.post_image(
-            image=image,
-            params=ImageParameters(
-                prompt='evil nina simone',
-                guidance_scale=1.0,
-                strength=1.5,
-                height=640,
-                width=480,
-                seed=123
-        ))
-        new_frame = VideoFrame.from_image(new_image)
-        return new_frame
-
-    async def transform_frame(self, frame):
-
-        if self.transform == "cartoon":
-
-            # gen image
-            logger.info('TRANS - Sending frame to img2img')
-            new_frame = await asyncify(self.test)(frame)
-
-            # assign timestamps
-            new_frame.pts = frame.pts
-            new_frame.time_base = frame.time_base
-
-            return new_frame
-
-        if self.transform == "edges":
-
-            # perform edge detection
-            img = frame.to_ndarray(format="bgr24")
-            img = cv2.cvtColor(cv2.Canny(img, 100, 200), cv2.COLOR_GRAY2BGR)
-
-            # rebuild a VideoFrame, preserving timing information
-            new_frame = VideoFrame.from_ndarray(img, format="bgr24")
-            new_frame.pts = frame.pts
-            new_frame.time_base = frame.time_base
-            return new_frame
-
-        elif self.transform == "rotate":
-
-            # rotate image
-            img = frame.to_ndarray(format="bgr24")
-            rows, cols, _ = img.shape
-            M = cv2.getRotationMatrix2D((cols / 2, rows / 2), frame.time * 45, 1)
-            img = cv2.warpAffine(img, M, (cols, rows))
-
-            # rebuild a VideoFrame, preserving timing information
-            new_frame = VideoFrame.from_ndarray(img, format="bgr24")
-            new_frame.pts = frame.pts
-            new_frame.time_base = frame.time_base
-            return new_frame
-
-        else:
-            return frame
 
 
 async def index(request):
@@ -251,11 +227,7 @@ async def offer(request):
         logger.info(f"Track {track.kind} received")
 
         if track.kind == "video":
-            video_transform_track = VideoTransformTrack(track, transform='cartoon')
-            # video_transform_track.start()
-            pc.addTrack(video_transform_track)
-
-            logger.info(f"Added track to pc")
+            pass
             # pc.addTrack(
             #     VideoTransformTrack(
             #         relay.subscribe(track), transform=params["video_transform"]
@@ -265,8 +237,12 @@ async def offer(request):
         @track.on("ended")
         async def on_ended():
             logger.info("Track %s ended", track.kind)
-            if track.kind == "video":
-                await video_transform_track.stop()
+            # if track.kind == "video":
+            #     await video_transform_track.stop()
+
+    # video_transform_track.start()
+    pc.addTrack(aiortc.mediastreams.VideoStreamTrack())
+    logger.info(f"Added video output to pc")
 
     # handle offer
     await pc.setRemoteDescription(offer)
