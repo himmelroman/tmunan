@@ -45,6 +45,7 @@ services:
   nginx:
     image: nginx
     #    restart: unless-stopped
+    network_mode: "host"
     ports:
       - "80:80"
       - "443:443"
