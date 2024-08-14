@@ -294,7 +294,7 @@ class WebRTCStreamManager:
 
             # save data channel
             sc.data_channel = channel
-            self.logger.info(f"DataChannel - Established for StreamClient: {sc.id=}, {sc.name}")
+            self.logger.info(f"DataChannel - Established for StreamClient: {sc.id=}, {sc.name=}")
 
             # check if there is no active peer
             if not self.active_connection_name:
@@ -419,12 +419,18 @@ class WebRTCStreamManager:
         # gen image
         # self.logger.info('TRANS - Sending frame to img2img')
         new_frame = await asyncify(self.request_img2img)(frame)
+        if new_frame:
 
-        # assign timestamps
-        new_frame.pts = frame.pts
-        new_frame.time_base = frame.time_base
+            # assign timestamps
+            new_frame.pts = frame.pts
+            new_frame.time_base = frame.time_base
 
-        return new_frame
+            return new_frame
+
+        else:
+
+            self.logger.warning(f"ImagineClient - Request to img2img failed, returning original frame.")
+            return frame
 
     def request_img2img(self, frame):
 
