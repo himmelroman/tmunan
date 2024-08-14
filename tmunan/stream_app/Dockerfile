@@ -1,12 +1,12 @@
 FROM ubuntu/python:3.10-22.04_stable
 
-USER root
-WORKDIR /root/app
+USER ubuntu
+WORKDIR /ubuntu/app
 
-COPY ./stream_app/requirements.txt /root/app/requirements.txt
+COPY ./stream_app/requirements.txt /ubuntu/app/requirements.txt
 
-RUN pip install -r /root/app/requirements.txt
+RUN pip install -r /ubuntu/app/requirements.txt
 
-COPY . /root/app/tmunan
+COPY . /ubuntu/app/tmunan
 
 CMD ["uvicorn",  "tmunan.stream_app.stream:app", "--host", "0.0.0.0", "--port", "8080"]
