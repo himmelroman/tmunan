@@ -19,7 +19,7 @@ def get_logger(log_name, log_path=None, console=True):
 
     # read log level
     log_level = os.environ.get('LOG_LEVEL', 'INFO')
-    log_level = logging.getLevelNamesMapping()[log_level]
+    log_level = logging.INFO  # logging.getLevelNamesMapping()[log_level]
 
     # init log dir
     if not log_path:
