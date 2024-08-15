@@ -13,9 +13,12 @@ from asyncer import asyncify
 from tmunan.utils.log import get_logger
 from tmunan.common.models import ImageParameters
 from tmunan.imagine_app.client import ImagineClient
+from tmunan.stream_app.aiortc_monkey_patch import patch_vpx
 
+# global shit
 import faulthandler
 faulthandler.enable()
+patch_vpx()
 
 
 class StreamClient:

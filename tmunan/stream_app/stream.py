@@ -27,7 +27,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
         imagine_port = os.environ.get("IMAGINE_PORT", "8090")
         imagine_secure = bool(os.environ.get("IMAGINE_SECURE", False))
 
-    # ceate stream manager
+    # create stream manager
     stream_manager = WebRTCStreamManager(imagine_host, imagine_port, imagine_secure)
 
     # yield fastapi state
