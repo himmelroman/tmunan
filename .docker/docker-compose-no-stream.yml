@@ -54,7 +54,6 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
     depends_on:
       - imagine
-      - stream
     logging:
       driver: "json-file"
       options:
