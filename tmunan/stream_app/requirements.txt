@@ -13,4 +13,5 @@ Pillow
 # webrtc
 av
 aiortc
+asyncer
 asyncify
