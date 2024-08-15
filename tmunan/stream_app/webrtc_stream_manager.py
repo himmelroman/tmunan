@@ -14,6 +14,9 @@ from tmunan.utils.log import get_logger
 from tmunan.common.models import ImageParameters
 from tmunan.imagine_app.client import ImagineClient
 
+import faulthandler
+faulthandler.enable()
+
 
 class StreamClient:
 
