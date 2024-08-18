@@ -521,5 +521,8 @@ class WebRTCStreamManager:
             # return processed frame
             return new_frame
 
-        except Exception as ex:
+        except ConnectionRefusedError:
+            self.logger.error(f"Error in request_img2img: ConnectionRefusedError! {self.img_client.service_url=}")
+
+        except Exception:
             self.logger.exception('Exception in request_img2img')
