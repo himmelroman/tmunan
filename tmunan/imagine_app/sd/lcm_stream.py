@@ -62,7 +62,7 @@ class StreamLCM:
         self.stream = None
         self.stream_cache = {
             'prompt': None,
-            'negative_prompt': None,
+            # 'negative_prompt': None,
             'guidance_scale': None,
             'strength': None,
             'seed': None
@@ -160,7 +160,7 @@ class StreamLCM:
         # determine if "prepare" is needed
         if (
                 self.stream_cache['prompt'] != prompt or
-                self.stream_cache['negative_prompt'] != negative_prompt or
+                # self.stream_cache['negative_prompt'] != negative_prompt or
                 self.stream_cache['guidance_scale'] != guidance_scale or
                 self.stream_cache['strength'] != strength or
                 self.stream_cache['seed'] != seed):
@@ -168,7 +168,7 @@ class StreamLCM:
             # prepare
             self.stream.prepare(
                 prompt=prompt,
-                negative_prompt=negative_prompt,
+                # negative_prompt=negative_prompt,
                 guidance_scale=float(guidance_scale),
                 strength=float(strength),
                 seed=int(seed)
@@ -183,7 +183,7 @@ class StreamLCM:
 
             # update cache
             self.stream_cache['prompt'] = prompt
-            self.stream_cache['negative_prompt'] = negative_prompt
+            # self.stream_cache['negative_prompt'] = negative_prompt
             self.stream_cache['guidance_scale'] = guidance_scale
             self.stream_cache['strength'] = strength
             self.stream_cache['seed'] = seed
