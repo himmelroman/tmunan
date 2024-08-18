@@ -62,8 +62,10 @@ class StreamLCM:
         self.stream = None
         self.stream_cache = {
             'prompt': None,
+            'negative_prompt': None,
             'guidance_scale': None,
-            'strength': None
+            'strength': None,
+            'seed': None
         }
         self.img2img_pipe = None
 
@@ -103,8 +105,7 @@ class StreamLCM:
         # StreamDiffusion
         self.stream = StreamDiffusion(
             self.img2img_pipe,
-            # t_index_list=[32, 45],
-            t_index_list=[33],
+            t_index_list=[33],  # t_index_list=[32, 45],
             torch_dtype=torch.float16,
             width=904,
             height=512,

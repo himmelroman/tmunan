@@ -181,8 +181,11 @@ class WebRTCStreamManager:
         self.peer_connections: Dict[str, StreamClient] = dict()
         self.active_connection_name = None
 
+        # parameters
+        self.diffusion_parameters = ImageParameters()
+        self.client_parameters = dict()
+
         # img generation
-        self.parameters = ImageParameters()
         self.img_client = None
         if imagine_host and imagine_port:
             self.img_client = ImagineClient(host=imagine_host, port=imagine_port, secure=imagine_secure)
@@ -210,8 +213,8 @@ class WebRTCStreamManager:
         # consumer track
         self.consume_active_peer_track()
 
-        # publish state
-        self.publish_state()
+        # publish presence
+        self.publish_presence()
 
     def consume_active_peer_track(self):
 
@@ -245,10 +248,55 @@ class WebRTCStreamManager:
         self.peer_connections.clear()
         self.logger.info(f"StreamClient registry cleanup complete")
 
-    def publish_state(self):
+    def get_client_list(self, include_peer_list=None, exclude_peer_list=None):
 
-        state = {
-                    "type": "state",
+        # include
+        if include_peer_list:
+            return [c for c in self.peer_connections.values() if c.name in include_peer_list]
+
+        # exclude
+        elif exclude_peer_list:
+            return [c for c in self.peer_connections.values() if c.name not in exclude_peer_list]
+
+        # all
+        else:
+            return list(self.peer_connections.values())
+
+    def _publish(self, message, client_list=None):
+
+        # init client list if empty
+        if not client_list:
+            client_list = self.get_client_list()
+
+        # log
+        self.logger.info(f"Publishing message to {[c.name for c in client_list]}: {message=}")
+
+        # iterate all stream peer connections
+        for sc in client_list:
+            try:
+
+                # check if data channel is connected
+                if sc.data_channel:
+
+                    # send state
+                    sc.data_channel.send(json.dumps(message))
+
+                    # log
+                    self.logger.debug(f"Sent message to StreamClient: {sc.id=}, {sc.name=}")
+
+                else:
+
+                    # log
+                    self.logger.warning(
+                        f"Could not send message because DataChannel is not initialized: {sc.id=}, {sc.name=}")
+
+            except Exception as ex:
+                self.logger.exception(f'Error while sending message: {sc.id=}, {sc.name=}')
+
+    def publish_presence(self, client_list=None):
+
+        presence = {
+                    "type": "presence",
                     "payload": {
                         "connections": [
                             {
@@ -257,30 +305,25 @@ class WebRTCStreamManager:
                             }
                             for spc in self.peer_connections.values()
                         ],
-                        "active_connection_name": self.active_connection_name,
-                        "parameters": self.parameters.model_dump()
+                        "active_connection_name": self.active_connection_name
                     }
                 }
 
-        # iterate all stream peer connections
-        for sc in list(self.peer_connections.values()):
-            try:
+        # publish
+        self._publish(presence, client_list)
 
-                # check if data channel is connected
-                if sc.data_channel:
+    def publish_parameters(self, client_list=None):
 
-                    # send state
-                    sc.data_channel.send(json.dumps(state))
+        parameters = {
+                    "type": "parameters",
+                    "payload": {
+                        "diffusion": self.diffusion_parameters.model_dump(),
+                        "client": self.client_parameters
+                    }
+                }
 
-                    # log
-                    self.logger.debug(f"Published state to StreamClient: {sc.id=}, {sc.name}")
-                else:
-
-                    # log
-                    self.logger.warning(f"Could not publish state to StreamClient because DataChannel is not initialized: {sc.id=}, {sc.name}")
-
-            except Exception as ex:
-                self.logger.exception(f'Error while publishing state to StreamClient: {sc.id=}, {sc.name}')
+        # publish
+        self._publish(parameters, client_list)
 
     async def handle_offer(self, id: UUID, name: str, output: bool, sdp, type):
 
@@ -307,7 +350,8 @@ class WebRTCStreamManager:
                 self.set_active_peer_connection(sc.name)
 
             # publish change
-            self.publish_state()
+            self.publish_presence(self.get_client_list(include_peer_list=[sc.name]))
+            self.publish_parameters(self.get_client_list(include_peer_list=[sc.name]))
 
             @channel.on("message")
             async def on_message(message):
@@ -316,30 +360,34 @@ class WebRTCStreamManager:
                 if isinstance(message, str) and message.startswith("ping"):
                     channel.send("pong" + message[4:])
                 else:
-                    await self.handle_control_message(message)
+                    await self.handle_control_message(message, sc)
 
         @sc.pc.on("connectionstatechange")
         async def on_connectionstatechange():
             self.logger.info(f"ConnectionState - State changed: {sc.pc.connectionState=}, {sc.id=}, {sc.name=}")
 
             # handle failed connection
-            if sc.pc.connectionState == "failed":
+            if sc.pc.connectionState in ["new", "connected", "connecting"]:
 
-                # close connection
-                await sc.pc.close()
+                # update presence
+                self.publish_presence()
 
-                # pop from registry
-                self.peer_connections.pop(sc.name)
-                self.logger.info(f"ConnectionState - StreamClient removed from registry: {sc.id=}, {sc.name=}")
+            elif sc.pc.connectionState in ["failed", "disconnected", "closed"]:
 
-                # publish state update
-                self.publish_state()
+                # get peer connection
+                if spc := self.peer_connections.pop(sc.name, None):
 
-            elif sc.pc.connectionState == "connected":
-                pass
+                    # close connection (this should be harmless if already closed)
+                    await spc.pc.close()
+
+                    # log
+                    self.logger.info(f"ConnectionState - StreamClient removed from registry: {spc.id=}, {spc.name=}")
+
+                    # update presence
+                    self.publish_presence()
 
             else:
-                self.logger.debug(f"Unhandled connection state: {sc.pc.connectionState}")
+                self.logger.warning(f"Unhandled connection state: {sc.pc.connectionState}")
 
         @sc.pc.on("track")
         def on_track(track):
@@ -382,34 +430,44 @@ class WebRTCStreamManager:
             'type': sc.pc.localDescription.type
         }
 
-    async def handle_control_message(self, app_msg):
+    async def handle_control_message(self, app_msg, sc):
 
         # parse json
         app_msg = json.loads(app_msg)
-        self.logger.info(f"DataChannel - Incoming message: {app_msg}")
+        self.logger.info(f"DataChannel - Incoming message from {sc.name}: {app_msg}")
 
         # extract app message
-        if app_msg['type'] == "set_parameters":
-            self.logger.info(f"DataChannel - Handling {app_msg['type']} control message")
+        if app_msg['type'] == "parameters":
 
             # check if parameters should be updated
-            if self.parameters.prompt == '' or app_msg['payload'].get('override', False) is True:
+            if self.diffusion_parameters.prompt == '' or app_msg['payload'].get('override', False) is True:
 
-                # update params
-                self.parameters = self.parameters.model_copy(update=app_msg['payload'])
-                self.logger.info(f"Parameters set: {self.parameters.model_dump()}")
+                # params updated flag
+                updated = False
 
-                # publish state update
-                self.publish_state()
+                # check for diffusion params update
+                if 'diffusion' in app_msg['payload']:
+
+                    # update params
+                    updated = True
+                    self.diffusion_parameters = self.diffusion_parameters.model_copy(update=app_msg['payload']['diffusion'])
+                    self.logger.info(f"Parameters set: {self.diffusion_parameters.model_dump()}")
+
+                # check for client params update
+                if 'client' in app_msg['payload']:
+
+                    # update params
+                    updated = True
+                    self.client_parameters.update(app_msg['payload']['client'])
+
+                # publish params update
+                if updated:
+                    self.publish_parameters()
 
         elif app_msg['type'] == "set_active_name":
-            self.logger.info(f"DataChannel - Handling {app_msg['type']} control message")
 
             # update active
             self.set_active_peer_connection(app_msg['payload']['name'])
-
-            # publish state update
-            self.publish_state()
 
         # elif app_msg['type'] == "set_connection_info":
         #     if conn := self.connections.get(UUID(app_msg['payload']['connection_id'])):
@@ -453,7 +511,7 @@ class WebRTCStreamManager:
             # post to image generation
             new_image = self.img_client.post_image(
                 image=image,
-                params=self.parameters
+                params=self.diffusion_parameters
             )
 
             # convert PIL back to frame
