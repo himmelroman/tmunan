@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from tmunan.stream_app.api.endpoints import router
-from tmunan.stream_app.webrtc_stream_manager import WebRTCStreamManager
+from tmunan.stream_app.webrtc.stream_manager import WebRTCStreamManager
 
 
 class AppState(TypedDict):
@@ -18,17 +18,8 @@ class AppState(TypedDict):
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
 
-    # initialize
-    imagine_host = None
-    imagine_port = None
-    imagine_secure = False
-    if 'IMAGINE_LOOPBACK' not in os.environ:
-        imagine_host = os.environ.get("IMAGINE_HOST", "localhost")
-        imagine_port = os.environ.get("IMAGINE_PORT", "8090")
-        imagine_secure = bool(os.environ.get("IMAGINE_SECURE", False))
-
     # create stream manager
-    stream_manager = WebRTCStreamManager(imagine_host, imagine_port, imagine_secure)
+    stream_manager = WebRTCStreamManager()
 
     # yield fastapi state
     yield AppState(stream_manager=stream_manager)

@@ -1,9 +1,9 @@
 import uuid
 
-from fastapi import Request, WebSocket, APIRouter, HTTPException
+from fastapi import Request, WebSocket, APIRouter
 from fastapi.responses import StreamingResponse, JSONResponse
 
-from tmunan.stream_app.stream_manager import ServerFullException
+from tmunan.stream_app.webrtc.signaling import Offer
 
 router = APIRouter()
 
@@ -26,44 +26,36 @@ async def websocket(name: str, ws: WebSocket):
 @router.get("/api/stream")
 async def stream(req: Request):
 
-    try:
-
-        # consume stream
-        consumer_id = uuid.uuid4()
-        return StreamingResponse(
-            req.state.stream_manager.handle_consumer(consumer_id),
-            media_type="multipart/x-mixed-replace;boundary=frame",
-            headers={"Cache-Control": "no-cache"},
-        )
-    except ServerFullException as ex:
-        return HTTPException(503)
+    # consume stream
+    consumer_id = uuid.uuid4()
+    return StreamingResponse(
+        req.state.stream_manager.handle_consumer(consumer_id),
+        media_type="multipart/x-mixed-replace;boundary=frame",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @router.post("/api/offer")
 async def offer(name: str, output: bool, req: Request):
 
-    try:
+    # get offer
+    request_params = await req.json()
 
-        # get offer
-        offer_params = await req.json()
+    # assign id
+    peer_id = uuid.uuid4()
 
-        # assign id
-        peer_id = uuid.uuid4()
+    # prepare offer
+    offer = Offer(
+        id=peer_id,
+        name=name,
+        output=output,
+        sdp=request_params["sdp"],
+        type=request_params["type"]
+    )
 
-        # handle offer
-        answer_params = await req.state.stream_manager.handle_offer(
-            id=peer_id,
-            name=name,
-            output=output,
-            sdp=offer_params["sdp"],
-            type=offer_params["type"]
-        )
+    # handle offer
+    answer = await req.state.stream_manager.handle_offer(offer)
 
-        return JSONResponse(
-            {"sdp": answer_params["sdp"], "type": answer_params["type"]},
-        )
-
-    except ServerFullException as ex:
-        return HTTPException(503)
-
-
+    return JSONResponse(
+        {"sdp": answer.sdp, "type": answer.type},
+    )
