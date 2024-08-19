@@ -107,6 +107,9 @@ function enumerateInputDevices() {
 }
 
 function negotiate() {
+
+
+
     return pc.createOffer().then((offer) => {
         return pc.setLocalDescription(offer);
     }).then(() => {
@@ -139,11 +142,10 @@ function negotiate() {
         }
 
         document.getElementById('offer-sdp').textContent = offer.sdp;
-        return fetch('http://localhost:8080/offer', {
+        return fetch('http://localhost:8080/api/offer?name=test&output=true', {
             body: JSON.stringify({
                 sdp: offer.sdp,
-                type: offer.type,
-                video_transform: document.getElementById('video-transform').value
+                type: offer.type
             }),
             headers: {
                 'Content-Type': 'application/json'
@@ -184,22 +186,22 @@ function start() {
             clearInterval(dcInterval);
             dataChannelLog.textContent += '- close\n';
         });
-        dc.addEventListener('open', () => {
-            dataChannelLog.textContent += '- open\n';
-            dcInterval = setInterval(() => {
-                var message = 'ping ' + current_stamp();
-                dataChannelLog.textContent += '> ' + message + '\n';
-                dc.send(message);
-            }, 1000);
-        });
-        dc.addEventListener('message', (evt) => {
-            dataChannelLog.textContent += '< ' + evt.data + '\n';
-
-            if (evt.data.substring(0, 4) === 'pong') {
-                var elapsed_ms = current_stamp() - parseInt(evt.data.substring(5), 10);
-                dataChannelLog.textContent += ' RTT ' + elapsed_ms + ' ms\n';
-            }
-        });
+        // dc.addEventListener('open', () => {
+        //     dataChannelLog.textContent += '- open\n';
+        //     dcInterval = setInterval(() => {
+        //         var message = 'ping ' + current_stamp();
+        //         dataChannelLog.textContent += '> ' + message + '\n';
+        //         dc.send(message);
+        //     }, 1000);
+        // });
+        // dc.addEventListener('message', (evt) => {
+        //     dataChannelLog.textContent += '< ' + evt.data + '\n';
+        //
+        //     if (evt.data.substring(0, 4) === 'pong') {
+        //         var elapsed_ms = current_stamp() - parseInt(evt.data.substring(5), 10);
+        //         dataChannelLog.textContent += ' RTT ' + elapsed_ms + ' ms\n';
+        //     }
+        // });
     }
 
     // Build media constraints.
@@ -240,29 +242,29 @@ function start() {
     }
 
     // Acquire media and start negotiation.
-    // if (constraints.audio || constraints.video) {
-    //     if (constraints.video) {
-    //         document.getElementById('media').style.display = 'block';
-    //     }
-    //     navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
-    //         stream.getTracks().forEach((track) => {
-    //             if ("contentHint" in track) {
-    //                 track.contentHint = 'detail';
-    //             }
-    //             pc.addTrack(track, stream);
-    //         });
-    //         return negotiate();
-    //     }, (err) => {
-    //         alert('Could not acquire media: ' + err);
-    //     });
-    // } else {
-    //     negotiate();
-    // }
-    document.getElementById('media').style.display = 'block';
-    pc.addTransceiver('video');
-    // this step seems to be optional:
-    // pc.getTransceivers().forEach(t => t.direction = 'recvonly');
-    negotiate();
+    if (constraints.audio || constraints.video) {
+        if (constraints.video) {
+            document.getElementById('media').style.display = 'block';
+        }
+        navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            stream.getTracks().forEach((track) => {
+                if ("contentHint" in track) {
+                    track.contentHint = 'detail';
+                }
+                pc.addTrack(track, stream);
+            });
+            return negotiate();
+        }, (err) => {
+            alert('Could not acquire media: ' + err);
+        });
+    } else {
+        negotiate();
+    }
+    // document.getElementById('media').style.display = 'block';
+    // pc.addTransceiver('video');
+    // // this step seems to be optional:
+    // // pc.getTransceivers().forEach(t => t.direction = 'recvonly');
+    // negotiate();
 
     document.getElementById('stop').style.display = 'inline-block';
 }

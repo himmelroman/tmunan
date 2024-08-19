@@ -456,9 +456,17 @@ class WebRTCStreamManager:
 
     async def handle_control_message(self, app_msg, sc):
 
-        # parse json
-        app_msg = json.loads(app_msg)
+        # log
         self.logger.info(f"DataChannel - Incoming message from {sc.name}: {app_msg}")
+
+        try:
+
+            # parse json
+            app_msg = json.loads(app_msg)
+
+        except json.decoder.JSONDecodeError:
+            self.logger.warning(f"DataChannel - Message is not a valid JSON, discarding.")
+            return
 
         # extract app message
         if app_msg['type'] == "parameters":
