@@ -10,7 +10,6 @@ services:
       - HF_HOME=/root/app/models
       - TENSORRT_DIR=/root/app/tensorrt
       - TMUNAN_IMAGE_MODE=${TMUNAN_IMAGE_MODE:-stream}
-      - ABLY_API_KEY=${ABLY_API_KEY}
     ports:
       - "8090:8090"
     deploy:
@@ -34,6 +33,8 @@ services:
     environment:
       - IMAGINE_HOST=localhost
       - IMAGINE_PORT=8090
+      - ABLY_API_KEY=${ABLY_API_KEY}
+      - SESSION_SIGNALING_CHANNEL=${SESSION_SIGNALING_CHANNEL-tmunan_dev}
 #    ports:
 #      - "8080:8080"
 #      - "10000-20000:10000-20000/udp"
