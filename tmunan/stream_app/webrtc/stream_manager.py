@@ -176,7 +176,7 @@ class WebRTCStreamManager:
         self.logger = get_logger(self.__class__.__name__)
 
         # signaling
-        self.signaling_channel_name = 'tmunan_dev'
+        self.signaling_channel_name = os.environ.get('SESSION_SIGNALING_CHANNEL', 'tmunan_dev')
         self.signaling_client = AblySignalingChannel()
         self.signaling_client.listen_to_offers(
             channel_name=self.signaling_channel_name,
