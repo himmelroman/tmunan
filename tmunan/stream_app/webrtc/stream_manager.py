@@ -1,7 +1,6 @@
 import os
 import json
 import asyncio
-from uuid import UUID
 from typing import Dict
 from functools import partial
 
@@ -26,9 +25,9 @@ patch_vpx()
 
 class StreamClient:
 
-    def __init__(self, id: UUID, name: str, pc: RTCPeerConnection, data_channel: RTCDataChannel = None):
+    def __init__(self, id: str, name: str, pc: RTCPeerConnection, data_channel: RTCDataChannel = None):
 
-        self.id: UUID = id
+        self.id: str = id
         self.name: str = name
         self.pc: RTCPeerConnection = pc
         self.data_channel: RTCDataChannel = data_channel
@@ -503,12 +502,6 @@ class WebRTCStreamManager:
 
             # update active
             self.set_active_peer_connection(app_msg['payload']['name'])
-
-        # elif app_msg['type'] == "set_connection_info":
-        #     if conn := self.connections.get(UUID(app_msg['payload']['connection_id'])):
-        #         conn.info.update(app_msg['payload']['info'])
-        #         await self.publish_state()
-        #         self.logger.info(f"Connection info updated: {conn.id=} - {conn.info}")
 
         else:
             self.logger.info(f"Unrecognized message: {app_msg}")

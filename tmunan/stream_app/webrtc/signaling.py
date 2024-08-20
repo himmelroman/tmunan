@@ -11,7 +11,7 @@ from tmunan.utils.log import get_logger
 
 
 class Offer(BaseModel):
-    id: uuid.UUID
+    id: str
     name: str
     output: bool
     sdp: str
@@ -19,7 +19,7 @@ class Offer(BaseModel):
 
 
 class Answer(BaseModel):
-    id: uuid.UUID
+    id: str
     name: str
     sdp: str
     type: str
@@ -74,7 +74,7 @@ class AblySignalingChannel:
         if message.name == 'offer':
 
             # peer id
-            peer_id = uuid.uuid4()
+            peer_id = str(uuid.uuid4())
 
             # load json from message
             offer_data = json.loads(message.data)
