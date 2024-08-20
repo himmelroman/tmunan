@@ -211,7 +211,7 @@ class WebRTCStreamManager:
 
             # init client
             img_client = ImagineClient(host=imagine_host, port=imagine_port, secure=imagine_secure)
-            self.logger.info(f"ImagineClient initialized: URL={self.img_client.service_url}")
+            self.logger.info(f"ImagineClient initialized: URL={img_client.service_url}")
 
             # return client
             return img_client
