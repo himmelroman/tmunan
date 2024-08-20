@@ -410,7 +410,7 @@ class WebRTCStreamManager:
         parameters = {
                     "type": "parameters",
                     "payload": {
-                        "diffusion": self.diffusion_parameters.model_dump(),
+                        "diffusion": self.diffusion_parameters.model_dump_json(),
                         "client": self.client_parameters
                     }
                 }
