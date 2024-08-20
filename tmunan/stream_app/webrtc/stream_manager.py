@@ -178,7 +178,10 @@ class WebRTCStreamManager:
         # signaling
         self.signaling_channel_name = 'tmunan_dev'
         self.signaling_client = AblySignalingChannel()
-        self.signaling_client.listen_to_offers(self.signaling_channel_name, self.handle_offer)
+        self.signaling_client.listen_to_offers(
+            channel_name=self.signaling_channel_name,
+            on_offer=self.handle_offer
+        )
 
         # peers
         self.peer_connections: Dict[str, StreamClient] = dict()

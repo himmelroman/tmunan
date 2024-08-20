@@ -2,10 +2,10 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Callable
-from pydantic import BaseModel, Field
+from typing import Callable, Coroutine, Any
 
 from ably import AblyRealtime
+from pydantic import BaseModel
 
 from tmunan.utils.log import get_logger
 
@@ -40,7 +40,7 @@ class AblySignalingChannel:
         # callback
         self.on_offer: Callable[[Offer], Answer] | None = None
 
-    def listen_to_offers(self, channel_name: str, on_offer: Callable[[Offer], Answer]):
+    def listen_to_offers(self, channel_name: str, on_offer: Callable[[Offer], Coroutine[Any, Any, Answer]]):
 
         # save channel
         self.ably_channel_name = channel_name
@@ -83,7 +83,7 @@ class AblySignalingChannel:
             offer = Offer(id=peer_id, **offer_data)
 
             # handle offer
-            answer = self.on_offer(offer)
+            answer = await self.on_offer(offer)
 
             # publish answer
             await self.publish(
