@@ -8,6 +8,7 @@ requests
 
 # utils
 fire==0.6.0
+awscli
 
 # ml
 # torch~=2.3
