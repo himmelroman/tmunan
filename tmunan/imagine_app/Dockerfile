@@ -15,7 +15,6 @@ ENV HF_HOME=/app/models
 
 # copy app
 COPY . /root/app/tmunan
-RUN chmod +x /root/app/run.sh
 
 # command
-ENTRYPOINT ["/root/app/run.sh"]
+ENTRYPOINT ["/root/app/tmunan/imagine_app/run.sh"]
