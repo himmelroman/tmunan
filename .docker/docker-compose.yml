@@ -9,6 +9,7 @@ services:
       - HF_HOME=/root/app/models
       - TENSORRT_DIR=/root/app/tensorrt
       - TMUNAN_IMAGE_MODE=${TMUNAN_IMAGE_MODE:-stream}
+      - ABLY_API_KEY=${ABLY_API_KEY}
     ports:
       - "8090:8090"
     deploy:
