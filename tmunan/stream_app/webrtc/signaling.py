@@ -89,7 +89,7 @@ class AblySignalingChannel:
             await self.publish(
                 channel=self.ably_channel_name,
                 event_name='answer',
-                message=json.dumps(answer.model_dump_json())
+                message=json.dumps(answer.model_dump())
             )
 
     async def disconnect(self):

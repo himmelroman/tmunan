@@ -138,7 +138,7 @@ class StreamManager:
                             for cons in self.stream.consumers.values()
                         ],
                         "active_connection_name": self.stream.active_connection_name,
-                        "parameters": self.stream.parameters.model_dump_json()
+                        "parameters": self.stream.parameters.model_dump()
                     }
                 }
 
