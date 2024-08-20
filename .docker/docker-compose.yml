@@ -29,6 +29,7 @@ services:
     image: ${STREAM_IMAGE-himmelroman/tmunan_stream:latest}
     #    restart: unless-stopped
     network_mode: "host"
+    env_file: ".env"
     environment:
       - IMAGINE_HOST=localhost
       - IMAGINE_PORT=8090
