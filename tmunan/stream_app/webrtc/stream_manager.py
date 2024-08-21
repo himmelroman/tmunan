@@ -256,20 +256,23 @@ class WebRTCStreamManager:
         else:
             self.logger.warning(f"Active client not found in registry!")
 
+    def on_track(self, sc: StreamClient, track: MediaStreamTrack):
+
+        # log
+        self.logger.info(f"MediaTrack - Received Track: {track.kind=}, {sc.id=}, {sc.name=}")
+
+        @track.on("ended")
+        async def on_ended():
+            self.logger.info(f"MediaTrack - Track ended: {track.kind=}, {sc.id=}, {sc.name=}")
+
     async def on_datachannel(self, sc: StreamClient, channel: RTCDataChannel):
 
         # save data channel
         sc.data_channel = channel
         sc.data_channel.on('message', partial(self.on_datachannel_message, sc))
+
+        # log
         self.logger.info(f"DataChannel - Established for StreamClient: {sc.id=}, {sc.name=}")
-
-        # check if there is no active peer
-        if not self.active_connection_name:
-            self.set_active_peer_connection(sc.name)
-
-        # publish change
-        self.publish_presence(self.get_client_list(include_peer_list=[sc.name]))
-        self.publish_parameters(self.get_client_list(include_peer_list=[sc.name]))
 
     async def on_datachannel_message(self, sc: StreamClient, message):
 
@@ -282,10 +285,22 @@ class WebRTCStreamManager:
         self.logger.info(f"ConnectionState - State changed: {sc.pc.connectionState=}, {sc.id=}, {sc.name=}")
 
         # handle failed connection
-        if sc.pc.connectionState in ["new", "connected", "connecting"]:
+        if sc.pc.connectionState in ["connected"]:
+
+            # add to registry
+            await self.add_peer_connection(sc)
+
+            # check if there is no active peer
+            if not self.active_connection_name:
+                self.set_active_peer_connection(sc.name)
+
+            # new connection from already active peer
+            elif self.active_connection_name == sc.name:
+                self.consume_active_peer_track()
 
             # update presence
             self.publish_presence()
+            self.publish_parameters(self.get_client_list(include_peer_list=[sc.name]))
 
         elif sc.pc.connectionState in ["failed", "disconnected", "closed"]:
 
@@ -303,26 +318,6 @@ class WebRTCStreamManager:
 
         else:
             self.logger.warning(f"Unhandled connection state: {sc.pc.connectionState}")
-
-    def on_track(self, sc: StreamClient, track: MediaStreamTrack):
-
-        # log
-        self.logger.info(f"MediaTrack - Received Track: {track.kind=}, {sc.id=}, {sc.name=}")
-
-        # handle video track
-        if track.kind == "video":
-
-            # no active peer, this is the first connection
-            if not self.active_connection_name:
-                self.set_active_peer_connection(sc.name)
-
-            # new connection from already active peer
-            elif self.active_connection_name == sc.name:
-                self.consume_active_peer_track()
-
-        @track.on("ended")
-        async def on_ended():
-            self.logger.info(f"MediaTrack - Track ended: {track.kind=}, {sc.id=}, {sc.name=}")
 
     async def cleanup(self):
 
@@ -430,9 +425,6 @@ class WebRTCStreamManager:
         #     configuration=RTCConfiguration([RTCIceServer("stun:stun.l.google:19302")])
         # ))
         sc = StreamClient(id=offer.id, name=offer.name, pc=pc)
-
-        # add to registry
-        await self.add_peer_connection(sc)
 
         # register events
         sc.pc.on("track", partial(self.on_track, sc))
