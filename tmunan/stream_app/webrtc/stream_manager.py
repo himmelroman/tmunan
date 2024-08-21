@@ -5,7 +5,7 @@ from typing import Dict
 from functools import partial
 
 import aiortc
-from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaRelay
 
 from av import VideoFrame
@@ -425,7 +425,10 @@ class WebRTCStreamManager:
         remote_peer_sdp = RTCSessionDescription(sdp=offer.sdp, type=offer.type)
 
         # create stream client
-        sc = StreamClient(id=offer.id, name=offer.name, pc=RTCPeerConnection())
+        pc = RTCPeerConnection(
+            configuration=RTCConfiguration([RTCIceServer("stun:stun.l.google:19302")])
+        )
+        sc = StreamClient(id=offer.id, name=offer.name, pc=pc)
 
         # add to registry
         await self.add_peer_connection(sc)
