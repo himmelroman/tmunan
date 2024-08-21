@@ -286,8 +286,8 @@ class WebRTCStreamManager:
 
         # save data channel
         sc.data_channel = channel
-        sc.data_channel.on('message', partial(self.on_datachannel_message, sc))
         sc.data_channel.on('close', partial(self.on_datachannel_close, sc))
+        sc.data_channel.on('message', partial(self.on_datachannel_message, sc))
 
         # publish presence and parameters to new peer
         self.publish_presence(self.get_client_list(include_peer_list=[sc.name]))
