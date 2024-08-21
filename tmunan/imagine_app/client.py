@@ -72,6 +72,10 @@ class ImagineClient:
 
     def post_image(self, image: Image, params: ImageParameters) -> Image:
 
+        # loopback when strength is zero
+        if params.strength < 1 or params.strength > 2.95:
+            return image
+
         # prepare post
         files = {
             'image': pil_to_bytes(image, format='jpeg', quality=95)
