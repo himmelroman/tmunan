@@ -227,7 +227,21 @@ class WebRTCStreamManager:
 
         # add to registry
         self.peer_connections[sc.name] = sc
-        self.logger.info(f"StreamClient added to peer registry: {sc.id=}, {sc.name}")
+        self.logger.info(f"PeerRegistry - StreamClient added: {sc.id=}, {sc.name}")
+
+    async def remove_peer_connection(self, sc: StreamClient):
+
+        # get peer connection
+        if spc := self.peer_connections.pop(sc.name, None):
+
+            # close connection (this should be harmless if already closed)
+            await spc.pc.close()
+
+            # log
+            self.logger.info(f"PeerRegistry - StreamClient removed: {spc.id=}, {spc.name=}")
+
+            # update presence
+            self.publish_presence()
 
     def set_active_peer_connection(self, name):
 
@@ -273,10 +287,19 @@ class WebRTCStreamManager:
         # save data channel
         sc.data_channel = channel
         sc.data_channel.on('message', partial(self.on_datachannel_message, sc))
+        sc.data_channel.on('close', partial(self.on_datachannel_close, sc))
 
         # publish presence and parameters to new peer
         self.publish_presence(self.get_client_list(include_peer_list=[sc.name]))
         self.publish_parameters(self.get_client_list(include_peer_list=[sc.name]))
+
+    async def on_datachannel_close(self, sc: StreamClient):
+
+        # log
+        self.logger.debug(f"DataChannel - Closed for StreamClient: {sc.id=}, {sc.name=}")
+
+        # remove peer
+        await self.remove_peer_connection(sc)
 
     async def on_datachannel_message(self, sc: StreamClient, message):
 
@@ -308,17 +331,8 @@ class WebRTCStreamManager:
 
         elif sc.pc.connectionState in ["failed", "disconnected", "closed"]:
 
-            # get peer connection
-            if spc := self.peer_connections.pop(sc.name, None):
-
-                # close connection (this should be harmless if already closed)
-                await spc.pc.close()
-
-                # log
-                self.logger.info(f"ConnectionState - StreamClient removed from registry: {spc.id=}, {spc.name=}")
-
-                # update presence
-                self.publish_presence()
+            # remove peer
+            await self.remove_peer_connection(sc)
 
         else:
             self.logger.warning(f"Unhandled connection state: {sc.pc.connectionState}")
