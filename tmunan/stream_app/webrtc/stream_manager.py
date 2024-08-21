@@ -271,6 +271,10 @@ class WebRTCStreamManager:
         sc.data_channel = channel
         sc.data_channel.on('message', partial(self.on_datachannel_message, sc))
 
+        # publish presence and parameters to new peer
+        self.publish_presence(self.get_client_list(include_peer_list=[sc.name]))
+        self.publish_parameters(self.get_client_list(include_peer_list=[sc.name]))
+
         # log
         self.logger.info(f"DataChannel - Established for StreamClient: {sc.id=}, {sc.name=}")
 
