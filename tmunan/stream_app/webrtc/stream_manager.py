@@ -425,9 +425,10 @@ class WebRTCStreamManager:
         remote_peer_sdp = RTCSessionDescription(sdp=offer.sdp, type=offer.type)
 
         # create stream client
-        pc = RTCPeerConnection(
-            configuration=RTCConfiguration([RTCIceServer("stun:stun.l.google:19302")])
-        )
+        pc = RTCPeerConnection()
+        # (
+        #     configuration=RTCConfiguration([RTCIceServer("stun:stun.l.google:19302")])
+        # ))
         sc = StreamClient(id=offer.id, name=offer.name, pc=pc)
 
         # add to registry
