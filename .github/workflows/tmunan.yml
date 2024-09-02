@@ -31,12 +31,12 @@ jobs:
       - name: Build Imagine image
         run: |
           cd tmunan
-          docker build -t tmunan/imagine:latest -f tmunan/imagine_app/Dockerfile .
+          docker build -t tmunan/imagine:latest -f imagine_app/Dockerfile .
 
       - name: Build Stream image
         run: |
           cd tmunan
-          docker build -t tmunan/stream:latest -f tmunan/stream_app/Dockerfile .
+          docker build -t tmunan/stream:latest -f stream_app/Dockerfile .
 
       - name: Push Imagine image to ECR
         run: |
