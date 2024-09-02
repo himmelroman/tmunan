@@ -1,0 +1,47 @@
+name: Tmunan Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::090268630745:role/github_actions
+          aws-region: eu-west-1
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 090268630745.dkr.ecr.eu-west-1.amazonaws.com
+
+      - name: Build Imagine image
+        run: |
+          docker build -t tmunan/imagine:latest -f tmunan/imagine_app/Dockerfile .
+
+      - name: Build Stream image
+        run: |
+          docker build -t tmunan/stream:latest -f tmunan/stream_app/Dockerfile .
+
+      - name: Push Imagine image to ECR
+        run: |
+          docker tag tmunan/imagine:latest 090268630745.dkr.ecr.eu-west-1.amazonaws.com/tmunan/imagine:latest
+          docker push 090268630745.dkr.ecr.eu-west-1.amazonaws.com/tmunan/imagine:latest
+
+      - name: Push Stream image to ECR
+        run: |
+          docker tag tmunan/stream:latest 090268630745.dkr.ecr.eu-west-1.amazonaws.com/tmunan/stream:latest
+          docker push 090268630745.dkr.ecr.eu-west-1.amazonaws.com/tmunan/stream:latest
