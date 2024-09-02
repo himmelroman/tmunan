@@ -1,4 +1,4 @@
-FROM himmelroman/stream-diffusion:base
+FROM 090268630745.dkr.ecr.eu-west-1.amazonaws.com/tmunan/stream_diffusion:base
 
 USER root
 WORKDIR /root/app
