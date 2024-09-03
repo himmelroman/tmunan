@@ -17,7 +17,7 @@ provider:
 
 functions:
   runSession:
-    handler: handler.run_session
+    handler: orc.run_session.handler.run_session
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
     events:
       - http:
