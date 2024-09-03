@@ -34,7 +34,7 @@ services:
       - IMAGINE_HOST=localhost
       - IMAGINE_PORT=8090
       - ABLY_API_KEY=${ABLY_API_KEY}
-      - SESSION_SIGNALING_CHANNEL=${SESSION_SIGNALING_CHANNEL-tmunan_dev}
+      - SIGNALING_CHANNEL=${SIGNALING_CHANNEL-tmunan_dev}
 #    ports:
 #      - "8080:8080"
 #      - "10000-20000:10000-20000/udp"

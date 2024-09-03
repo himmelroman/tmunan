@@ -1,0 +1,43 @@
+name: Deploy Tmunan Orchestration
+
+on:
+  push:
+    tags:
+      - orc
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::090268630745:role/github_deploy_role
+          aws-region: eu-west-1
+
+      - name: Deploy to AWS
+        run: |
+          . venv/bin/activate
+          serverless deploy

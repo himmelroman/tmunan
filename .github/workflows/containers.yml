@@ -1,4 +1,4 @@
-name: Tmunan Workflow
+name: Deploy Tmunan Containers
 
 on:
   push:

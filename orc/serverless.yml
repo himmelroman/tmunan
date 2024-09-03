@@ -1,0 +1,30 @@
+service: tmunan-orc
+
+provider:
+  name: aws
+  runtime: python3.10
+  region: eu-west-1
+  environment:
+    ECS_CLUSTER_NAME: tmunan_cluster
+    TASK_DEFINITION: tmunan_task
+    CONTAINER_NAME: stream
+
+  iam:
+    role: arn:aws:iam::090268630745:role/github_deploy_role
+  lambdaRole: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
+
+functions:
+  runSession:
+    handler: handler.run_session
+    events:
+      - http:
+          path: run_session
+          method: post
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "ecs:RunTask"
+        Resource: "*"
+
+plugins:
+  - serverless-python-requirements
