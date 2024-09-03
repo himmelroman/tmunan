@@ -44,9 +44,14 @@ def run_session(event, context):
             }
         )
 
+        # log response
+        logging.info(f'Run Session - ECS Response: {response}')
+
         return {
             'statusCode': 200,
-            'body': json.dumps(response)
+            'body': json.dumps({
+                'status': 'success'
+            })
         }
 
     else:

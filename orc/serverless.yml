@@ -15,10 +15,18 @@ provider:
     name: tmunan-deployment-bucket
     serverSideEncryption: AES256  # Optional: Enables server-side encryption
 
+package:
+  individually: true
+  exclude:
+    - ".*/**"
+
 functions:
   runSession:
     handler: orc.run_session.handler.run_session
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
+    package:
+      include:
+        - orc/**
     events:
       - http:
           path: run_session
