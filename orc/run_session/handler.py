@@ -50,7 +50,10 @@ def run_session(event, context):
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'status': 'success'
+                'cluster_arn': response['tasks'][0]['clusterArn'],
+                'task_def_arn': response['tasks'][0]['taskDefinitionArn'],
+                'task_def_version': response['tasks'][0]['version'],
+                'task_arn': response['tasks'][0]['taskArn']
             })
         }
 
