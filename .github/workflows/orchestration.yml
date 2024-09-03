@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - master
-    tags:
-      - orc
+    paths:
+      - orc/**
 
 jobs:
   deploy-serverless:
