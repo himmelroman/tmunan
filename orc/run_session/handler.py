@@ -1,3 +1,4 @@
+import logging
 import os
 import json
 import boto3
@@ -12,31 +13,48 @@ def run_session(event, context):
     task_definition = os.getenv('TASK_DEFINITION')
 
     # read session vars
-    signaling_channel = event['queryStringParameters'].get('SIGNALING_CHANNEL')
+    signaling_channel = event['queryStringParameters'].get('signaling_channel', None)
 
-    # launch task on ECS
-    container_name = 'stream'
-    response = ecs_client.run_task(
-        cluster=cluster_name,
-        taskDefinition=task_definition,
-        overrides={
-            'containerOverrides': [
-                {
-                    'name': container_name,
-                    'environment': [
-                        {
-                            'name': 'SIGNALING_CHANNEL',
-                            'value': signaling_channel
-                        }
-                    ]
-                }
-            ]
-        },
-        count=1,
-        launchType='EC2'
-    )
+    # log
+    logging.info(f'Run Session - Parameters: {signaling_channel=}')
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps(response)
-    }
+    # verify params
+    if cluster_name and task_definition and signaling_channel:
+
+        logging.info(f'Run Session - Launching task: {cluster_name=}, {task_definition=}')
+
+        # launch task on ECS
+        container_name = 'stream'
+        response = ecs_client.run_task(
+            cluster=cluster_name,
+            taskDefinition=task_definition,
+            overrides={
+                'containerOverrides': [
+                    {
+                        'name': container_name,
+                        'environment': [
+                            {
+                                'name': 'SIGNALING_CHANNEL',
+                                'value': signaling_channel
+                            }
+                        ]
+                    }
+                ]
+            },
+            count=1,
+            launchType='EC2'
+        )
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps(response)
+        }
+
+    else:
+
+        return {
+            'statusCode': 400,
+            'body': json.dumps({
+                'error': 'Required parameters missing'
+            })
+        }
