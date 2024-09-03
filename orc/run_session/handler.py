@@ -28,6 +28,7 @@ def run_session(event, context):
         response = ecs_client.run_task(
             cluster=cluster_name,
             taskDefinition=task_definition,
+            count=1,
             overrides={
                 'containerOverrides': [
                     {
@@ -40,9 +41,7 @@ def run_session(event, context):
                         ]
                     }
                 ]
-            },
-            count=1,
-            launchType='EC2'
+            }
         )
 
         return {
