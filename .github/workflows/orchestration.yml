@@ -36,10 +36,10 @@ jobs:
           pip install -r orc/requirements.txt
 
       - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::090268630745:role/github_deploy_role
           aws-region: eu-west-1
+          role-to-assume: arn:aws:iam::090268630745:role/github_deploy_role
 
       - name: Serverless hack
         run: |
