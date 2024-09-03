@@ -10,6 +10,9 @@ provider:
     CONTAINER_NAME: stream
   iam:
     role: arn:aws:iam::090268630745:role/github_deploy_role
+  deploymentBucket:
+    name: tmunan-deployment-bucket
+    serverSideEncryption: AES256  # Optional: Enables server-side encryption
 
 functions:
   runSession:
