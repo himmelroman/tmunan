@@ -1,6 +1,6 @@
+import os
 import json
 import boto3
-import os
 
 ecs_client = boto3.client('ecs')
 
