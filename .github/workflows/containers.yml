@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - tmunan/**
+      - 'tmunan/**'
 
 jobs:
   build-and-push:
@@ -35,13 +35,13 @@ jobs:
           df -h /
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::090268630745:role/github_deploy_role
           aws-region: eu-west-1
+          role-to-assume: arn:aws:iam::090268630745:role/github_deploy_role
 
       - name: Log in to Amazon ECR
         run: |
