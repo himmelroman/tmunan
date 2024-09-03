@@ -3,9 +3,10 @@ name: Deploy Tmunan Containers
 on:
   push:
     branches:
-      - main
-#    paths:
-#      - 'tmunan/**'
+      - master
+    paths:
+      - 'tmunan/**'
+      - '.github/workflows/containers.yml'
 
 jobs:
   build-and-push:

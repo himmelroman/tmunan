@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - master
-#    paths:
-#      - 'orc/**'
+    paths:
+      - 'orc/**'
+      - '.github/workflows/orchestration.yml'
 
 jobs:
   deploy-serverless:
