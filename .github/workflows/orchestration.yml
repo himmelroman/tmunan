@@ -2,6 +2,8 @@ name: Deploy Tmunan Orchestration
 
 on:
   push:
+    branches:
+      - master
     tags:
       - orc
 

@@ -2,7 +2,7 @@ service: tmunan-orc
 
 provider:
   name: aws
-  runtime: python3.10
+  runtime: python3.11
   region: eu-west-1
   environment:
     ECS_CLUSTER_NAME: tmunan_cluster

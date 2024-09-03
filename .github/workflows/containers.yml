@@ -3,8 +3,7 @@ name: Deploy Tmunan Containers
 on:
   push:
     branches:
-      - master
-  pull_request:
+      - main
 
 jobs:
   build-and-push:
