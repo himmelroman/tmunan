@@ -42,4 +42,4 @@ jobs:
       - name: Deploy to AWS
         run: |
           . venv/bin/activate
-          serverless deploy --file orc/serverless.yml
+          serverless deploy --config orc/serverless.yml
