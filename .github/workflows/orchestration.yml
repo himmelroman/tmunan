@@ -8,7 +8,7 @@ on:
       - orc
 
 jobs:
-  deploy:
+  deploy-serverless:
     runs-on: ubuntu-latest
 
     permissions:
@@ -42,4 +42,4 @@ jobs:
       - name: Deploy to AWS
         run: |
           . venv/bin/activate
-          serverless deploy
+          serverless deploy --file orc/serverless.yml
