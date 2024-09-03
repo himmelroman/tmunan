@@ -3,9 +3,9 @@ name: Deploy Tmunan Containers
 on:
   push:
     branches:
-      - master
-    paths:
-      - 'tmunan/**'
+      - main
+#    paths:
+#      - 'tmunan/**'
 
 jobs:
   build-and-push:

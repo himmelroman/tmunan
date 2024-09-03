@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'orc/**'
+#    paths:
+#      - 'orc/**'
 
 jobs:
   deploy-serverless:
