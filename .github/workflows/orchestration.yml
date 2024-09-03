@@ -39,7 +39,12 @@ jobs:
           role-to-assume: arn:aws:iam::090268630745:role/github_deploy_role
           aws-region: eu-west-1
 
+      - name: Serverless hack
+        run: |
+          echo Copy serverless.yaml file to the root folder
+          cp orc/serverless.yml ./serverless.yml
+
       - name: Deploy to AWS
         run: |
           . venv/bin/activate
-          serverless deploy --config orc/serverless.yml
+          serverless deploy
