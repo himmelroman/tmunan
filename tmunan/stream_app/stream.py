@@ -1,3 +1,7 @@
+import os
+import time
+import signal
+import asyncio
 from contextlib import asynccontextmanager
 from typing import TypedDict, AsyncIterator
 
@@ -10,6 +14,30 @@ from tmunan.stream_app.api.endpoints import router
 from tmunan.stream_app.webrtc.stream_manager import WebRTCStreamManager
 
 
+async def shutdown_monitor(stream_manager: WebRTCStreamManager):
+
+    # read idle timeout value from env (default is 15 min)
+    idle_timeout_seconds = float(os.environ.get("IDLE_TIMEOUT_SECONDS", 60 * 15))
+
+    # loop forever
+    while True:
+
+        # calc the time since the last activity
+        idle_duration = time.time() - stream_manager.last_activity
+
+        # check if idle timeout reached
+        if idle_duration > idle_timeout_seconds:
+
+            # shutdown stream manager
+            await stream_manager.shutdown(reason="inactivity")
+
+            # shutdown the application gracefully
+            os.kill(os.getpid(), signal.SIGKILL)
+
+        # check every 10 seconds
+        await asyncio.sleep(10)
+
+
 class AppState(TypedDict):
     stream_manager: WebRTCStreamManager
 
@@ -19,6 +47,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncIterator[AppState]:
 
     # create stream manager
     stream_manager = WebRTCStreamManager()
+    await asyncio.create_task(shutdown_monitor(stream_manager))
 
     # yield fastapi state
     yield AppState(stream_manager=stream_manager)

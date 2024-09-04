@@ -1,11 +1,12 @@
 import os
 import json
 import asyncio
+import time
 from typing import Dict
 from functools import partial
 
 import aiortc
-from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel, RTCConfiguration, RTCIceServer
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 from aiortc.contrib.media import MediaRelay
 
 from av import VideoFrame
@@ -173,6 +174,7 @@ class WebRTCStreamManager:
 
         # env
         self.logger = get_logger(self.__class__.__name__)
+        self.last_activity: float = time.time()
 
         # signaling
         self.signaling_channel_name = os.environ.get('SIGNALING_CHANNEL', 'tmunan_dev')
@@ -197,6 +199,30 @@ class WebRTCStreamManager:
 
         # img generation
         self.img_client = self._init_imagine_client()
+
+    async def shutdown(self, reason: str):
+
+        # shutdown signaling
+        if self.signaling_client:
+            await self.signaling_client.disconnect()
+
+        # shutdown transform track
+        if self.video_transform_track:
+            await self.video_transform_track.stop_tasks()
+
+        # shutdown img2img client
+        if self.img_client:
+            self.img_client.stop()
+
+        # disconnect peers
+        if self.peer_connections:
+
+            # publish reason
+            self.publish_shutdown(reason=reason)
+
+            # close all peer connections
+            for sc in list(self.peer_connections.values()):
+                await self.remove_peer_connection(sc=sc, publish_presence=False)
 
     def _init_imagine_client(self):
 
@@ -229,7 +255,7 @@ class WebRTCStreamManager:
         self.peer_connections[sc.name] = sc
         self.logger.info(f"PeerRegistry - StreamClient added: {sc.id=}, {sc.name}")
 
-    async def remove_peer_connection(self, sc: StreamClient):
+    async def remove_peer_connection(self, sc: StreamClient, publish_presence: bool = True):
 
         # get peer connection
         if spc := self.peer_connections.pop(sc.name, None):
@@ -241,7 +267,8 @@ class WebRTCStreamManager:
             self.logger.info(f"PeerRegistry - StreamClient removed: {spc.id=}, {spc.name=}")
 
             # update presence
-            self.publish_presence()
+            if publish_presence:
+                self.publish_presence()
 
     def set_active_peer_connection(self, name):
 
@@ -398,6 +425,18 @@ class WebRTCStreamManager:
             except Exception as ex:
                 self.logger.exception(f'Error while sending message: {sc.id=}, {sc.name=}')
 
+    def publish_shutdown(self, reason: str):
+
+        shutdown = {
+            "type": "shutdown",
+            "payload": {
+                "reason": reason
+            }
+        }
+
+        # publish
+        self._publish(shutdown)
+
     def publish_presence(self, client_list=None):
 
         presence = {
@@ -523,7 +562,6 @@ class WebRTCStreamManager:
     async def transform_frame(self, frame):
 
         # gen image
-        # self.logger.info('TRANS - Sending frame to img2img')
         new_frame = await asyncify(self.request_img2img)(frame)
         if new_frame:
 
