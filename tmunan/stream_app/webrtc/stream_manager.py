@@ -202,6 +202,9 @@ class WebRTCStreamManager:
 
     async def shutdown(self, reason: str):
 
+        # log
+        self.logger.warning(f'StreamManager shutting down {reason=}')()
+
         # shutdown signaling
         if self.signaling_client:
             await self.signaling_client.disconnect()
