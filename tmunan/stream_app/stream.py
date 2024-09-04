@@ -22,17 +22,17 @@ async def shutdown_monitor(stream_manager: WebRTCStreamManager):
     # loop forever
     while True:
 
-        # calc the time since the last activity
-        idle_duration = time.time() - stream_manager.last_activity
+        # check if last activity is initialized
+        if stream_manager.last_activity:
 
-        # check if idle timeout reached
-        if idle_duration > idle_timeout_seconds:
+            # check if idle timeout reached
+            if time.time() - stream_manager.last_activity > idle_timeout_seconds:
 
-            # shutdown stream manager
-            await stream_manager.shutdown(reason="inactivity")
+                # shutdown stream manager
+                await stream_manager.shutdown(reason="inactivity")
 
-            # shutdown the application gracefully
-            os.kill(os.getpid(), signal.SIGKILL)
+                # shutdown the application gracefully
+                os.kill(os.getpid(), signal.SIGKILL)
 
         # check every 10 seconds
         await asyncio.sleep(10)
