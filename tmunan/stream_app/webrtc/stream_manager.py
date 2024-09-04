@@ -284,7 +284,7 @@ class WebRTCStreamManager:
 
             # publish to event-bridge
             try:
-                self.logger.info(f"ActivityReport - Publishing usage report: {usage_time=}")
+                self.logger.info(f"ActivityReport - Publishing usage report: {event=}")
                 self.eb_client.put_events(Entries=[event])
 
             except Exception:
