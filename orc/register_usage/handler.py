@@ -4,7 +4,7 @@ logger = logging.getLogger()
 logger.setLevel("INFO")
 
 
-def run_session(event, context):
+def register_usage(event, context):
 
     # print incoming event
     logger.info(f'RegisterUsage Invoked: {event=}')
