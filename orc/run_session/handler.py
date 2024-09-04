@@ -1,9 +1,11 @@
-import logging
 import os
 import json
 import boto3
+import logging
 
 ecs_client = boto3.client('ecs')
+logger = logging.getLogger()
+logger.setLevel("INFO")
 
 
 def run_session(event, context):
