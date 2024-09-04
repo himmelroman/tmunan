@@ -2,9 +2,11 @@ import os
 import json
 import asyncio
 import time
+from datetime import datetime
 from typing import Dict
 from functools import partial
 
+import boto3
 import aiortc
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 from aiortc.contrib.media import MediaRelay
@@ -174,7 +176,17 @@ class WebRTCStreamManager:
 
         # env
         self.logger = get_logger(self.__class__.__name__)
-        self.last_activity: float = time.time()
+        self._shutting_down = False
+
+        # activity
+        self._start_time: float = time.time()
+        self.last_activity: float | None = None
+
+        # event bridge
+        self.eb_bus_name = os.environ.get('EB_BUS_NAME', None)
+        if self.eb_bus_name is not None:
+            self.eb_client = boto3.client('events')
+            asyncio.create_task(self.usage_reporter())
 
         # signaling
         self.signaling_channel_name = os.environ.get('SIGNALING_CHANNEL', 'tmunan_dev')
@@ -204,6 +216,9 @@ class WebRTCStreamManager:
 
         # log
         self.logger.warning(f'StreamManager shutting down {reason=}')()
+
+        # raise flag
+        self._shutting_down = True
 
         # shutdown signaling
         if self.signaling_client:
@@ -246,6 +261,37 @@ class WebRTCStreamManager:
 
             # return client
             return img_client
+
+    async def usage_reporter(self):
+
+        # loop forever
+        while not self._shutting_down:
+
+            # get usage time from start
+            current_time = time.time()
+            usage_time = current_time - self._start_time
+
+            # create the event
+            event = {
+                'Source': 'tmunan.task',
+                'DetailType': 'tmunan.usage.update',
+                'Detail': json.dumps({
+                    'usage_time_seconds': usage_time,
+                    'timestamp': datetime.utcnow().isoformat()
+                }),
+                'EventBusName': self.eb_bus_name
+            }
+
+            # publish to event-bridge
+            try:
+                self.logger.info(f"ActivityReport - Publishing usage report: {usage_time=}")
+                self.eb_client.put_events(Entries=[event])
+
+            except Exception:
+                self.logger.exception(f"Failed to publish event to EventBridge!")
+
+            # Wait for 1 minute before sending the next report
+            await asyncio.sleep(60)
 
     async def add_peer_connection(self, sc: StreamClient):
 
@@ -332,6 +378,9 @@ class WebRTCStreamManager:
         await self.remove_peer_connection(sc)
 
     async def on_datachannel_message(self, sc: StreamClient, message):
+
+        # update activity
+        self.last_activity = time.time()
 
         self.logger.debug(f'DataChannel - Message from {sc.id=}, {sc.name}: {message=}')
         await self.handle_control_message(message, sc)
@@ -474,6 +523,9 @@ class WebRTCStreamManager:
 
     async def handle_offer(self, offer: Offer) -> Answer:
 
+        # update activity
+        self.last_activity = time.time()
+
         self.logger.info(f"HandleOffer - Handling new offer: {offer.id=}, {offer.name=}, {offer.output=}")
 
         # parse incoming offer
@@ -563,6 +615,9 @@ class WebRTCStreamManager:
             self.logger.info(f"Unrecognized message: {app_msg}")
 
     async def transform_frame(self, frame):
+
+        # update activity
+        self.last_activity = time.time()
 
         # gen image
         new_frame = await asyncify(self.request_img2img)(frame)
