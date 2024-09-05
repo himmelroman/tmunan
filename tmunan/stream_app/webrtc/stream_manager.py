@@ -180,7 +180,7 @@ class WebRTCStreamManager:
 
         # activity
         self._start_time: float = time.time()
-        self.last_activity: float | None = None
+        self.last_activity: float = time.time()
 
         # event bridge
         self.eb_bus_name = os.environ.get('EB_BUS_NAME', None)
@@ -215,7 +215,7 @@ class WebRTCStreamManager:
     async def shutdown(self, reason: str):
 
         # log
-        self.logger.warning(f'StreamManager shutting down {reason=}')()
+        self.logger.warning(f'StreamManager shutting down {reason=}')
 
         # raise flag
         self._shutting_down = True

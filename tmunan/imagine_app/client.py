@@ -39,7 +39,9 @@ class ImagineClient:
 
     def stop(self):
         self._stop_requested = True
-        self._worker_thread.join()
+
+        if self._worker_thread.is_alive():
+            self._worker_thread.join()
 
     def _thread_func(self):
 
