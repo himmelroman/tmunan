@@ -55,7 +55,7 @@ class StreamLCM:
     # constructor
     def __init__(self, model_id=None, cache_dir=None):
 
-        # model sizes
+        # model id
         self.model_id = model_id
 
         # pipelines
@@ -149,9 +149,6 @@ class StreamLCM:
                     # 'build_dynamic_shape': True
                 }
             )
-
-        # warmup
-
 
         self.logger.info("Loading models finished.")
 

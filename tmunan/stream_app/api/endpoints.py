@@ -1,11 +1,19 @@
 import uuid
 
-from fastapi import Request, WebSocket, APIRouter
+from fastapi import Request, WebSocket, APIRouter, status
 from fastapi.responses import StreamingResponse, JSONResponse
 
 from tmunan.stream_app.webrtc.signaling import Offer
 
 router = APIRouter()
+
+
+@router.get("/api/health")
+async def health(req: Request, status_code=status.HTTP_200_OK):
+    return {
+        "status": "ok",
+
+    }
 
 
 @router.websocket("/api/ws")

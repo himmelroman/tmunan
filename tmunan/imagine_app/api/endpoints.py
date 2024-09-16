@@ -1,12 +1,22 @@
 import io
 
 from PIL import Image
-from fastapi import Request, Response, APIRouter, UploadFile, HTTPException, Depends
+from fastapi import Request, Response, APIRouter, UploadFile, HTTPException, Depends, status
 
 from tmunan.utils.image import pil_to_bytes
 from tmunan.common.models import ImageParameters
 
 router = APIRouter()
+
+
+@router.get("/api/health")
+async def health(req: Request, status_code=status.HTTP_200_OK):
+    return {
+        "status": "ok",
+        "model": {
+            "id": req.state.img_gen.model_id
+        }
+    }
 
 
 @router.post("/api/txt2img")
