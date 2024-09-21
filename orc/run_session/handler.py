@@ -1,11 +1,14 @@
 import os
 import json
+import uuid
+
 import boto3
 import logging
 
-ecs_client = boto3.client('ecs')
 logger = logging.getLogger()
 logger.setLevel("INFO")
+
+ecs_client = boto3.client('ecs')
 
 
 def run_session(event, context):
@@ -15,6 +18,7 @@ def run_session(event, context):
     task_definition = os.getenv('TASK_DEFINITION')
 
     # read session vars
+    session_id = event['queryStringParameters'].get('session_id', str(uuid.uuid4()))
     signaling_channel = event['queryStringParameters'].get('signaling_channel', None)
 
     # log
@@ -26,7 +30,6 @@ def run_session(event, context):
         logging.info(f'Run Session - Launching task: {cluster_name=}, {task_definition=}')
 
         # launch task on ECS
-        container_name = 'stream'
         response = ecs_client.run_task(
             cluster=cluster_name,
             taskDefinition=task_definition,
@@ -34,8 +37,12 @@ def run_session(event, context):
             overrides={
                 'containerOverrides': [
                     {
-                        'name': container_name,
+                        'name': 'stream',
                         'environment': [
+                            {
+                                'name': 'SESSION_ID',
+                                'value': session_id
+                            },
                             {
                                 'name': 'SIGNALING_CHANNEL',
                                 'value': signaling_channel

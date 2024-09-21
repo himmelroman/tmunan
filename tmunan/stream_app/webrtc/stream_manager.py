@@ -182,9 +182,10 @@ class WebRTCStreamManager:
         self._start_time: float = time.time()
         self.last_activity: float = time.time()
 
-        # event bridge
+        # usage reporter
+        self.session_id = os.environ.get('SESSION_ID', None)
         self.eb_bus_name = os.environ.get('EB_BUS_NAME', None)
-        if self.eb_bus_name is not None:
+        if self.eb_bus_name is not None and self.session_id is not None:
             self.eb_client = boto3.client('events')
             asyncio.create_task(self.usage_reporter())
 
@@ -276,6 +277,7 @@ class WebRTCStreamManager:
                 'Source': 'tmunan.task',
                 'DetailType': 'tmunan.usage.update',
                 'Detail': json.dumps({
+                    'session_id': self.session_id,
                     'usage_time_seconds': usage_time,
                     'timestamp': datetime.utcnow().isoformat()
                 }),

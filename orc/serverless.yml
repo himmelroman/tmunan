@@ -9,6 +9,7 @@ provider:
     ECS_CLUSTER_NAME: tmunan_cluster
     TASK_DEFINITION: tmunan_task
     CONTAINER_NAME: stream
+    DYNAMODB_TABLE: ${self:service}_${self:provider.stage}_sessions
   iam:
     role: arn:aws:iam::090268630745:role/github_deploy_role
   deploymentBucket:
@@ -20,7 +21,37 @@ package:
   exclude:
     - ".*/**"
 
+resources:
+  Resources:
+    SessionsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: session_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: session_id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+
 functions:
+  api:
+    handler: orc.sessions.rest_api.handler
+    role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
+    package:
+      include:
+        - orc/**
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+
   run_session:
     handler: orc.run_session.handler.run_session
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
