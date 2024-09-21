@@ -77,5 +77,10 @@ functions:
             detail-type:
               - tmunan.usage.update
 
-#plugins:
-#  - serverless-python-requirements
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    requirementsFile: orc/requirements.txt
+    slim: true
