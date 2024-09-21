@@ -2,7 +2,8 @@ from pydantic import BaseModel
 from typing import Dict, Optional
 
 
-class SessionInfo(BaseModel):
+class SessionData(BaseModel):
+    creation_time: str
     start_time: str
     end_time: Optional[str] = None
 
@@ -14,5 +15,5 @@ class UsageData(BaseModel):
 class SessionItem(BaseModel):
     user_id: str
     session_id: str
-    info: SessionInfo
-    usage: UsageData
+    session_data: SessionData
+    usage_data: UsageData

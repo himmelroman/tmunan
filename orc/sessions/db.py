@@ -5,7 +5,7 @@ from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 
-from orc.sessions.models import SessionItem, SessionInfo, UsageData
+from orc.sessions.models import SessionItem, SessionData, UsageData
 
 
 class DynamoDBSessionManager:
@@ -30,8 +30,8 @@ class DynamoDBSessionManager:
                 return SessionItem(
                     user_id=item['user_id'],
                     session_id=item['session_id'],
-                    info=SessionInfo(**json.loads(item['info'])),
-                    usage=UsageData(**json.loads(item['usage']))
+                    session_data=SessionData(**json.loads(item['session_data'])),
+                    usage_data=UsageData(**json.loads(item['usage_data']))
                 )
             return None
 
@@ -45,8 +45,8 @@ class DynamoDBSessionManager:
                 Item={
                     'user_id': session.user_id,
                     'session_id': session.session_id,
-                    'info': json.dumps(session.info.model_dump()),
-                    'usage': json.dumps(session.usage.model_dump())
+                    'session_data': json.dumps(session.session_data.model_dump()),
+                    'usage_data': json.dumps(session.usage_data.model_dump())
                 },
                 ConditionExpression='attribute_not_exists(user_id) AND attribute_not_exists(session_id)'
             )
@@ -66,10 +66,10 @@ class DynamoDBSessionManager:
                     'user_id': session.user_id,
                     'session_id': session.session_id
                 },
-                UpdateExpression='SET info = :info, usage = :usage',
+                UpdateExpression='SET session_data = :session_data, usage_data = :usage_data',
                 ExpressionAttributeValues={
-                    ':info': json.dumps(session.info.model_dump()),
-                    ':usage': json.dumps(session.usage.model_dump())
+                    ':session_data': json.dumps(session.session_data.model_dump()),
+                    ':usage_data': json.dumps(session.usage_data.model_dump())
                 }
             )
             return True
