@@ -39,8 +39,9 @@ jobs:
 
       - name: Serverless hack
         run: |
-          echo Copy serverless.yaml file to the root folder
+          echo Copy serverless.yaml and requirements.txt files to root folder
           cp orc/serverless.yml ./serverless.yml
+          cp orc/requirements.txt ./requirements.txt
 
       - name: Install Serverless Framework
         run: |
