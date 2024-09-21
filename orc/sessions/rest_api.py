@@ -1,3 +1,6 @@
+import logging
+import os
+
 from mangum import Mangum
 from fastapi import FastAPI, HTTPException
 
@@ -5,7 +8,10 @@ from orc.sessions.db import DynamoDBSessionManager
 from orc.sessions.models import SessionItem, SessionInfo, UsageData
 
 app = FastAPI()
-session_manager = DynamoDBSessionManager('YourTableName')
+session_manager = DynamoDBSessionManager(os.environ['DYNAMODB_TABLE'])
+
+logger = logging.getLogger()
+logger.setLevel("INFO")
 
 
 @app.get("/sessions/{user_id}/{session_id}")
