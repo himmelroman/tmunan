@@ -30,6 +30,7 @@ jobs:
           npm install -g serverless@3
           cd orc
           serverless plugin install -n serverless-python-requirements
+          cd ..
 
       - name: Install dependencies
         run: |
