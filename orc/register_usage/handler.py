@@ -19,7 +19,7 @@ def register_usage(event, context):
     usage_duration = event['detail']['usage_time_seconds']
 
     # update usage
-    new_usage = UsageData(duration=usage_duration)
+    new_usage = UsageData(duration=int(usage_duration))
     success = session_manager.update_session_usage(user_id, session_id, new_usage)
 
     # log

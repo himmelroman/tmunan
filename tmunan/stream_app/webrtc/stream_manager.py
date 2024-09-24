@@ -280,7 +280,7 @@ class WebRTCStreamManager:
                 'Detail': json.dumps({
                     'user_id': self.user_id,
                     'session_id': self.session_id,
-                    'usage_time_seconds': usage_time,
+                    'usage_time_seconds': int(usage_time),
                     'timestamp': datetime.utcnow().isoformat()
                 }),
                 'EventBusName': self.eb_bus_name

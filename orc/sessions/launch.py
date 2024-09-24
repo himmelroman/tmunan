@@ -59,7 +59,5 @@ def launch_session(user_id, session_id, signaling_channel):
         # prepare return info
         return {
                 'cluster_arn': response['tasks'][0]['clusterArn'],
-                'task_def_arn': response['tasks'][0]['taskDefinitionArn'],
-                'task_def_version': response['tasks'][0]['version'],
                 'task_arn': response['tasks'][0]['taskArn']
             }
