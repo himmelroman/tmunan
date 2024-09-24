@@ -4,8 +4,9 @@ import os
 from mangum import Mangum
 from fastapi import FastAPI, HTTPException
 
+from orc.sessions.launch import launch_session
+from orc.sessions.models import UsageData
 from orc.sessions.db import DynamoDBSessionManager
-from orc.sessions.models import SessionItem, SessionData, UsageData
 
 app = FastAPI()
 session_manager = DynamoDBSessionManager(os.environ['DYNAMODB_TABLE'])
@@ -24,25 +25,35 @@ async def get_session(user_id: str, session_id: str):
 
 
 @app.post("/sessions")
-async def create_session(session: SessionItem):
-    if session_manager.create_session(session):
+async def create_session(user_id: str, session_id: str):
+    if session_manager.create_session(user_id, session_id):
         return {"message": "Session created successfully"}
     else:
         raise HTTPException(status_code=400, detail="Failed to create session")
 
 
-@app.put("/sessions/{user_id}/{session_id}")
-async def update_session(user_id: str, session_id: str, session_data: SessionData, usage_data: UsageData):
+@app.post("/sessions/{user_id}/{session_id}/launch")
+async def update_session(user_id: str, session_id: str):
 
-    session = SessionItem(
-        user_id=user_id,
-        session_id=session_id,
-        session_data=session_data,
-        usage_data=usage_data
-    )
-    if session_manager.update_session(session):
-        return {"message": "Session updated successfully"}
+    # get session
+    session = session_manager.get_session(user_id, session_id)
+    if session:
+
+        # generate signaling channel
+        signaling_channel = f'tmunan_session_{session_id}'
+
+        # launch the session
+        return launch_session(user_id, session_id, signaling_channel)
     else:
-        raise HTTPException(status_code=400, detail="Failed to update session")
+        raise HTTPException(status_code=400, detail="Failed to update session usage")
+
+
+@app.put("/sessions/{user_id}/{session_id}/usage")
+async def update_session(user_id: str, session_id: str, usage_data: UsageData):
+    if session_manager.update_session_usage(user_id, session_id, usage_data):
+        return {"message": "Session usage updated successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Failed to update session usage")
+
 
 handler = Mangum(app)

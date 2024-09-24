@@ -1,19 +1,20 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel
-from typing import Dict, Optional
-
-
-class SessionData(BaseModel):
-    creation_time: str
-    start_time: str
-    end_time: Optional[str] = None
 
 
 class UsageData(BaseModel):
-    duration: int  # in seconds
+    duration: int = 0   # in seconds
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 
 class SessionItem(BaseModel):
     user_id: str
     session_id: str
-    session_data: SessionData
+    created_at: Optional[datetime] = None
     usage_data: UsageData

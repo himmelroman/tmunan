@@ -1,6 +1,4 @@
 import os
-import json
-import uuid
 
 import boto3
 import logging
@@ -11,23 +9,21 @@ logger.setLevel("INFO")
 ecs_client = boto3.client('ecs')
 
 
-def run_session(event, context):
+def launch_session(user_id, session_id, signaling_channel):
 
     # read ECS vars
     cluster_name = os.getenv('ECS_CLUSTER_NAME')
     task_definition = os.getenv('TASK_DEFINITION')
 
-    # read session vars
-    session_id = event['queryStringParameters'].get('session_id', str(uuid.uuid4()))
-    signaling_channel = event['queryStringParameters'].get('signaling_channel', None)
-
     # log
     logging.info(f'Run Session - Parameters: {signaling_channel=}')
 
     # verify params
-    if cluster_name and task_definition and signaling_channel:
+    if not cluster_name or not task_definition or not signaling_channel:
+        raise Exception('Required parameters missing')
 
-        logging.info(f'Run Session - Launching task: {cluster_name=}, {task_definition=}')
+    else:
+        logging.info(f'Launch Session - Launching task: {cluster_name=}, {task_definition=}')
 
         # launch task on ECS
         response = ecs_client.run_task(
@@ -39,6 +35,10 @@ def run_session(event, context):
                     {
                         'name': 'stream',
                         'environment': [
+                            {
+                                'name': 'USER_ID',
+                                'value': user_id
+                            },
                             {
                                 'name': 'SESSION_ID',
                                 'value': session_id
@@ -54,23 +54,12 @@ def run_session(event, context):
         )
 
         # log response
-        logging.info(f'Run Session - ECS Response: {response}')
+        logging.info(f'Launch Session - ECS Response: {response}')
 
+        # prepare return info
         return {
-            'statusCode': 200,
-            'body': json.dumps({
                 'cluster_arn': response['tasks'][0]['clusterArn'],
                 'task_def_arn': response['tasks'][0]['taskDefinitionArn'],
                 'task_def_version': response['tasks'][0]['version'],
                 'task_arn': response['tasks'][0]['taskArn']
-            })
-        }
-
-    else:
-
-        return {
-            'statusCode': 400,
-            'body': json.dumps({
-                'error': 'Required parameters missing'
-            })
-        }
+            }

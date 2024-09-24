@@ -183,6 +183,7 @@ class WebRTCStreamManager:
         self.last_activity: float = time.time()
 
         # usage reporter
+        self.user_id = os.environ.get('USER_ID', None)
         self.session_id = os.environ.get('SESSION_ID', None)
         self.eb_bus_name = os.environ.get('EB_BUS_NAME', None)
         if self.eb_bus_name is not None and self.session_id is not None:
@@ -277,6 +278,7 @@ class WebRTCStreamManager:
                 'Source': 'tmunan.task',
                 'DetailType': 'tmunan.usage.update',
                 'Detail': json.dumps({
+                    'user_id': self.user_id,
                     'session_id': self.session_id,
                     'usage_time_seconds': usage_time,
                     'timestamp': datetime.utcnow().isoformat()

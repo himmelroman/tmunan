@@ -1,11 +1,12 @@
 import json
 import logging
+from datetime import datetime
 from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError
 
-from orc.sessions.models import SessionItem, SessionData, UsageData
+from orc.sessions.models import SessionItem, UsageData
 
 
 class DynamoDBSessionManager:
@@ -16,6 +17,14 @@ class DynamoDBSessionManager:
 
         self.logger = logging.getLogger()
         self.logger.setLevel("INFO")
+
+    @staticmethod
+    def _serialize_datetime(dt: datetime) -> str:
+        return dt.isoformat() if dt else None
+
+    @staticmethod
+    def _deserialize_datetime(dt_str: str) -> datetime:
+        return datetime.fromisoformat(dt_str) if dt_str else None
 
     def get_session(self, user_id: str, session_id: str) -> Optional[SessionItem]:
         try:
@@ -30,8 +39,10 @@ class DynamoDBSessionManager:
                 return SessionItem(
                     user_id=item['user_id'],
                     session_id=item['session_id'],
-                    session_data=SessionData(**json.loads(item['session_data'])),
-                    usage_data=UsageData(**json.loads(item['usage_data']))
+                    created_at=self._deserialize_datetime(item['created_at']),
+                    usage_data=UsageData(
+                        duration=item['duration']
+                    )
                 )
             return None
 
@@ -39,14 +50,16 @@ class DynamoDBSessionManager:
             self.logger.exception("Error getting session")
             return None
 
-    def create_session(self, session: SessionItem) -> bool:
+    def create_session(self, user_id: str, session_id: str) -> bool:
         try:
             self.table.put_item(
                 Item={
-                    'user_id': session.user_id,
-                    'session_id': session.session_id,
-                    'session_data': json.dumps(session.session_data.model_dump()),
-                    'usage_data': json.dumps(session.usage_data.model_dump())
+                    'user_id': user_id,
+                    'session_id': session_id,
+                    'created_at': self._serialize_datetime(datetime.utcnow()),
+                    'usage_data': {
+                        'duration': 0
+                    }
                 },
                 ConditionExpression='attribute_not_exists(user_id) AND attribute_not_exists(session_id)'
             )
@@ -54,22 +67,21 @@ class DynamoDBSessionManager:
 
         except ClientError as e:
             if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-                self.logger.error(f"Session already exists for user {session.user_id} and session {session.session_id}")
+                self.logger.error(f"Session already exists for user {user_id} and session {session_id}")
             else:
                 self.logger.exception(f"Error creating session")
             return False
 
-    def update_session(self, session: SessionItem) -> bool:
+    def update_session_usage(self, user_id: str, session_id: str, usage: UsageData) -> bool:
         try:
             self.table.update_item(
                 Key={
-                    'user_id': session.user_id,
-                    'session_id': session.session_id
+                    'user_id': user_id,
+                    'session_id': session_id
                 },
-                UpdateExpression='SET session_data = :session_data, usage_data = :usage_data',
+                UpdateExpression='SET usage_data = :usage_data',
                 ExpressionAttributeValues={
-                    ':session_data': json.dumps(session.session_data.model_dump()),
-                    ':usage_data': json.dumps(session.usage_data.model_dump())
+                    ':usage_data': json.dumps(usage.model_dump())
                 }
             )
             return True
