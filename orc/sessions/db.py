@@ -40,9 +40,7 @@ class DynamoDBSessionManager:
                     user_id=item['user_id'],
                     session_id=item['session_id'],
                     created_at=self._deserialize_datetime(item['created_at']),
-                    usage_data=UsageData(
-                        duration=item['duration']
-                    )
+                    usage_data=UsageData(**item['usage_data']) if 'usage_data' in item else None,
                 )
             return None
 
@@ -57,9 +55,7 @@ class DynamoDBSessionManager:
                     'user_id': user_id,
                     'session_id': session_id,
                     'created_at': self._serialize_datetime(datetime.utcnow()),
-                    'usage_data': {
-                        'duration': 0
-                    }
+                    'usage_data': json.dumps(UsageData().model_dump())
                 },
                 ConditionExpression='attribute_not_exists(user_id) AND attribute_not_exists(session_id)'
             )
