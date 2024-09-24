@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import signal
@@ -14,6 +15,10 @@ from tmunan.stream_app.api.endpoints import router
 from tmunan.stream_app.webrtc.stream_manager import WebRTCStreamManager
 
 
+logger = logging.getLogger()
+logger.setLevel("INFO")
+
+
 async def shutdown_monitor(stream_manager: WebRTCStreamManager):
 
     # read idle timeout value from env (default is 15 min)
@@ -22,8 +27,13 @@ async def shutdown_monitor(stream_manager: WebRTCStreamManager):
     # loop forever
     while True:
 
+        # log
+        logger.info(f'Shutdown Monitor - Activity: {stream_manager.last_activity}, Max Idle: {idle_timeout_seconds}')
+
         # check if idle timeout reached
         if time.time() - stream_manager.last_activity > idle_timeout_seconds:
+
+            logger.info(f'Shutdown Monitor - Shutting down')
 
             # shutdown stream manager
             await stream_manager.shutdown(reason="inactivity")
@@ -31,8 +41,8 @@ async def shutdown_monitor(stream_manager: WebRTCStreamManager):
             # shutdown the application gracefully
             os.kill(os.getpid(), signal.SIGKILL)
 
-        # check every 10 seconds
-        await asyncio.sleep(10)
+        # check every minute
+        await asyncio.sleep(60)
 
 
 class AppState(TypedDict):
