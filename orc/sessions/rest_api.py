@@ -5,7 +5,7 @@ from mangum import Mangum
 from fastapi import FastAPI, HTTPException
 
 from orc.sessions.launch import launch_session
-from orc.sessions.models import UsageData
+from orc.sessions.models import UsageData, SessionItem
 from orc.sessions.db import DynamoDBSessionManager
 
 app = FastAPI()
@@ -25,8 +25,8 @@ async def get_session(user_id: str, session_id: str):
 
 
 @app.post("/sessions")
-async def create_session(user_id: str, session_id: str):
-    if session_manager.create_session(user_id, session_id):
+async def create_session(session: SessionItem):
+    if session_manager.create_session(session.user_id, session.session_id):
         return {"message": "Session created successfully"}
     else:
         raise HTTPException(status_code=400, detail="Failed to create session")

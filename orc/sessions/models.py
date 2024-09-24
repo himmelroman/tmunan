@@ -17,4 +17,4 @@ class SessionItem(BaseModel):
     user_id: str
     session_id: str
     created_at: Optional[datetime] = None
-    usage_data: UsageData
+    usage_data: Optional[UsageData] = None
