@@ -10,6 +10,9 @@ logger.setLevel("INFO")
 
 def register_usage(event, context):
 
+    # log
+    logger.info(f"Received event: {event}")
+
     # init db
     session_manager = DynamoDBSessionManager(os.environ['DYNAMODB_TABLE'])
 
