@@ -40,7 +40,7 @@ class DynamoDBSessionManager:
                     user_id=item['user_id'],
                     session_id=item['session_id'],
                     created_at=self._deserialize_datetime(item['created_at']),
-                    usage_data=UsageData(**item['usage_data']) if 'usage_data' in item else None
+                    usage_data=UsageData(**json.loads(item['usage_data'])) if 'usage_data' in item else None
                 )
             return None
 
