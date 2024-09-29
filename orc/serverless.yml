@@ -44,6 +44,9 @@ functions:
 
   auth0_custom_authorizer:
     handler: handler.lambda_handler
+    package:
+      include:
+        - orc/**
     events:
       - http:
           path: authorizer
@@ -51,7 +54,6 @@ functions:
     environment:
       AUTH0_DOMAIN: dev-68iu6g42wy1qjtkd.eu.auth0.com
       API_AUDIENCE: https://api.tmunan.icu
-    arn: arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:${self:service}-auth0_custom_authorizer
 
   api:
     handler: orc.sessions.rest_api.handler
@@ -68,7 +70,6 @@ functions:
             type: request             # Custom request authorizer
             resultTtlInSeconds: 60    # Disabling caching (optional, set to cache results)
             identitySource: method.request.header.Authorization
-            arn: arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:${self:service}-auth0_custom_authorizer
 
   register_usage:
     handler: orc.register_usage.handler.register_usage
