@@ -12,7 +12,7 @@ def handler(event, context):
     """AWS Lambda Authorizer handler."""
     try:
 
-        # logger.info(f"Event: {event}")
+        logger.info(f"Event: {event}")
 
         # extract auth header
         if auth_header := event["headers"].get("Authorization"):
