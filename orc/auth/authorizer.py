@@ -25,7 +25,7 @@ def handler(event, context):
             if auth_token == 'magic':
                 return {
                     "principalId": 'magic_principle_id',
-                    "policyDocument": generate_policy('magic_principle_id', "Allow", event["methodArn"]),
+                    "policyDocument": generate_policy("Allow", event["methodArn"]),
                     "context": {
                         "user_id": 'magic_user_id',
                         "email": 'magic_email',
@@ -40,7 +40,7 @@ def handler(event, context):
             # Generate an allow policy and pass claims in the context
             return {
                 "principalId": payload["sub"],  # User's unique identifier from the token
-                "policyDocument": generate_policy("user", "Allow", event["methodArn"]),
+                "policyDocument": generate_policy("Allow", event["methodArn"]),
                 "context": {
                     "user_id": payload["sub"],              # Example claim
                     "email": payload.get("email", None),    # Optional, if available in token
