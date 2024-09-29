@@ -10,8 +10,6 @@ provider:
     TASK_DEFINITION: tmunan_task
     CONTAINER_NAME: stream
     DYNAMODB_TABLE: ${self:service}_${self:provider.stage}_sessions
-    AUTH0_DOMAIN: dev-68iu6g42wy1qjtkd.eu.auth0.com
-    API_AUDIENCE: https://api.tmunan.icu
   iam:
     role: arn:aws:iam::090268630745:role/github_deploy_role
   deploymentBucket:
@@ -51,8 +49,8 @@ functions:
           path: authorizer
           method: POST
     environment:
-      AUTH0_DOMAIN: ${self:provider.environment:AUTH0_DOMAIN}
-      API_AUDIENCE: ${self:provider.environment:API_AUDIENCE}
+      AUTH0_DOMAIN: dev-68iu6g42wy1qjtkd.eu.auth0.com
+      API_AUDIENCE: https://api.tmunan.icu
 
   api:
     handler: orc.sessions.rest_api.handler
