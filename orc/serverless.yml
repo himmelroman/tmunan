@@ -71,17 +71,6 @@ functions:
             identitySource: method.request.header.Authorization
             arn: arn:aws:lambda:${self:provider.region}:#{AWS::AccountId}:function:${self:service}-authLambda
 
-#  run_session:
-#    handler: orc.run_session.handler.run_session
-#    role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
-#    package:
-#      include:
-#        - orc/**
-#    events:
-#      - http:
-#          path: run_session
-#          method: post
-
   register_usage:
     handler: orc.register_usage.handler.register_usage
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role

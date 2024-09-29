@@ -31,7 +31,11 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        # Log the error and return a deny policy
+
+        # Log the error
+        logger.exception(f"Error in auth lambda handler!")
+
+        # return a deny policy
         return {
             "principalId": "user",
             "policyDocument": generate_policy("user", "Deny", event["methodArn"])
