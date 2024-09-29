@@ -43,7 +43,7 @@ resources:
 functions:
 
   auth0-authorizer:
-    handler: orc.auth.handler
+    handler: orc.auth.authorizer.handler
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
     package:
       include:
