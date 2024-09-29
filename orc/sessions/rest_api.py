@@ -25,7 +25,7 @@ async def read_user_me(request: Request):
     user_id = claims.get("user_id")
     email = claims.get("email")
 
-    return {"user_id": user_id, "email": email}
+    return {'claims': claims, "user_id": user_id, "email": email}
 
 
 @app.get("/sessions/{user_id}/{session_id}")

@@ -47,7 +47,7 @@ functions:
     events:
       - http:
           path: authorizer
-          method: POST
+          method: ANY
     environment:
       AUTH0_DOMAIN: dev-68iu6g42wy1qjtkd.eu.auth0.com
       API_AUDIENCE: https://api.tmunan.icu
@@ -67,7 +67,7 @@ functions:
             type: request             # Custom request authorizer
             resultTtlInSeconds: 60    # Disabling caching (optional, set to cache results)
             identitySource: method.request.header.Authorization
-            arn: arn:aws:lambda:${self:provider.region}:#{AWS::AccountId}:function:${self:service}-authLambda
+            arn: arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:${self:service}-authLambda
 
   register_usage:
     handler: orc.register_usage.handler.register_usage
