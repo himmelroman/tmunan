@@ -11,6 +11,9 @@ logger.setLevel(logging.INFO)
 def handler(event, context):
     """AWS Lambda Authorizer handler."""
     try:
+
+        logger.info(f"Received event: {event}")
+
         # Extract the token from the event (API Gateway authorizer setup)
         token = event.get("authorizationToken", "").split(" ")[1]
         logger.info(f"Received token: {token}")
