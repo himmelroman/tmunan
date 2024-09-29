@@ -12,44 +12,47 @@ def handler(event, context):
     """AWS Lambda Authorizer handler."""
     try:
 
-        logger.info(f"Received event: {event}")
+        # logger.info(f"Event: {event}")
 
-        # Extract the token from the event (API Gateway authorizer setup)
-        token = event.get("authorizationToken", "").split(" ")[1]
-        logger.info(f"Received token: {token}")
-        if token == 'magic':
+        # extract auth header
+        if auth_header := event["headers"].get("Authorization"):
+
+            # extract the token from the header
+            auth_token = auth_header.split(" ")[1]
+            logger.info(f"Token: {auth_token}")
+
+            # check magic backdoor
+            if auth_token == 'magic':
+                return {
+                    "principalId": 'magic_principle_id',
+                    "policyDocument": generate_policy("user", "Allow", event["methodArn"]),
+                    "context": {
+                        "user_id": 'magic_user_id',
+                        "email": 'magic_email',
+                        "name": 'magic_name'
+                    }
+                }
+
+            # validate and decode the token
+            payload = verify_token(auth_token)
+            logger.info(f"Token payload: {payload}")
+
+            # Generate an allow policy and pass claims in the context
             return {
-                "principalId": 'magic_principle_id',
+                "principalId": payload["sub"],  # User's unique identifier from the token
                 "policyDocument": generate_policy("user", "Allow", event["methodArn"]),
                 "context": {
-                    "user_id": 'magic_user_id',
-                    "email": 'magic_email',
-                    "name": 'magic_name'
+                    "user_id": payload["sub"],              # Example claim
+                    "email": payload.get("email", None),    # Optional, if available in token
+                    "name": payload.get("name", None)       # Optional
                 }
             }
 
-        # Validate and decode the token
-        payload = verify_token(token)
-        logger.info(f"Received payload: {payload}")
-
-        # Generate an allow policy and pass claims in the context
-        return {
-            "principalId": payload["sub"],  # User's unique identifier from the token
-            "policyDocument": generate_policy("user", "Allow", event["methodArn"]),
-            "context": {
-                "user_id": payload["sub"],              # Example claim
-                "email": payload.get("email", None),    # Optional, if available in token
-                "name": payload.get("name", None)       # Optional
-            }
-        }
-
     except Exception as e:
-
-        # Log the error
         logger.exception(f"Error in auth lambda handler!")
 
-        # return a deny policy
-        return {
-            "principalId": "user",
-            "policyDocument": generate_policy("user", "Deny", event["methodArn"])
-        }
+    # return a deny policy
+    return {
+        "principalId": "user",
+        "policyDocument": generate_policy("user", "Deny", event["methodArn"])
+    }
