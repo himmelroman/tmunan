@@ -2,7 +2,7 @@ import logging
 import os
 
 from mangum import Mangum
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request, HTTPException
 
 from orc.sessions.launch import launch_session
 from orc.sessions.models import UsageData, SessionItem
@@ -13,6 +13,19 @@ session_manager = DynamoDBSessionManager(os.environ['DYNAMODB_TABLE'])
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
+
+
+@app.get("/users/me")
+async def read_user_me(request: Request):
+
+    # Access the request context, specifically the authorizer context
+    claims = request.scope["aws.event"]["requestContext"]["authorizer"]
+
+    # You can now access claims like user_id, email, etc.
+    user_id = claims.get("user_id")
+    email = claims.get("email")
+
+    return {"user_id": user_id, "email": email}
 
 
 @app.get("/sessions/{user_id}/{session_id}")

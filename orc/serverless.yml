@@ -10,6 +10,8 @@ provider:
     TASK_DEFINITION: tmunan_task
     CONTAINER_NAME: stream
     DYNAMODB_TABLE: ${self:service}_${self:provider.stage}_sessions
+    AUTH0_DOMAIN: dev-68iu6g42wy1qjtkd.eu.auth0.com
+    API_AUDIENCE: https://api.tmunan.icu
   iam:
     role: arn:aws:iam::090268630745:role/github_deploy_role
   deploymentBucket:
@@ -41,6 +43,17 @@ resources:
         TableName: ${self:provider.environment.DYNAMODB_TABLE}
 
 functions:
+
+  authLambda:
+    handler: handler.lambda_handler
+    events:
+      - http:
+          path: authorizer
+          method: POST
+    environment:
+      AUTH0_DOMAIN: ${env:AUTH0_DOMAIN}
+      API_AUDIENCE: ${env:API_AUDIENCE}
+
   api:
     handler: orc.sessions.rest_api.handler
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
@@ -51,6 +64,12 @@ functions:
       - http:
           path: /{proxy+}
           method: ANY
+          authorizer:
+            name: authLambda
+            type: request             # Custom request authorizer
+            resultTtlInSeconds: 60    # Disabling caching (optional, set to cache results)
+            identitySource: method.request.header.Authorization
+            arn: arn:aws:lambda:${self:provider.region}:#{AWS::AccountId}:function:${self:service}-authLambda
 
 #  run_session:
 #    handler: orc.run_session.handler.run_session
