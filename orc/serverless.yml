@@ -44,6 +44,7 @@ functions:
 
   auth0_custom_authorizer:
     handler: handler.lambda_handler
+    role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
     package:
       include:
         - orc/**
