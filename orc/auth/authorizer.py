@@ -25,7 +25,7 @@ def handler(event, context):
             if auth_token == 'magic':
                 return {
                     "principalId": 'magic_principle_id',
-                    "policyDocument": generate_policy("user", "Allow", event["methodArn"]),
+                    "policyDocument": generate_policy('magic_principle_id', "Allow", event["methodArn"]),
                     "context": {
                         "user_id": 'magic_user_id',
                         "email": 'magic_email',
