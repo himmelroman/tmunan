@@ -51,8 +51,8 @@ functions:
           path: authorizer
           method: POST
     environment:
-      AUTH0_DOMAIN: ${env:AUTH0_DOMAIN}
-      API_AUDIENCE: ${env:API_AUDIENCE}
+      AUTH0_DOMAIN: ${self:provider.environment:AUTH0_DOMAIN}
+      API_AUDIENCE: ${self:provider.environment:API_AUDIENCE}
 
   api:
     handler: orc.sessions.rest_api.handler
