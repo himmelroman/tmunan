@@ -42,7 +42,7 @@ resources:
 
 functions:
 
-  auth0_custom_authorizer:
+  auth0-authorizer:
     handler: orc.auth.handler
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
     package:
@@ -72,7 +72,7 @@ functions:
             resultTtlInSeconds: 60    # Disabling caching (optional, set to cache results)
             identitySource: method.request.header.Authorization
 
-  register_usage:
+  register-usage:
     handler: orc.register_usage.handler.register_usage
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
     package:
