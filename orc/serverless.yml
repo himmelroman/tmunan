@@ -67,7 +67,7 @@ functions:
           path: /{proxy+}
           method: ANY
           authorizer:
-            name: auth0_custom_authorizer
+            name: auth0-authorizer
             type: request             # Custom request authorizer
             resultTtlInSeconds: 60    # Disabling caching (optional, set to cache results)
             identitySource: method.request.header.Authorization
