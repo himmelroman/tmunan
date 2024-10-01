@@ -74,9 +74,11 @@ def verify_token(token):
     except ExpiredSignatureError:
         logger.error("Token has expired")
         raise Exception("Token has expired")
+
     except JWTClaimsError as e:
         logger.error(f"JWT Claims error: {str(e)}")
         raise Exception(f"JWT Claims error: {str(e)}")
+
     except JWTError as e:
         logger.error(f"JWT Error: {str(e)}")
         raise Exception(f"JWT Error: {str(e)}")

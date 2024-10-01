@@ -48,10 +48,6 @@ functions:
     package:
       include:
         - orc/**
-    events:
-      - http:
-          path: authorizer
-          method: ANY
     environment:
       AUTH0_DOMAIN: dev-68iu6g42wy1qjtkd.eu.auth0.com
       API_AUDIENCE: https://api.tmunan.icu
@@ -63,7 +59,7 @@ functions:
       include:
         - orc/**
     events:
-      - http:
+      - httpApi:
           path: /{proxy+}
           method: ANY
           authorizer:
