@@ -40,8 +40,16 @@ resources:
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.DYNAMODB_TABLE}
 
-functions:
+httpApi:
+  authorizers:
+    auth0-authorizer:
+      type: request
+      identitySource:
+        - '$request.header.Authorization'  # Adjust as needed
+      resultTtlInSeconds: 60  # Caching configuration
+      functionName: auth0-authorizer  # Reference to the actual Lambda function
 
+functions:
   auth0-authorizer:
     handler: orc.auth.authorizer.handler
     role: arn:aws:iam::090268630745:role/tmunan_orc_execution_role
@@ -64,9 +72,6 @@ functions:
           method: ANY
           authorizer:
             name: auth0-authorizer
-            type: request             # Custom request authorizer
-            resultTtlInSeconds: 60    # Disabling caching (optional, set to cache results)
-            identitySource: method.request.header.Authorization
 
   register-usage:
     handler: orc.register_usage.handler.register_usage
