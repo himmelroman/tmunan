@@ -69,8 +69,8 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
-          authorizer:
-            name: auth0-authorizer
+#          authorizer:
+#            name: auth0-authorizer
 
   register-usage:
     handler: orc.register_usage.handler.register_usage
