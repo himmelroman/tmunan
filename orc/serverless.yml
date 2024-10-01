@@ -15,6 +15,14 @@ provider:
   deploymentBucket:
     name: tmunan-deployment-bucket
     serverSideEncryption: AES256  # Optional: Enables server-side encryption
+  httpApi:
+    authorizers:
+      auth0-authorizer:
+        type: request
+        identitySource:
+          - '$request.header.Authorization'  # Adjust as needed
+        resultTtlInSeconds: 60  # Caching configuration
+        functionName: auth0-authorizer  # Reference to the actual Lambda function
 
 package:
   individually: true
@@ -39,15 +47,6 @@ resources:
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.DYNAMODB_TABLE}
-
-httpApi:
-  authorizers:
-    auth0-authorizer:
-      type: request
-      identitySource:
-        - '$request.header.Authorization'  # Adjust as needed
-      resultTtlInSeconds: 60  # Caching configuration
-      functionName: auth0-authorizer  # Reference to the actual Lambda function
 
 functions:
   auth0-authorizer:
